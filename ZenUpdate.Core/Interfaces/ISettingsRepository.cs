@@ -4,7 +4,7 @@ namespace ZenUpdate.Core.Interfaces;
 
 /// <summary>
 /// Provides read and write access to the user's application settings file.
-/// Settings are stored at <c>%APPDATA%\ZenUpdate\settings.json</c>.
+/// Settings are stored at <c>%APPDATA%\XenUpdate\settings.json</c>.
 /// </summary>
 public interface ISettingsRepository
 {

@@ -6,22 +6,15 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <RootNamespace>ZenUpdate.App</RootNamespace>
-    <AssemblyName>ZenUpdate</AssemblyName>
+    <AssemblyName>XenUpdate</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <OutputType>WinExe</OutputType>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Project assets (window icon etc.) -->
+    <!-- Project assets: logo, AppIcon.ico, and any future branding images -->
     <Resource Include="Assets\**\*" />
-    <!--
-      Branding logo lives in the repo-root img\ folder so it can be edited
-      independently of the WPF project. Linking it as 'img\logo.png' makes
-      it available at pack://application:,,,/img/logo.png at runtime, which
-      is what MainWindow.xaml references for the title bar and sidebar.
-    -->
-    <Resource Include="..\img\logo.png" Link="img\logo.png" />
   </ItemGroup>
 
   <ItemGroup>

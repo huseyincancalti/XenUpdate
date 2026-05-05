@@ -6,7 +6,7 @@ namespace ZenUpdate.Infrastructure.Storage;
 
 /// <summary>
 /// Reads and writes the blacklist JSON file stored at
-/// <c>%APPDATA%\ZenUpdate\blacklist.json</c>.
+/// <c>%APPDATA%\XenUpdate\blacklist.json</c>.
 ///
 /// New entries are saved as a simple JSON array of objects:
 /// <code>
@@ -25,7 +25,7 @@ public sealed class JsonBlacklistRepository : IBlacklistRepository
 
     private static readonly string FilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "ZenUpdate", "blacklist.json");
+        "XenUpdate", "blacklist.json");
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {

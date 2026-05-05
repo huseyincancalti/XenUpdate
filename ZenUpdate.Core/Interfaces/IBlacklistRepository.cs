@@ -5,7 +5,7 @@ namespace ZenUpdate.Core.Interfaces;
 /// <summary>
 /// Provides read and write access to the blacklist file.
 /// The blacklist stores package IDs that should be excluded from winget update results.
-/// The file is stored at <c>%APPDATA%\ZenUpdate\blacklist.json</c>.
+/// The file is stored at <c>%APPDATA%\XenUpdate\blacklist.json</c>.
 /// </summary>
 public interface IBlacklistRepository
 {

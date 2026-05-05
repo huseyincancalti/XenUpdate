@@ -4,7 +4,7 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:vm="clr-namespace:ZenUpdate.App.ViewModels"
         xmlns:views="clr-namespace:ZenUpdate.App.Views"
-        Title="ZenUpdate"
+        Title="XenUpdate"
         Icon="pack://application:,,,/Assets/AppIcon.ico"
         Height="720" Width="1100"
         MinHeight="600" MinWidth="800"
@@ -184,13 +184,9 @@
             </Grid.ColumnDefinitions>
 
             <!-- Left: Icon & Title (IsHitTestVisible=False so WindowChrome drag works) -->
-            <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False">
-                <!--
-                    Title bar logo: small (Height only so aspect ratio is preserved by Image.Stretch=Uniform).
-                    Sources from img\logo.png via the linked Resource declared in ZenUpdate.App.csproj.
-                -->
-                <Image Source="pack://application:,,,/img/logo.png" Height="22" VerticalAlignment="Center" Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality" />
-                <TextBlock Text="ZenUpdate" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource ZenTextBrush}" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="14,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False">
+                <Image Source="pack://application:,,,/Assets/logo.png" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                <TextBlock Text="XenUpdate" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource ZenTextBrush}" VerticalAlignment="Center" />
             </StackPanel>
 
             <!--
@@ -244,14 +240,10 @@
                     BorderBrush="{DynamicResource ZenDividerBrush}">
                 <StackPanel>
 
-                    <!--
-                        Sidebar branding: logo + app name.
-                        Logo Height=44 (no Width — Image.Stretch=Uniform keeps the aspect ratio
-                        intact so the new larger img\logo.png is rendered without distortion).
-                    -->
-                    <StackPanel Orientation="Horizontal" Margin="20,24,20,20" VerticalAlignment="Center">
-                        <Image Source="pack://application:,,,/img/logo.png" Height="44" VerticalAlignment="Center" Margin="0,0,12,0" RenderOptions.BitmapScalingMode="HighQuality" />
-                        <TextBlock Text="ZenUpdate"
+                    <!-- App logo / title -->
+                    <StackPanel Orientation="Horizontal" Margin="20,22,20,18" VerticalAlignment="Center">
+                        <Image Source="pack://application:,,,/Assets/logo.png" Width="32" Height="32" VerticalAlignment="Center" Margin="0,0,10,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                        <TextBlock Text="XenUpdate"
                                    FontSize="20"
                                    FontWeight="Bold"
                                    Foreground="{DynamicResource ZenPrimaryBrush}"

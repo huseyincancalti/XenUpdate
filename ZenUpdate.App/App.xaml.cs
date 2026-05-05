@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using ZenUpdate.App.Services;
 using ZenUpdate.App.Startup;
@@ -28,6 +29,9 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // Migrate settings/blacklist from old %APPDATA%\ZenUpdate to new %APPDATA%\XenUpdate.
+        MigrateAppDataFolder();
+
         try
         {
             var serviceCollection = new ServiceCollection();
@@ -36,8 +40,8 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[ZenUpdate] DI container build failed: {ex}");
-            ShowFallbackWindow("ZenUpdate could not initialize its services.\n\n" + ex.Message);
+            Debug.WriteLine($"[XenUpdate] DI container build failed: {ex}");
+            ShowFallbackWindow("XenUpdate could not initialize its services.\n\n" + ex.Message);
             return;
         }
 
@@ -53,8 +57,8 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[ZenUpdate] MainWindow construction failed: {ex}");
-            ShowFallbackWindow("ZenUpdate could not load its main window.\n\n" + ex.Message);
+            Debug.WriteLine($"[XenUpdate] MainWindow construction failed: {ex}");
+            ShowFallbackWindow("XenUpdate could not load its main window.\n\n" + ex.Message);
             return;
         }
 
@@ -67,7 +71,7 @@ public partial class App : Application
         catch (Exception ex)
         {
             // The window will still appear (empty); the user can at least close it.
-            Debug.WriteLine($"[ZenUpdate] ShellViewModel resolution failed: {ex}");
+            Debug.WriteLine($"[XenUpdate] ShellViewModel resolution failed: {ex}");
         }
 
         try
@@ -76,8 +80,8 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[ZenUpdate] MainWindow.Show failed: {ex}");
-            ShowFallbackWindow("ZenUpdate could not display its main window.\n\n" + ex.Message);
+            Debug.WriteLine($"[XenUpdate] MainWindow.Show failed: {ex}");
+            ShowFallbackWindow("XenUpdate could not display its main window.\n\n" + ex.Message);
             return;
         }
 
@@ -106,14 +110,14 @@ public partial class App : Application
             // Wrapping the call in Task.Run escapes the dispatcher context
             // so the I/O continuation runs on a thread-pool thread instead.
             // This is the real reason the previous startup hung whenever
-            // %APPDATA%\ZenUpdate\settings.json existed.
+            // %APPDATA%\XenUpdate\settings.json existed.
             settings = Task.Run(static () =>
                 Services.GetRequiredService<ISettingsRepository>().LoadAsync()
             ).GetAwaiter().GetResult();
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[ZenUpdate] Settings load failed at startup, using defaults: {ex}");
+            Debug.WriteLine($"[XenUpdate] Settings load failed at startup, using defaults: {ex}");
             settings = new AppSettings();
         }
 
@@ -125,7 +129,7 @@ public partial class App : Application
         {
             // Theme is purely cosmetic. Startup must continue even if the
             // theme dictionaries cannot be merged for any reason.
-            Debug.WriteLine($"[ZenUpdate] Theme apply failed at startup: {ex}");
+            Debug.WriteLine($"[XenUpdate] Theme apply failed at startup: {ex}");
         }
     }
 
@@ -139,7 +143,7 @@ public partial class App : Application
         {
             new Window
             {
-                Title = "ZenUpdate (Recovery)",
+                Title = "XenUpdate (Recovery)",
                 Width = 480,
                 Height = 220,
                 Content = new System.Windows.Controls.TextBlock
@@ -152,7 +156,7 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[ZenUpdate] Recovery window failed to show: {ex}");
+            Debug.WriteLine($"[XenUpdate] Recovery window failed to show: {ex}");
         }
     }
 
@@ -183,7 +187,7 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[ZenUpdate] Startup scan trigger failed: {ex}");
+            Debug.WriteLine($"[XenUpdate] Startup scan trigger failed: {ex}");
         }
     }
 
@@ -198,5 +202,71 @@ public partial class App : Application
             disposable.Dispose();
         }
         base.OnExit(e);
+    }
+
+    /// <summary>
+    /// One-time migration from the old <c>%APPDATA%\ZenUpdate</c> folder to the new
+    /// <c>%APPDATA%\XenUpdate</c> folder. Copies settings.json, blacklist.json, and
+    /// the logs subfolder if they exist. Silently skipped if:
+    ///   - the old folder does not exist, or
+    ///   - the new folder already exists (migration was already done or user started fresh).
+    /// Failures are swallowed so they never block startup.
+    /// </summary>
+    private static void MigrateAppDataFolder()
+    {
+        try
+        {
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            var oldDir = Path.Combine(appData, "ZenUpdate");
+            var newDir = Path.Combine(appData, "XenUpdate");
+
+            if (!Directory.Exists(oldDir) || Directory.Exists(newDir))
+            {
+                return;
+            }
+
+            Directory.CreateDirectory(newDir);
+
+            // Copy top-level files (settings.json, blacklist.json, etc.)
+            foreach (var file in Directory.GetFiles(oldDir))
+            {
+                var destFile = Path.Combine(newDir, Path.GetFileName(file));
+                try
+                {
+                    File.Copy(file, destFile, overwrite: false);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[XenUpdate] Migration: could not copy {file}: {ex.Message}");
+                }
+            }
+
+            // Copy logs subfolder
+            var oldLogs = Path.Combine(oldDir, "logs");
+            var newLogs = Path.Combine(newDir, "logs");
+            if (Directory.Exists(oldLogs))
+            {
+                Directory.CreateDirectory(newLogs);
+                foreach (var logFile in Directory.GetFiles(oldLogs))
+                {
+                    var destFile = Path.Combine(newLogs, Path.GetFileName(logFile));
+                    try
+                    {
+                        File.Copy(logFile, destFile, overwrite: false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[XenUpdate] Migration: could not copy log {logFile}: {ex.Message}");
+                    }
+                }
+            }
+
+            Debug.WriteLine("[XenUpdate] AppData migration from ZenUpdate to XenUpdate completed.");
+        }
+        catch (Exception ex)
+        {
+            // Migration is best-effort. Never crash on migration failure.
+            Debug.WriteLine($"[XenUpdate] AppData migration failed (non-fatal): {ex.Message}");
+        }
     }
 }

@@ -22,10 +22,10 @@ public sealed class ThemeService : IThemeService
     private const string ZenThemeMarkerKey = "ZenBackgroundBrush";
 
     private static readonly Uri DarkThemeUri =
-        new("pack://application:,,,/ZenUpdate;component/Themes/ZenColors.Dark.xaml", UriKind.Absolute);
+        new("pack://application:,,,/XenUpdate;component/Themes/ZenColors.Dark.xaml", UriKind.Absolute);
 
     private static readonly Uri LightThemeUri =
-        new("pack://application:,,,/ZenUpdate;component/Themes/ZenColors.Light.xaml", UriKind.Absolute);
+        new("pack://application:,,,/XenUpdate;component/Themes/ZenColors.Light.xaml", UriKind.Absolute);
 
     /// <inheritdoc />
     public void ApplyTheme(AppTheme theme)
@@ -45,7 +45,7 @@ public sealed class ThemeService : IThemeService
 
         if ((!zenSwapOk || !mdSwapOk) && theme != AppTheme.Dark)
         {
-            Debug.WriteLine($"[ZenUpdate] Theme '{theme}' failed to apply; reverting to Dark.");
+            Debug.WriteLine($"[XenUpdate] Theme '{theme}' failed to apply; reverting to Dark.");
             TryReplaceZenDictionary(app, AppTheme.Dark);
             TryApplyMaterialDesignBaseTheme(AppTheme.Dark);
         }
@@ -73,7 +73,7 @@ public sealed class ThemeService : IThemeService
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[ZenUpdate] ReplaceZenDictionary failed for '{theme}': {ex.Message}");
+            Debug.WriteLine($"[XenUpdate] ReplaceZenDictionary failed for '{theme}': {ex.Message}");
             return false;
         }
     }
@@ -90,7 +90,7 @@ public sealed class ThemeService : IThemeService
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[ZenUpdate] MaterialDesign base theme flip failed for '{theme}': {ex.Message}");
+            Debug.WriteLine($"[XenUpdate] MaterialDesign base theme flip failed for '{theme}': {ex.Message}");
             return false;
         }
     }

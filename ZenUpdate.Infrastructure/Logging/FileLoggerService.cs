@@ -8,7 +8,7 @@ namespace ZenUpdate.Infrastructure.Logging;
 /// Writes log entries to a daily rolling log file and raises <see cref="LogEntryAdded"/>
 /// so the UI log console can display entries in real time.
 /// Implements <see cref="ILoggerService"/>.
-/// Log files are stored at <c>%APPDATA%\ZenUpdate\logs\zenupdate-yyyy-MM-dd.log</c>.
+/// Log files are stored at <c>%APPDATA%\XenUpdate\logs\xenupdate-yyyy-MM-dd.log</c>.
 /// </summary>
 public sealed class FileLoggerService : ILoggerService
 {
@@ -32,7 +32,7 @@ public sealed class FileLoggerService : ILoggerService
     {
         _logDirectory = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "ZenUpdate", "logs");
+            "XenUpdate", "logs");
     }
 
     /// <inheritdoc />
@@ -75,7 +75,7 @@ public sealed class FileLoggerService : ILoggerService
         try
         {
             Directory.CreateDirectory(_logDirectory);
-            var fileName = $"zenupdate-{DateTime.Now:yyyy-MM-dd}.log";
+            var fileName = $"xenupdate-{DateTime.Now:yyyy-MM-dd}.log";
             var filePath = Path.Combine(_logDirectory, fileName);
 
             lock (_writeLock)

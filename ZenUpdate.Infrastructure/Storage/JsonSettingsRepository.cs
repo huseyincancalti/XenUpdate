@@ -8,7 +8,7 @@ using ZenUpdate.Core.Models;
 namespace ZenUpdate.Infrastructure.Storage;
 
 /// <summary>
-/// Reads and writes the application settings JSON file at <c>%APPDATA%\ZenUpdate\settings.json</c>.
+/// Reads and writes the application settings JSON file at <c>%APPDATA%\XenUpdate\settings.json</c>.
 /// Implements <see cref="ISettingsRepository"/>.
 ///
 /// Designed to be unconditionally safe to call during application startup:
@@ -23,7 +23,7 @@ public sealed class JsonSettingsRepository : ISettingsRepository
 {
     private static readonly string FilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "ZenUpdate", "settings.json");
+        "XenUpdate", "settings.json");
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -108,7 +108,7 @@ public sealed class JsonSettingsRepository : ISettingsRepository
         {
             // Absolute last resort. The app must still open even if something
             // unexpected (e.g. a security exception on %APPDATA%) blows up here.
-            Debug.WriteLine($"[ZenUpdate] LoadAsync hit an unexpected error: {ex}");
+            Debug.WriteLine($"[XenUpdate] LoadAsync hit an unexpected error: {ex}");
             SafeLogWarning($"Could not load settings. Using defaults. Reason: {ex.Message}");
             return new AppSettings();
         }
@@ -167,7 +167,7 @@ public sealed class JsonSettingsRepository : ISettingsRepository
         {
             settings.LogDirectory = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "ZenUpdate", "logs");
+                "XenUpdate", "logs");
         }
 
         if (settings.MaxLogConsoleEntries <= 0)
@@ -191,20 +191,20 @@ public sealed class JsonSettingsRepository : ISettingsRepository
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[ZenUpdate] Failed to back up corrupted settings file: {ex.Message}");
+            Debug.WriteLine($"[XenUpdate] Failed to back up corrupted settings file: {ex.Message}");
         }
     }
 
     private void SafeLogInfo(string message)
     {
         try { _logger.Info(message); }
-        catch { Debug.WriteLine($"[ZenUpdate] {message}"); }
+        catch { Debug.WriteLine($"[XenUpdate] {message}"); }
     }
 
     private void SafeLogWarning(string message)
     {
         try { _logger.Warning(message); }
-        catch { Debug.WriteLine($"[ZenUpdate] {message}"); }
+        catch { Debug.WriteLine($"[XenUpdate] {message}"); }
     }
 
     /// <summary>
@@ -246,7 +246,7 @@ public sealed class JsonSettingsRepository : ISettingsRepository
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[ZenUpdate] Theme value could not be parsed, falling back to Dark: {ex.Message}");
+                    Debug.WriteLine($"[XenUpdate] Theme value could not be parsed, falling back to Dark: {ex.Message}");
             }
 
             return AppTheme.Dark;

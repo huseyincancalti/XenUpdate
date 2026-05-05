@@ -6,7 +6,7 @@ namespace ZenUpdate.Core.Models;
 
 /// <summary>
 /// Stores user-configurable application settings.
-/// Serialized to and from <c>%APPDATA%\ZenUpdate\settings.json</c>.
+/// Serialized to and from <c>%APPDATA%\XenUpdate\settings.json</c>.
 /// Implements <see cref="INotifyPropertyChanged"/> so the Settings page
 /// can auto-save when a checkbox is toggled.
 /// </summary>
@@ -15,7 +15,7 @@ public sealed class AppSettings : INotifyPropertyChanged
     private bool _scanOnStartup;
 
     /// <summary>
-    /// If true, ZenUpdate checks for updates automatically when the app starts.
+    /// If true, XenUpdate checks for updates automatically when the app starts.
     /// Default: false (user must trigger scans manually).
     /// </summary>
     public bool ScanOnStartup
@@ -27,7 +27,7 @@ public sealed class AppSettings : INotifyPropertyChanged
     private bool _minimizeToTray;
 
     /// <summary>
-    /// If true, ZenUpdate minimizes to the system tray instead of closing when the window is closed.
+    /// If true, XenUpdate minimizes to the system tray instead of closing when the window is closed.
     /// Default: false.
     /// </summary>
     public bool MinimizeToTray
@@ -50,11 +50,11 @@ public sealed class AppSettings : INotifyPropertyChanged
 
     /// <summary>
     /// The folder where log files are written.
-    /// Default: <c>%APPDATA%\ZenUpdate\logs</c>.
+    /// Default: <c>%APPDATA%\XenUpdate\logs</c>.
     /// </summary>
     public string LogDirectory { get; set; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "ZenUpdate", "logs");
+        "XenUpdate", "logs");
 
     /// <summary>
     /// The maximum number of log entries to display in the UI log console.

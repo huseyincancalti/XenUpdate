@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚡ ZenUpdate
+# ⚡ XenUpdate
 
 **A modern Windows desktop application that helps you manage software, Windows, and driver updates from a single interface.**
 
@@ -22,7 +22,7 @@ Built with **.NET 8**, **WPF**, and **MVVM**, featuring a clean architecture foc
 
 ## 🏗️ Architecture
 
-ZenUpdate uses a clean, layered architecture separating UI logic from update, storage, and system integration operations:
+XenUpdate uses a clean, layered architecture separating UI logic from update, storage, and system integration operations:
 
     ZenUpdate.sln
     ├── ZenUpdate.App              # WPF UI, Views, ViewModels, Themes
@@ -44,7 +44,7 @@ ZenUpdate uses a clean, layered architecture separating UI logic from update, st
 
 ### 📥 Download
 You can download the latest version directly from the Releases page:  
-👉 **[Download ZenUpdate from Releases](../../releases)**
+👉 **[Download XenUpdate from Releases](../../releases)**
 
 > **💡 Tip:** After downloading, run the application as **Administrator** for the best experience.
 
@@ -58,8 +58,8 @@ You can download the latest version directly from the Releases page:
 
 **Steps**
 1. Clone the repository:
-       git clone [https://github.com/your-username/ZenUpdate.git](https://github.com/your-username/ZenUpdate.git)
-       cd ZenUpdate
+       git clone https://github.com/your-username/XenUpdate.git
+       cd XenUpdate
 2. Open `ZenUpdate.sln` in **Visual Studio 2022**.
 3. Set `ZenUpdate.App` as the startup project.
 4. Build and run the application.
@@ -68,7 +68,7 @@ You can download the latest version directly from the Releases page:
 
 ## ⚠️ Notes
 
-- ZenUpdate interacts with system-level update tools. Some update operations may require **administrator privileges** or a **system restart**.
+- XenUpdate interacts with system-level update tools. Some update operations may require **administrator privileges** or a **system restart**.
 - The application **does not** automatically restart your computer.
 
 ---
