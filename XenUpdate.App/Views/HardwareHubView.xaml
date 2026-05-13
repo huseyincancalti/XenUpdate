@@ -1,0 +1,209 @@
+<UserControl x:Class="XenUpdate.App.Views.HardwareHubView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:vm="clr-namespace:XenUpdate.App.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance vm:HardwareHubViewModel, IsDesignTimeCreatable=False}"
+             Loaded="HardwareHubView_OnLoaded">
+    <!--
+        DataContext is set automatically by MainWindow's DataTemplate binding.
+        DataContext type: HardwareHubViewModel
+    -->
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Page Title -->
+        <TextBlock Grid.Row="0"
+                   Text="Hardware Hub"
+                   Style="{StaticResource PageTitleStyle}" />
+
+        <!-- Loading indicator -->
+        <ProgressBar Grid.Row="1"
+                     IsIndeterminate="True"
+                     Height="4"
+                     Margin="0,0,0,12"
+                     Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+        <!-- ── Hardware Cards ─────────────────────────────────────────── -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,20">
+
+            <!-- GPU Card -->
+            <Border Style="{StaticResource ZenGlassPanelStyle}"
+                    Width="280"
+                    Padding="20"
+                    Margin="0,0,16,0"
+                    CornerRadius="10">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <materialDesign:PackIcon Kind="Gpu"
+                                                 Width="22" Height="22"
+                                                 Foreground="{DynamicResource ZenPrimaryBrush}"
+                                                 VerticalAlignment="Center"
+                                                 Margin="0,0,8,0" />
+                        <TextBlock Text="GPU"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   Opacity="0.7"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding Hardware.GpuName, FallbackValue='Detecting…'}"
+                               FontSize="15"
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,6" />
+
+                    <Border Background="{DynamicResource ZenNavItemSelectedBackgroundBrush}"
+                            CornerRadius="6"
+                            Padding="8,3"
+                            HorizontalAlignment="Left">
+                        <TextBlock Text="{Binding Hardware.GpuVendor, FallbackValue='Unknown'}"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   Foreground="White" />
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <!-- CPU Card -->
+            <Border Style="{StaticResource ZenGlassPanelStyle}"
+                    Width="280"
+                    Padding="20"
+                    CornerRadius="10">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <materialDesign:PackIcon Kind="Cpu64Bit"
+                                                 Width="22" Height="22"
+                                                 Foreground="{DynamicResource ZenPrimaryBrush}"
+                                                 VerticalAlignment="Center"
+                                                 Margin="0,0,8,0" />
+                        <TextBlock Text="CPU"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   Opacity="0.7"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding Hardware.CpuName, FallbackValue='Detecting…'}"
+                               FontSize="15"
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,6" />
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+
+        <!-- ── Update Lists (TabControl) ─────────────────────────────── -->
+        <TabControl Grid.Row="3"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="0">
+
+            <!-- Apps Tab -->
+            <TabItem Header="Apps">
+                <Border Style="{StaticResource ZenDataGridChromeStyle}" Margin="0,8,0,0">
+                    <DataGrid ItemsSource="{Binding AppUpdates}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              EnableRowVirtualization="True"
+                              VirtualizingPanel.IsVirtualizing="True"
+                              VirtualizingPanel.VirtualizationMode="Recycling"
+                              VirtualizingPanel.ScrollUnit="Pixel"
+                              Background="{DynamicResource ZenDataGridSurfaceBrush}"
+                              Foreground="{DynamicResource ZenTextBrush}"
+                              ColumnHeaderStyle="{StaticResource ZenDataGridColumnHeaderStyle}"
+                              RowStyle="{StaticResource ZenDataGridRowStyle}"
+                              CellStyle="{StaticResource ZenDataGridCellStyle}"
+                              materialDesign:DataGridAssist.CellPadding="8 6"
+                              materialDesign:DataGridAssist.ColumnHeaderPadding="8 6">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Name"          Binding="{Binding Name}"           Width="*"   IsReadOnly="True" />
+                            <DataGridTextColumn Header="Current Ver."  Binding="{Binding CurrentVersion}"  Width="120" IsReadOnly="True" />
+                            <DataGridTextColumn Header="New Ver."      Binding="{Binding NewVersion}"      Width="120" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Size"          Binding="{Binding DisplaySize}"     Width="90"  IsReadOnly="True" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+            </TabItem>
+
+            <!-- System Tab -->
+            <TabItem Header="System">
+                <Border Style="{StaticResource ZenDataGridChromeStyle}" Margin="0,8,0,0">
+                    <DataGrid ItemsSource="{Binding SystemUpdates}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              EnableRowVirtualization="True"
+                              VirtualizingPanel.IsVirtualizing="True"
+                              VirtualizingPanel.VirtualizationMode="Recycling"
+                              VirtualizingPanel.ScrollUnit="Pixel"
+                              Background="{DynamicResource ZenDataGridSurfaceBrush}"
+                              Foreground="{DynamicResource ZenTextBrush}"
+                              ColumnHeaderStyle="{StaticResource ZenDataGridColumnHeaderStyle}"
+                              RowStyle="{StaticResource ZenDataGridRowStyle}"
+                              CellStyle="{StaticResource ZenDataGridCellStyle}"
+                              materialDesign:DataGridAssist.CellPadding="8 6"
+                              materialDesign:DataGridAssist.ColumnHeaderPadding="8 6">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Name"          Binding="{Binding Name}"           Width="*"   IsReadOnly="True" />
+                            <DataGridTextColumn Header="Current Ver."  Binding="{Binding CurrentVersion}"  Width="120" IsReadOnly="True" />
+                            <DataGridTextColumn Header="New Ver."      Binding="{Binding NewVersion}"      Width="120" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Size"          Binding="{Binding DisplaySize}"     Width="90"  IsReadOnly="True" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+            </TabItem>
+
+            <!-- Drivers Tab -->
+            <TabItem Header="Drivers">
+                <Border Style="{StaticResource ZenDataGridChromeStyle}" Margin="0,8,0,0">
+                    <DataGrid ItemsSource="{Binding DriverUpdates}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              EnableRowVirtualization="True"
+                              VirtualizingPanel.IsVirtualizing="True"
+                              VirtualizingPanel.VirtualizationMode="Recycling"
+                              VirtualizingPanel.ScrollUnit="Pixel"
+                              Background="{DynamicResource ZenDataGridSurfaceBrush}"
+                              Foreground="{DynamicResource ZenTextBrush}"
+                              ColumnHeaderStyle="{StaticResource ZenDataGridColumnHeaderStyle}"
+                              RowStyle="{StaticResource ZenDataGridRowStyle}"
+                              CellStyle="{StaticResource ZenDataGridCellStyle}"
+                              materialDesign:DataGridAssist.CellPadding="8 6"
+                              materialDesign:DataGridAssist.ColumnHeaderPadding="8 6">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Name"          Binding="{Binding Name}"           Width="*"   IsReadOnly="True" />
+                            <DataGridTextColumn Header="Current Ver."  Binding="{Binding CurrentVersion}"  Width="120" IsReadOnly="True" />
+                            <DataGridTextColumn Header="New Ver."      Binding="{Binding NewVersion}"      Width="120" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Size"          Binding="{Binding DisplaySize}"     Width="90"  IsReadOnly="True" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+            </TabItem>
+
+        </TabControl>
+
+        <!-- Status bar -->
+        <TextBlock Grid.Row="4"
+                   Text="{Binding StatusMessage}"
+                   Opacity="0.65"
+                   FontSize="12"
+                   Margin="0,8,0,0" />
+
+    </Grid>
+</UserControl>

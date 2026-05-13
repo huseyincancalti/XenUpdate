@@ -1,0 +1,32 @@
+<Application x:Class="XenUpdate.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+
+                <!-- MaterialDesign base theme (Dark) -->
+                <materialDesign:BundledTheme BaseTheme="Dark"
+                                             PrimaryColor="DeepPurple"
+                                             SecondaryColor="Lime" />
+
+                <!-- MaterialDesign WPF component styles -->
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign2.Defaults.xaml" />
+
+                <!--
+                    Active Zen theme palette. ThemeService replaces this entry at runtime
+                    (identified by the ZenBackgroundBrush key) with ZenColors.Light.xaml
+                    when the user switches to the light theme.
+                -->
+                <ResourceDictionary Source="Themes/ZenColors.Dark.xaml" />
+
+                <!-- App-specific overrides and custom styles -->
+                <ResourceDictionary Source="Themes/MaterialOverrides.xaml" />
+
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+
+</Application>

@@ -1,0 +1,202 @@
+<UserControl x:Class="XenUpdate.App.Views.WindowsUpdatesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
+    <!--
+        DataContext is set automatically by MainWindow's DataTemplate binding.
+        DataContext type: WindowsUpdatesViewModel
+    -->
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   Text="Windows Updates"
+                   Style="{StaticResource PageTitleStyle}" />
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12">
+
+            <Button Content="Check for Updates"
+                    Command="{Binding ScanCommand}"
+                    Style="{StaticResource MaterialDesignRaisedButton}"
+                    Margin="0,0,8,0" />
+
+            <Button Content="Install Selected"
+                    Command="{Binding InstallSelectedCommand}"
+                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                    Margin="0,0,8,0" />
+
+            <Button Content="Cancel"
+                    Command="{Binding CancelScanCommand}"
+                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                    Margin="0,0,8,0"
+                    Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+            <!--
+                Scan-only thin progress bar.
+                Bound to IsScanning so it stays hidden while installs run;
+                install progress is shown by the dedicated feedback panel below.
+            -->
+            <ProgressBar IsIndeterminate="True"
+                         Width="120"
+                         Height="4"
+                         VerticalAlignment="Center"
+                         Visibility="{Binding IsScanning, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+        </StackPanel>
+
+        <Border Grid.Row="2"
+                Style="{StaticResource ZenGlassPanelStyle}"
+                Margin="0,0,0,12"
+                Padding="12"
+                Visibility="{Binding IsInstallBatchRunning, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel>
+                <TextBlock Text="{Binding CurrentBatchProgressText}"
+                           FontWeight="SemiBold"
+                           Margin="0,0,0,4" />
+                <TextBlock Text="{Binding CurrentUpdateTitle, StringFormat=Current update: {0}}"
+                           Margin="0,0,0,4" />
+                <TextBlock Text="{Binding CurrentKbArticle, StringFormat=KB: {0}}"
+                           Margin="0,0,0,6"
+                           Visibility="{Binding HasCurrentKbArticle, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <ProgressBar IsIndeterminate="True"
+                             Height="6"
+                             Margin="0,0,0,6" />
+                <TextBlock Text="{Binding CurrentInstallDetailText}"
+                           Opacity="0.7"
+                           FontSize="12" />
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="3">
+            <Border Style="{StaticResource ZenDataGridChromeStyle}"
+                    Visibility="{Binding HasUpdates, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <DataGrid x:Name="WindowsUpdatesDataGrid"
+                      ItemsSource="{Binding Updates}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      CanUserDeleteRows="False"
+                      IsReadOnly="False"
+                      SelectionMode="Extended"
+                      SelectionUnit="FullRow"
+                      ClipboardCopyMode="ExcludeHeader"
+                      EnableRowVirtualization="True"
+                      EnableColumnVirtualization="True"
+                      VirtualizingPanel.IsVirtualizing="True"
+                      VirtualizingPanel.VirtualizationMode="Recycling"
+                      VirtualizingPanel.ScrollUnit="Pixel"
+                      ScrollViewer.CanContentScroll="True"
+                      Background="{DynamicResource ZenDataGridSurfaceBrush}"
+                      Foreground="{DynamicResource ZenTextBrush}"
+                      ColumnHeaderStyle="{StaticResource ZenDataGridColumnHeaderStyle}"
+                      RowStyle="{StaticResource ZenDataGridRowStyle}"
+                      CellStyle="{StaticResource ZenDataGridCellStyle}"
+                      PreviewMouseRightButtonDown="WindowsUpdatesDataGrid_OnPreviewMouseRightButtonDown"
+                      materialDesign:DataGridAssist.CellPadding="8 6"
+                      materialDesign:DataGridAssist.ColumnHeaderPadding="8 6">
+                <DataGrid.ContextMenu>
+                    <ContextMenu Opened="WindowsUpdatesContextMenu_OnOpened">
+                        <MenuItem x:Name="CopyUpdateTitleMenuItem"
+                                  Header="Copy Update Title"
+                                  Click="CopyUpdateTitleMenuItem_OnClick" />
+                        <MenuItem x:Name="CopyKbArticleMenuItem"
+                                  Header="Copy KB Article"
+                                  Click="CopyKbArticleMenuItem_OnClick" />
+                        <MenuItem x:Name="CopyUpdateTitleAndKbMenuItem"
+                                  Header="Copy Update Title + KB"
+                                  Click="CopyUpdateTitleAndKbMenuItem_OnClick" />
+                        <MenuItem x:Name="CopySelectedUpdateTitlesMenuItem"
+                                  Header="Copy Selected Titles"
+                                  Click="CopySelectedUpdateTitlesMenuItem_OnClick" />
+                    </ContextMenu>
+                </DataGrid.ContextMenu>
+                <DataGrid.Columns>
+
+                    <DataGridCheckBoxColumn Header=""
+                                            Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"
+                                            Width="40"
+                                            IsReadOnly="False" />
+
+                    <DataGridTemplateColumn Header="Update"
+                                            Width="*"
+                                            IsReadOnly="True"
+                                            SortMemberPath="DisplayName">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding DisplayName}"
+                                           TextTrimming="CharacterEllipsis"
+                                           VerticalAlignment="Center"
+                                           Padding="2,0"
+                                           ToolTip="{Binding DisplayName}" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <DataGridTemplateColumn Header="KB Article"
+                                            Width="120"
+                                            IsReadOnly="True"
+                                            SortMemberPath="KbArticleId">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding KbArticleId}"
+                                           TextTrimming="CharacterEllipsis"
+                                           VerticalAlignment="Center"
+                                           Padding="2,0"
+                                           ToolTip="{Binding KbArticleId}" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <DataGridTemplateColumn Header="Severity"
+                                            Width="110"
+                                            IsReadOnly="True"
+                                            SortMemberPath="MsrcSeverity">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding MsrcSeverity}"
+                                           TextTrimming="CharacterEllipsis"
+                                           VerticalAlignment="Center"
+                                           Padding="2,0"
+                                           ToolTip="{Binding MsrcSeverity}" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <DataGridTemplateColumn Header="Status"
+                                            Width="110"
+                                            IsReadOnly="True"
+                                            SortMemberPath="Status"
+                                            CellTemplate="{StaticResource StatusBadgeCellTemplate}" />
+
+                </DataGrid.Columns>
+            </DataGrid>
+            </Border>
+
+            <Border Style="{StaticResource ZenGlassPanelStyle}"
+                    Padding="24"
+                    Visibility="{Binding IsEmptyStateVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="No Windows updates found. All clear for now."
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,8" />
+                    <TextBlock Text="Your system is up to date, so there is nothing to review here at the moment."
+                               Opacity="0.7"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <TextBlock Grid.Row="4"
+                   Text="{Binding StatusMessage}"
+                   Opacity="0.65"
+                   FontSize="12"
+                   Margin="0,8,0,0" />
+
+    </Grid>
+</UserControl>

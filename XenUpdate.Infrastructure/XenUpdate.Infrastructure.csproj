@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <RootNamespace>XenUpdate.Infrastructure</RootNamespace>
+    <AssemblyName>XenUpdate.Infrastructure</AssemblyName>
+    <!-- Required for WUApiLib COM interop -->
+    <UseWindowsForms>false</UseWindowsForms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
+    <PackageReference Include="System.Management" Version="8.0.0" />
+    <PackageReference Include="Microsoft.WindowsPackageManager.ComInterop" Version="1.10.340" />
+  </ItemGroup>
+
+  <!--
+    To enable Windows Update (WUApiLib) COM interop, add the COM reference in Visual Studio:
+    Project → Add COM Reference → Windows Update Agent API
+    Or add the interop assembly manually once available.
+  -->
+	
+	<ItemGroup>
+		<ProjectReference Include="..\XenUpdate.Core\XenUpdate.Core.csproj" />
+	</ItemGroup>
+	
+</Project>

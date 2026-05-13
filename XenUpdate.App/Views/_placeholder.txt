@@ -1,0 +1,14 @@
+<Window x:Class="XenUpdate.App.Views.HardwareHubView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:vm="clr-namespace:XenUpdate.App.ViewModels"
+        d:DataContext="{d:DesignInstance vm:HardwareHubViewModel, IsDesignTimeCreatable=False}"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="HardwareHubView"
+        Height="600" Width="900">
+    <!-- Standalone Window wrapper is required by WPF for a .xaml file with x:Class.
+         MainWindow hosts this as a DataTemplate (UserControl equivalent pattern). -->
+</Window>
