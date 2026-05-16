@@ -2,9 +2,11 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
+using System.Windows.Threading;
 using XenUpdate.App.Services;
 using XenUpdate.App.Startup;
 using XenUpdate.App.ViewModels;
+using XenUpdate.App.Views;
 using XenUpdate.Core.Interfaces;
 using XenUpdate.Core.Models;
 
@@ -20,6 +22,12 @@ public partial class App : Application
     public static IServiceProvider Services { get; private set; } = null!;
 
     /// <summary>
+    /// True when the app was launched with <c>-background</c> or <c>-minimized</c>,
+    /// e.g. from the Windows Run registry key on system startup.
+    /// </summary>
+    public static bool IsBackgroundStartup { get; private set; }
+
+    /// <summary>
     /// Called by WPF when the application starts.
     /// Builds the service container and opens the main window.
     /// Every step is individually guarded so a bad settings file or a broken
@@ -28,6 +36,12 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        DispatcherUnhandledException += OnDispatcherUnhandledException;
+        AppDomain.CurrentDomain.UnhandledException += OnDomainUnhandledException;
+
+        IsBackgroundStartup = e.Args.Contains("-background", StringComparer.OrdinalIgnoreCase)
+                           || e.Args.Contains("-minimized", StringComparer.OrdinalIgnoreCase);
 
         // Migrate settings/blacklist from old %APPDATA%\XenUpdate to new %APPDATA%\XenUpdate.
         MigrateAppDataFolder();
@@ -62,21 +76,30 @@ public partial class App : Application
             return;
         }
 
-        ShellViewModel? shellVm = null;
+        MainViewModel? mainVm = null;
         try
         {
-            shellVm = Services.GetRequiredService<ShellViewModel>();
-            mainWindow.DataContext = shellVm;
+            mainVm = Services.GetRequiredService<MainViewModel>();
+            mainWindow.DataContext = mainVm;
         }
         catch (Exception ex)
         {
             // The window will still appear (empty); the user can at least close it.
-            Debug.WriteLine($"[XenUpdate] ShellViewModel resolution failed: {ex}");
+            Debug.WriteLine($"[XenUpdate] MainViewModel resolution failed: {ex}");
         }
 
         try
         {
-            mainWindow.Show();
+            if (IsBackgroundStartup)
+            {
+                // Keep the window hidden; tray icon is still active.
+                mainWindow.Show();
+                mainWindow.Hide();
+            }
+            else
+            {
+                mainWindow.Show();
+            }
         }
         catch (Exception ex)
         {
@@ -85,11 +108,9 @@ public partial class App : Application
             return;
         }
 
-        if (shellVm is not null)
+        if (mainVm is not null)
         {
-            // Trigger an auto-scan after the window appears if the user enabled it.
-            // We fire-and-forget from the UI thread; ScanAsync is already async-safe.
-            _ = TriggerStartupScanAsync(shellVm);
+            _ = TriggerStartupScanAsync(mainVm);
         }
     }
 
@@ -164,7 +185,7 @@ public partial class App : Application
     /// Waits for the SettingsViewModel to finish loading from disk,
     /// then triggers a winget scan if <see cref="AppSettings.ScanOnStartup"/> is true.
     /// </summary>
-    private static async Task TriggerStartupScanAsync(ShellViewModel shellVm)
+    private static async Task TriggerStartupScanAsync(MainViewModel mainVm)
     {
         try
         {
@@ -177,18 +198,46 @@ public partial class App : Application
                 return;
             }
 
-            var programsVm = Services.GetRequiredService<ProgramsViewModel>();
-            if (programsVm.ScanCommand.CanExecute(null))
+            if (mainVm.CheckForUpdatesCommand.CanExecute(null))
             {
-                // Navigate to Programs so the user sees the scan in progress.
-                shellVm.NavigateTo(AppPage.Programs);
-                programsVm.ScanCommand.Execute(null);
+                mainVm.CheckForUpdatesCommand.Execute(null);
             }
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[XenUpdate] Startup scan trigger failed: {ex}");
         }
+    }
+
+    private static void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+    {
+        e.Handled = true;
+        AppLogger.AddLog($"[CRASH] {e.Exception.GetType().Name}: {e.Exception.Message}");
+        ShowCrashReporter(e.Exception);
+    }
+
+    private static void OnDomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+        if (e.ExceptionObject is Exception ex)
+        {
+            AppLogger.AddLog($"[FATAL] {ex.GetType().Name}: {ex.Message}");
+            ShowCrashReporter(ex);
+        }
+    }
+
+    private static void ShowCrashReporter(Exception ex)
+    {
+        try
+        {
+            var win = new CrashReporterWindow(ex);
+            win.ShowDialog();
+        }
+        catch
+        {
+            // Last-ditch: if even the crash window fails, just exit.
+        }
+
+        Environment.Exit(1);
     }
 
     /// <summary>

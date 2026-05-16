@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.22000</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
@@ -13,12 +13,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Project assets: logo, AppIcon.ico, and any future branding images -->
-    <Resource Include="Assets\**\*" />
+    <!-- Project assets: logo, AppIcon.ico, and any future branding images (excluding locale JSON) -->
+    <Resource Include="Assets\**\*" Exclude="Assets\Locales\**" />
+    <Content Include="Assets\Locales\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+    <PackageReference Include="H.NotifyIcon.Wpf" Version="2.1.2" />
     <PackageReference Include="MaterialDesignThemes" Version="5.1.0" />
     <PackageReference Include="MaterialDesignColors" Version="3.1.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />

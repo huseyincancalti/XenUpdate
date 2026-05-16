@@ -31,10 +31,11 @@ public sealed class WindowsUpdateProvider : IUpdateProvider
         Task.Run<IEnumerable<CategorizedUpdateItem>>(SearchUpdates);
 
     /// <inheritdoc/>
-    public Task InstallUpdateAsync(CategorizedUpdateItem item)
+    public Task<bool> InstallUpdateAsync(CategorizedUpdateItem item, IProgress<double> progress)
     {
         ArgumentNullException.ThrowIfNull(item);
-        return Task.Run(() => PerformInstall(item));
+        ArgumentNullException.ThrowIfNull(progress);
+        return Task.Run(() => PerformInstall(item, progress));
     }
 
     // ── Private blocking helpers (run on thread pool) ─────────────────────────
@@ -102,9 +103,10 @@ public sealed class WindowsUpdateProvider : IUpdateProvider
         return results;
     }
 
-    private static void PerformInstall(CategorizedUpdateItem item)
+    private static bool PerformInstall(CategorizedUpdateItem item, IProgress<double> progress)
     {
         item.Status = UpdateStatus.Downloading;
+        progress.Report(10);
 
         try
         {
@@ -138,7 +140,8 @@ public sealed class WindowsUpdateProvider : IUpdateProvider
             if (target is null)
             {
                 item.Status = UpdateStatus.Failed;
-                return;
+                progress.Report(0);
+                return false;
             }
 
             // ── Build a single-item update collection ─────────────────────────
@@ -159,24 +162,29 @@ public sealed class WindowsUpdateProvider : IUpdateProvider
             if (downloadCode != 2 && downloadCode != 3)
             {
                 item.Status = UpdateStatus.Failed;
-                return;
+                progress.Report(0);
+                return false;
             }
 
             // ── Install ───────────────────────────────────────────────────────
             item.Status = UpdateStatus.Installing;
+            progress.Report(50);
 
             dynamic installer = session.CreateUpdateInstaller();
             installer.Updates = updateColl;
             dynamic installResult = installer.Install();
             int installCode = (int)installResult.ResultCode;
 
-            item.Status = (installCode == 2 || installCode == 3)
-                ? UpdateStatus.Succeeded
-                : UpdateStatus.Failed;
+            var succeeded = installCode == 2 || installCode == 3;
+            item.Status = succeeded ? UpdateStatus.Installed : UpdateStatus.Failed;
+            progress.Report(succeeded ? 100 : 0);
+            return succeeded;
         }
         catch (Exception)
         {
             item.Status = UpdateStatus.Failed;
+            progress.Report(0);
+            return false;
         }
     }
 

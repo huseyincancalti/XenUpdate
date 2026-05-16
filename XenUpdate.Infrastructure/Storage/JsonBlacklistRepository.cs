@@ -154,6 +154,23 @@ public sealed class JsonBlacklistRepository : IBlacklistRepository
         }
     }
 
+    /// <inheritdoc />
+    public async Task ClearAsync()
+    {
+        await _lock.WaitAsync();
+        try
+        {
+            await WriteEntriesUnsafeAsync([]);
+            _logger.Info("Blacklist cleared.");
+        }
+        finally
+        {
+            _lock.Release();
+        }
+
+        BlacklistChanged?.Invoke();
+    }
+
     private async Task<List<BlacklistEntry>> ReadEntriesUnsafeAsync()
     {
         if (!File.Exists(FilePath))

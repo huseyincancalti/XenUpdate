@@ -18,7 +18,7 @@ public interface IUpdateProvider
     /// <summary>
     /// Installs the specified update item.
     /// The implementation is responsible for updating <see cref="CategorizedUpdateItem.Status"/>
-    /// to <c>Installing</c>, <c>Succeeded</c>, or <c>Failed</c> as progress changes.
+    /// to <c>Downloading</c>, <c>Installing</c>, <c>Installed</c>, or <c>Failed</c> as progress changes.
     /// </summary>
-    Task InstallUpdateAsync(CategorizedUpdateItem item);
+    Task<bool> InstallUpdateAsync(CategorizedUpdateItem item, IProgress<double> progress);
 }

@@ -1,6 +1,3 @@
-using Microsoft.Management.Deployment;
-using System.Security.Principal;
-using WindowsPackageManager.Interop;
 using XenUpdate.Core.Enums;
 using XenUpdate.Core.Interfaces;
 using XenUpdate.Core.Models;
@@ -8,163 +5,101 @@ using XenUpdate.Core.Models;
 namespace XenUpdate.Infrastructure.Providers;
 
 /// <summary>
-/// <see cref="IUpdateProvider"/> implementation that discovers and installs
-/// application updates via the Winget COM API
-/// (<c>Microsoft.Management.Deployment</c> / <c>WindowsPackageManager.Interop</c>).
+/// Adapts the command-line Winget scanner and installer to the unified update provider contract.
 /// </summary>
 public sealed class WingetProvider : IUpdateProvider
 {
-    // ── Factory helper ────────────────────────────────────────────────────────
+    private readonly IWingetScanner _scanner;
+    private readonly IWingetInstaller _installer;
 
-    /// <summary>
-    /// Creates the correct factory depending on whether the process is elevated.
-    /// Using the wrong factory causes a hard crash (no exception) in WinGet COM.
-    /// </summary>
-    private static WindowsPackageManagerFactory CreateFactory()
+    /// <summary>Initializes a new Winget provider.</summary>
+    public WingetProvider(IWingetScanner scanner, IWingetInstaller installer)
     {
-        bool isAdmin = new WindowsPrincipal(WindowsIdentity.GetCurrent())
-            .IsInRole(WindowsBuiltInRole.Administrator);
-
-        return isAdmin
-            ? new WindowsPackageManagerElevatedFactory()
-            : new WindowsPackageManagerStandardFactory();
+        _scanner = scanner;
+        _installer = installer;
     }
 
-    // ── IUpdateProvider ───────────────────────────────────────────────────────
-
-    /// <inheritdoc/>
+    /// <inheritdoc />
     public async Task<IEnumerable<CategorizedUpdateItem>> GetUpdatesAsync()
     {
-        var results = new List<CategorizedUpdateItem>();
-
         try
         {
-            var factory = CreateFactory();
-            var manager = factory.CreatePackageManager();
-
-            // Build a composite catalog that searches installed packages against
-            // every available remote source so WinGet can compare versions.
-            var compositeOptions = factory.CreateCreateCompositePackageCatalogOptions();
-            compositeOptions.CompositeSearchBehavior = CompositeSearchBehavior.LocalCatalogs;
-
-            foreach (var remoteCatalog in manager.GetPackageCatalogs().ToArray())
-                compositeOptions.Catalogs.Add(remoteCatalog);
-
-            var catalogRef  = manager.CreateCompositePackageCatalog(compositeOptions);
-            var connectResult = catalogRef.Connect();
-
-            if (connectResult.Status != ConnectResultStatus.Ok)
-                return results;   // Degrade gracefully — log upstream if needed.
-
-            // Search for all installed packages (empty Id filter = match all).
-            var findOptions   = factory.CreateFindPackagesOptions();
-            var idFilter      = factory.CreatePackageMatchFilter();
-            idFilter.Field    = PackageMatchField.Id;
-            idFilter.Option   = PackageFieldMatchOption.ContainsCaseInsensitive;
-            idFilter.Value    = string.Empty;
-            findOptions.Filters.Add(idFilter);
-
-            var findResult = await connectResult.PackageCatalog.FindPackagesAsync(findOptions);
-
-            foreach (var match in findResult.Matches.ToArray())
+            var updates = await _scanner.GetAvailableUpdatesAsync(CancellationToken.None);
+            return updates.Select(item => new CategorizedUpdateItem
             {
-                var pkg = match.CatalogPackage;
-
-                // Only surface packages that have an upgrade available.
-                var installedVersion  = pkg.InstalledVersion;
-                var availableVersion  = pkg.DefaultInstallVersion;
-
-                if (installedVersion is null || availableVersion is null)
-                    continue;
-
-                // Compare version strings; skip if already up-to-date.
-                if (string.Equals(
-                        installedVersion.Version,
-                        availableVersion.Version,
-                        StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                results.Add(new CategorizedUpdateItem
-                {
-                    Id               = pkg.Id              ?? string.Empty,
-                    Name             = pkg.Name            ?? pkg.Id ?? string.Empty,
-                    CurrentVersion   = installedVersion.Version  ?? string.Empty,
-                    NewVersion       = availableVersion.Version  ?? string.Empty,
-                    // WinGet COM API does not expose download size on CatalogPackage;
-                    // leave null so DisplaySize renders "Unknown".
-                    DownloadSizeBytes = null,
-                    Status           = UpdateStatus.Pending,
-                    Category         = UpdateCategory.Apps
-                });
-            }
+                Id = string.IsNullOrWhiteSpace(item.WingetPackageId) ? item.Id : item.WingetPackageId,
+                Name = item.DisplayName,
+                CurrentVersion = item.CurrentVersion,
+                NewVersion = item.AvailableVersion,
+                DownloadSizeBytes = null,
+                Status = item.Status,
+                Category = UpdateCategory.Apps
+            }).ToList();
         }
-        catch (Exception)
+        catch
         {
-            // WinGet COM failures are non-fatal: return whatever was collected.
-            // The caller (HardwareHubViewModel / ProgramsViewModel) is
-            // responsible for surfacing the error via the log console.
+            return [];
         }
-
-        return results;
     }
 
-    /// <inheritdoc/>
-    public async Task InstallUpdateAsync(CategorizedUpdateItem item)
+    /// <inheritdoc />
+    public async Task<bool> InstallUpdateAsync(CategorizedUpdateItem item, IProgress<double> progress)
     {
         ArgumentNullException.ThrowIfNull(item);
+        ArgumentNullException.ThrowIfNull(progress);
 
-        item.Status = UpdateStatus.Installing;
+        var appUpdate = new AppUpdateItem
+        {
+            Id = item.Id,
+            DisplayName = item.Name,
+            CurrentVersion = item.CurrentVersion,
+            AvailableVersion = item.NewVersion,
+            WingetPackageId = item.Id,
+            Status = item.Status,
+            IsSelected = item.IsSelected
+        };
+
+        item.Status = UpdateStatus.Downloading;
+        progress.Report(10);
 
         try
         {
-            var factory = CreateFactory();
-            var manager = factory.CreatePackageManager();
-
-            // Locate the specific package by exact Id match.
-            var compositeOptions = factory.CreateCreateCompositePackageCatalogOptions();
-            compositeOptions.CompositeSearchBehavior = CompositeSearchBehavior.LocalCatalogs;
-
-            foreach (var remoteCatalog in manager.GetPackageCatalogs().ToArray())
-                compositeOptions.Catalogs.Add(remoteCatalog);
-
-            var catalogRef    = manager.CreateCompositePackageCatalog(compositeOptions);
-            var connectResult = catalogRef.Connect();
-
-            if (connectResult.Status != ConnectResultStatus.Ok)
+            var lastProgress = 10d;
+            var progressBridge = new Progress<int>(value =>
             {
-                item.Status = UpdateStatus.Failed;
-                return;
-            }
+                var normalizedValue = Math.Clamp(value, 0, 100);
+                var mappedValue = normalizedValue < 100
+                    ? 15 + normalizedValue * 0.65
+                    : 90;
 
-            var findOptions  = factory.CreateFindPackagesOptions();
-            var idFilter     = factory.CreatePackageMatchFilter();
-            idFilter.Field   = PackageMatchField.Id;
-            idFilter.Option  = PackageFieldMatchOption.Equals;
-            idFilter.Value   = item.Id;
-            findOptions.Filters.Add(idFilter);
+                if (mappedValue > lastProgress)
+                {
+                    lastProgress = mappedValue;
+                    progress.Report(mappedValue);
+                }
 
-            var findResult = await connectResult.PackageCatalog.FindPackagesAsync(findOptions);
-            var match      = findResult.Matches.ToArray().FirstOrDefault();
+                item.Status = normalizedValue < 100
+                    ? UpdateStatus.Downloading
+                    : UpdateStatus.Installing;
+            });
 
-            if (match is null)
-            {
-                item.Status = UpdateStatus.Failed;
-                return;
-            }
+            item.Status = UpdateStatus.Installing;
+            progress.Report(Math.Max(lastProgress, 35));
 
-            var upgradeOptions = factory.CreateInstallOptions();
-            upgradeOptions.PackageInstallMode = PackageInstallMode.Silent;
+            var succeeded = await _installer.InstallUpdateAsync(
+                appUpdate,
+                progressBridge,
+                CancellationToken.None);
 
-            var upgradeResult = await manager.UpgradePackageAsync(
-                match.CatalogPackage, upgradeOptions);
-
-            item.Status = upgradeResult.Status == InstallResultStatus.Ok
-                ? UpdateStatus.Succeeded
-                : UpdateStatus.Failed;
+            item.Status = succeeded ? UpdateStatus.Installed : UpdateStatus.Failed;
+            progress.Report(succeeded ? 100 : 0);
+            return succeeded;
         }
-        catch (Exception)
+        catch
         {
             item.Status = UpdateStatus.Failed;
+            progress.Report(0);
+            return false;
         }
     }
 }

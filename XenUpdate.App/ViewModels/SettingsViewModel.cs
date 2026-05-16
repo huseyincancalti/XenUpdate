@@ -266,11 +266,54 @@ public sealed partial class SettingsViewModel : ObservableObject
                 _ = SaveAsync();
                 break;
 
+            case nameof(AppSettings.RunOnStartup):
+                ApplyRunOnStartup(Settings.RunOnStartup);
+                _ = SaveAsync();
+                break;
+
             case nameof(AppSettings.Theme):
-                // Raise IsLightTheme so the toggle button icon updates immediately.
                 OnPropertyChanged(nameof(IsLightTheme));
                 ApplyThemeAndSave(Settings.Theme);
                 break;
+        }
+    }
+
+    /// <summary>
+    /// Writes or removes the XenUpdate entry in the Windows Run registry key
+    /// so the app auto-launches (hidden) at system startup.
+    /// </summary>
+    private void ApplyRunOnStartup(bool enable)
+    {
+        const string keyName = "XenUpdate";
+        const string runKeyPath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
+
+        try
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(runKeyPath, writable: true);
+            if (key is null)
+            {
+                _logger.Warning("Could not open Windows Run registry key.");
+                return;
+            }
+
+            if (enable)
+            {
+                var exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName;
+                if (!string.IsNullOrWhiteSpace(exePath))
+                {
+                    key.SetValue(keyName, $"\"{exePath}\" -background");
+                    _logger.Info("RunOnStartup enabled.");
+                }
+            }
+            else
+            {
+                key.DeleteValue(keyName, throwOnMissingValue: false);
+                _logger.Info("RunOnStartup disabled.");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Error("Failed to update RunOnStartup registry key.", ex);
         }
     }
 

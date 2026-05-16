@@ -1,21 +1,7 @@
 using System.Management;
+using XenUpdate.Core.Models;
 
 namespace XenUpdate.Infrastructure.Hardware;
-
-/// <summary>
-/// Snapshot of the local machine's relevant hardware, resolved once at startup.
-/// </summary>
-public sealed record HardwareProfile
-{
-    /// <summary>Full GPU name as reported by Win32_VideoController (e.g. "NVIDIA GeForce RTX 4070").</summary>
-    public string GpuName { get; init; } = string.Empty;
-
-    /// <summary>Parsed GPU vendor: "NVIDIA", "AMD", "Intel", or "Unknown".</summary>
-    public string GpuVendor { get; init; } = string.Empty;
-
-    /// <summary>Full CPU name as reported by Win32_Processor (e.g. "Intel(R) Core(TM) i7-13700K").</summary>
-    public string CpuName { get; init; } = string.Empty;
-}
 
 /// <summary>
 /// Uses WMI to interrogate the local hardware and build a <see cref="HardwareProfile"/>.
@@ -42,8 +28,6 @@ public static class HardwareDetector
         };
     }
 
-    // ── helpers ──────────────────────────────────────────────────────────────
-
     private static string QueryFirstString(string wqlQuery, string propertyName)
     {
         try
@@ -56,7 +40,6 @@ public static class HardwareDetector
         }
         catch (ManagementException)
         {
-            // WMI not available or access denied — degrade gracefully.
         }
 
         return string.Empty;

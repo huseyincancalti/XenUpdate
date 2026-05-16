@@ -37,4 +37,9 @@ public interface IBlacklistRepository
     /// </summary>
     /// <param name="packageId">The winget package ID to remove from the blacklist.</param>
     Task RemoveAsync(string packageId);
+
+    /// <summary>
+    /// Removes all entries from the blacklist and saves the empty file.
+    /// </summary>
+    Task ClearAsync();
 }

@@ -43,6 +43,8 @@
     <SolidColorBrush x:Key="ZenDataGridSurfaceBrush"               Color="#F4F6FF" />
     <!-- DataGrid row hover: subtle indigo wash so hovered rows are clearly visible -->
     <SolidColorBrush x:Key="ZenDataGridRowHoverBrush"              Color="#E8ECFF" />
+    <!-- DataGrid row selected: soft indigo accent -->
+    <SolidColorBrush x:Key="ZenDataGridRowSelectedBrush"           Color="#C7D2FE" />
     <!-- DataGrid column header: slightly darker strip for visual separation -->
     <SolidColorBrush x:Key="ZenDataGridHeaderBrush"                Color="#EDF0FF" />
     <SolidColorBrush x:Key="ZenDataGridHeaderForegroundBrush"      Color="#475569" />

@@ -1,9 +1,12 @@
 using Microsoft.Extensions.DependencyInjection;
 using XenUpdate.App.Services;
 using XenUpdate.Core.Interfaces;
+using XenUpdate.Infrastructure.Hardware;
 using XenUpdate.Infrastructure.Logging;
 using XenUpdate.Infrastructure.Providers;
 using XenUpdate.Infrastructure.Storage;
+using XenUpdate.Infrastructure.Services;
+using XenUpdate.Infrastructure.System;
 using XenUpdate.Infrastructure.Winget;
 using XenUpdate.Infrastructure.WindowsUpdate;
 using XenUpdate.App.ViewModels;
@@ -26,9 +29,12 @@ public static class ServiceCollectionExtensions
         // --- Singletons ---
         // These are created once and shared for the entire lifetime of the application.
         services.AddSingleton<ILoggerService, FileLoggerService>();
-        services.AddSingleton<IBlacklistRepository, JsonBlacklistRepository>();
-        services.AddSingleton<ISettingsRepository, JsonSettingsRepository>();
+        services.AddSingleton<IBlacklistRepository, BlacklistRepository>();
+        services.AddSingleton<ISettingsRepository, SettingsRepository>();
         services.AddSingleton<IThemeService, ThemeService>();
+        services.AddSingleton<IHardwareScannerService, HardwareScannerService>();
+        services.AddSingleton<ISystemRestoreService, WindowsSystemRestoreService>();
+        services.AddSingleton<IAppUpdateService, GitHubAppUpdateService>();
 
         // --- Transient (Infrastructure) ---
         // These are stateless helpers — a new instance is fine for each use.
@@ -46,6 +52,7 @@ public static class ServiceCollectionExtensions
         // --- ViewModels (Singleton) ---
         // Singleton preserves state (loaded data, scroll position, etc.)
         // when the user navigates away from a page and comes back.
+        services.AddSingleton<MainViewModel>();
         services.AddSingleton<ShellViewModel>();
         services.AddSingleton<ProgramsViewModel>();
         services.AddSingleton<WindowsUpdatesViewModel>();

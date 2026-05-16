@@ -1,47 +1,55 @@
 <Window x:Class="XenUpdate.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:tb="http://www.hardcodet.net/taskbar"
+        xmlns:loc="clr-namespace:XenUpdate.App.Services"
         xmlns:vm="clr-namespace:XenUpdate.App.ViewModels"
-        xmlns:views="clr-namespace:XenUpdate.App.Views"
         Title="XenUpdate"
         Icon="pack://application:,,,/Assets/AppIcon.ico"
-        Height="720" Width="1100"
-        MinHeight="600" MinWidth="800"
+        Height="720"
+        Width="1100"
+        MinHeight="600"
+        MinWidth="900"
         WindowStyle="None"
         Background="{DynamicResource ZenAmbientBackgroundBrush}"
         TextElement.Foreground="{DynamicResource MaterialDesignBody}"
-        TextElement.FontFamily="{DynamicResource MaterialDesignFont}">
+        TextElement.FontFamily="{DynamicResource MaterialDesignFont}"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance vm:MainViewModel, IsDesignTimeCreatable=False}">
 
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="42" 
-                      CornerRadius="0" 
-                      GlassFrameThickness="0" 
-                      ResizeBorderThickness="6" 
+        <WindowChrome CaptionHeight="32"
+                      CornerRadius="0"
+                      GlassFrameThickness="0"
+                      ResizeBorderThickness="6"
                       UseAeroCaptionButtons="False" />
     </WindowChrome.WindowChrome>
 
-    <Window.Style>
-        <Style TargetType="Window">
-            <Style.Triggers>
-                <!-- Add slight padding when maximized so the custom chrome isn't clipped -->
-                <Trigger Property="WindowState" Value="Maximized">
-                    <Setter Property="Padding" Value="8" />
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-    </Window.Style>
-
-    <!--
-        DataContext is set in App.xaml.cs to ShellViewModel.
-        No code-behind logic here except small log drawer helpers.
-    -->
-
-    <!-- DataTemplates: map page ViewModels to their Views -->
     <Window.Resources>
-        <!--
-            Custom Window Control Buttons (Minimize, Maximize, Close)
-        -->
+        <Style TargetType="ToolTip">
+            <Setter Property="Background" Value="#1E1E2E" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToolTip">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <Border.Effect>
+                                <DropShadowEffect ShadowDepth="2" BlurRadius="8" Opacity="0.5" Color="#000000" />
+                            </Border.Effect>
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="WindowControlButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
@@ -65,7 +73,9 @@
             </Setter>
         </Style>
 
-        <Style x:Key="WindowCloseButtonStyle" TargetType="Button" BasedOn="{StaticResource WindowControlButtonStyle}">
+        <Style x:Key="WindowCloseButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource WindowControlButtonStyle}">
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -83,66 +93,33 @@
             </Setter>
         </Style>
 
-        <!--
-            Shell-local styles only. All colours come from the active Zen theme
-            (DynamicResource ZenSidebarBrush, ZenSidebarHoverBrush, ...) so the
-            sidebar and log drawer repaint as soon as the theme is switched.
-        -->
-
-        <Style x:Key="SidebarNavButtonStyle"
-               TargetType="Button"
-               BasedOn="{StaticResource MaterialDesignFlatButton}">
-            <Setter Property="Height" Value="46" />
-            <Setter Property="Margin" Value="14,4" />
-            <Setter Property="Padding" Value="16,10" />
+        <Style x:Key="SidebarItemStyle" TargetType="ListBoxItem">
+            <Setter Property="Height" Value="48" />
+            <Setter Property="Margin" Value="12,4" />
+            <Setter Property="Padding" Value="14,0" />
+            <Setter Property="Foreground" Value="{DynamicResource ZenTextBrush}" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="8" />
-            <Setter Property="Foreground" Value="{DynamicResource ZenTextBrush}" />
-            <Setter Property="TextElement.Foreground" Value="{DynamicResource ZenTextBrush}" />
-            <Setter Property="TextElement.FontSize" Value="13" />
-            <Setter Property="TextElement.FontWeight" Value="SemiBold" />
-            <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource ZenSidebarHoverBrush}" />
-                </Trigger>
-                <Trigger Property="IsPressed" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource ZenNavItemSelectedBackgroundBrush}" />
-                    <Setter Property="Foreground" Value="White" />
-                    <Setter Property="TextElement.Foreground" Value="White" />
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <!--
-            Flat toggle button used as the log drawer header.
-            Keeps the full bar clickable while respecting the app's dark theme.
-        -->
-        <Style x:Key="LogDrawerHeaderToggleStyle" TargetType="ToggleButton">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Foreground" Value="{DynamicResource ZenTextBrush}" />
-            <Setter Property="HorizontalContentAlignment" Value="Left" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Padding" Value="14,0" />
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="ToggleButton">
-                        <Border x:Name="HeaderBorder"
-                                Background="{TemplateBinding Background}"
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Root"
+                                Background="Transparent"
+                                CornerRadius="8"
                                 Padding="{TemplateBinding Padding}">
-                            <ContentPresenter VerticalAlignment="Center"
-                                              HorizontalAlignment="Stretch" />
+                            <ContentPresenter VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="HeaderBorder"
+                                <Setter TargetName="Root"
                                         Property="Background"
-                                        Value="{DynamicResource ZenLogDrawerHeaderHoverBrush}" />
+                                        Value="{DynamicResource ZenSidebarHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Root"
+                                        Property="Background"
+                                        Value="{DynamicResource ZenNavItemSelectedBackgroundBrush}" />
+                                <Setter Property="Foreground" Value="White" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -150,35 +127,233 @@
             </Setter>
         </Style>
 
-        <DataTemplate DataType="{x:Type vm:ProgramsViewModel}">
-            <views:ProgramsView />
+        <Style x:Key="HiddenTabItemStyle" TargetType="TabItem">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem" />
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ModernToggleButtonStyle" TargetType="ToggleButton">
+            <Setter Property="Background" Value="{DynamicResource ZenPrimaryBrush}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Opacity" Value="0.9" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource ZenSidebarSelectedBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Root" Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ModernIconToggleButtonStyle"
+               TargetType="ToggleButton"
+               BasedOn="{StaticResource ModernToggleButtonStyle}">
+            <Setter Property="Width" Value="44" />
+            <Setter Property="Height" Value="44" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="{DynamicResource ZenGlassPanelBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource ZenTextBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ZenGlassBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style x:Key="ModernButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource ZenPrimaryBrush}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Opacity" Value="0.9" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Root" Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="UpdateGridStyle"
+               TargetType="DataGrid"
+               BasedOn="{StaticResource MaterialDesignDataGrid}">
+            <Setter Property="AutoGenerateColumns" Value="False" />
+            <Setter Property="CanUserAddRows" Value="False" />
+            <Setter Property="CanUserDeleteRows" Value="False" />
+            <Setter Property="IsReadOnly" Value="False" />
+            <Setter Property="SelectionMode" Value="Extended" />
+            <Setter Property="SelectionUnit" Value="FullRow" />
+            <Setter Property="EnableRowVirtualization" Value="True" />
+            <Setter Property="EnableColumnVirtualization" Value="True" />
+            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
+            <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
+            <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel" />
+            <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource ZenTextBrush}" />
+            <Setter Property="FontFamily" Value="Segoe UI Variable, Segoe UI, Roboto, sans-serif" />
+            <Setter Property="RowHeight" Value="42" />
+            <Setter Property="ColumnHeaderStyle" Value="{StaticResource ZenDataGridColumnHeaderStyle}" />
+            <Setter Property="RowStyle" Value="{StaticResource ZenDataGridRowStyle}" />
+            <Setter Property="CellStyle" Value="{StaticResource ZenDataGridCellStyle}" />
+            <Setter Property="materialDesign:DataGridAssist.CellPadding" Value="10 0" />
+            <Setter Property="materialDesign:DataGridAssist.ColumnHeaderPadding" Value="10 8" />
+        </Style>
+
+        <Style x:Key="GlassHardwarePanelStyle" TargetType="Border">
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="Padding" Value="22" />
+            <Setter Property="BorderBrush" Value="#33FFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Background" Value="#1AFFFFFF" />
+            <Setter Property="TextElement.Foreground" Value="{DynamicResource MaterialDesignBody}" />
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="15"
+                                      ShadowDepth="0"
+                                      Opacity="0.40"
+                                      Direction="270"
+                                      Color="#000000" />
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ClickableDataGridRowStyle"
+               TargetType="DataGridRow"
+               BasedOn="{StaticResource ZenDataGridRowStyle}">
+            <EventSetter Event="PreviewMouseLeftButtonDown" Handler="DataGridRow_PreviewMouseLeftButtonDown" />
+        </Style>
+
+        <DataTemplate x:Key="SelectUpdateCellTemplate">
+            <Border Background="Transparent"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    MinHeight="36">
+                <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center" />
+            </Border>
         </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:WindowsUpdatesViewModel}">
-            <views:WindowsUpdatesView />
+
+        <DataTemplate x:Key="UpdateRowDetailsTemplate">
+            <Border Background="#1A000000"
+                    BorderBrush="{DynamicResource MaterialDesignDivider}"
+                    BorderThickness="0,1,0,1"
+                    Padding="16,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,24,0">
+                            <TextBlock Text="Package ID: "
+                                       Foreground="{DynamicResource MaterialDesignBodyLight}"
+                                       FontSize="12"
+                                       Opacity="0.7"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding PackageId, FallbackValue=—}"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Publisher: "
+                                       Foreground="{DynamicResource MaterialDesignBodyLight}"
+                                       FontSize="12"
+                                       Opacity="0.7"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding Publisher, FallbackValue=—}"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </WrapPanel>
+                    <Button Grid.Column="1"
+                            Command="{Binding OpenReleaseNotesCommand}"
+                            Style="{StaticResource MaterialDesignFlatButton}"
+                            Foreground="DeepSkyBlue"
+                            Padding="8,4"
+                            Height="32"
+                            ToolTip="Search for release notes in your browser">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="OpenInNew" Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Search Release Notes" FontSize="12" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Border>
         </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:DriversViewModel}">
-            <views:DriversView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
-            <views:SettingsView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:HardwareHubViewModel}">
-            <views:HardwareHubView />
-        </DataTemplate>
+
     </Window.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
-            <!-- Title bar -->
             <RowDefinition Height="42" />
-            <!-- Main content area -->
             <RowDefinition Height="*" />
-            <!-- Log drawer: Auto so the row only takes as much space as the drawer needs. -->
-            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- ===== Custom Title Bar ===== -->
-        <Grid Grid.Row="0" Background="{DynamicResource ZenDeepBackgroundBrush}"
+        <tb:TaskbarIcon x:Name="AppTrayIcon"
+                        Grid.RowSpan="2"
+                        IconSource="pack://application:,,,/Assets/AppIcon.ico"
+                        ToolTipText="XenUpdate - Background Updater"
+                        DoubleClickCommand="{Binding ShowWindowCommand}">
+            <tb:TaskbarIcon.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Open XenUpdate"
+                              Command="{Binding ShowWindowCommand}" />
+                    <Separator />
+                    <MenuItem Header="Exit"
+                              Command="{Binding ExitApplicationCommand}"
+                              Foreground="Red" />
+                </ContextMenu>
+            </tb:TaskbarIcon.ContextMenu>
+        </tb:TaskbarIcon>
+
+        <Grid Grid.Row="0"
+              Background="{DynamicResource ZenDeepBackgroundBrush}"
               TextElement.Foreground="{DynamicResource ZenTextBrush}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
@@ -186,35 +361,82 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <!-- Left: Icon & Title (IsHitTestVisible=False so WindowChrome drag works) -->
-            <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="14,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False">
-                <Image Source="pack://application:,,,/Assets/logo.png" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality" />
-                <TextBlock Text="XenUpdate" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource ZenTextBrush}" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="0"
+                        Orientation="Horizontal"
+                        Margin="14,0,0,0"
+                        VerticalAlignment="Center"
+                        IsHitTestVisible="False">
+                <Image Source="pack://application:,,,/Assets/logo.png"
+                       Width="20"
+                       Height="20"
+                       Margin="0,0,8,0"
+                       RenderOptions.BitmapScalingMode="HighQuality" />
+                <TextBlock Text="XenUpdate"
+                           FontWeight="SemiBold"
+                           FontSize="13"
+                           VerticalAlignment="Center" />
             </StackPanel>
 
-            <!--
-                Centre drag area: spans the middle column.
-                MouseLeftButtonDown on double-click triggers maximize/restore.
-                WindowChrome handles single-click-and-drag automatically.
-            -->
             <Border Grid.Column="1"
                     Background="Transparent"
                     MouseLeftButtonDown="TitleBar_MouseLeftButtonDown" />
 
-            <!-- Right: Window Controls -->
-            <StackPanel Grid.Column="2" Orientation="Horizontal" WindowChrome.IsHitTestVisibleInChrome="True">
-                <Button Style="{StaticResource WindowControlButtonStyle}" Click="MinimizeButton_Click" ToolTip="Minimize">
+            <StackPanel Grid.Column="2"
+                        Orientation="Horizontal"
+                        WindowChrome.IsHitTestVisibleInChrome="True">
+                <Button Command="{Binding DownloadAppUpdateCommand}"
+                        Visibility="{Binding HasAppUpdate, Converter={StaticResource BooleanToVisibilityConverter}}"
+                        Height="24"
+                        Margin="0,0,10,0"
+                        Padding="10,0"
+                        FontSize="11"
+                        FontWeight="SemiBold"
+                        Foreground="White"
+                        Background="#E53935"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        VerticalAlignment="Center"
+                        ToolTip="A new version of XenUpdate is available — click to download">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd"
+                                    Background="{TemplateBinding Background}"
+                                    CornerRadius="4"
+                                    Padding="{TemplateBinding Padding}">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="#E53935" BlurRadius="8" ShadowDepth="0" Opacity="0.7" />
+                                </Border.Effect>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <materialDesign:PackIcon Kind="ArrowUpCircle" Width="13" Height="13" Margin="0,0,5,0" VerticalAlignment="Center" />
+                                    <ContentPresenter VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="#C62828" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                    New Version Available!
+                </Button>
+
+                <Button Style="{StaticResource WindowControlButtonStyle}"
+                        Click="MinimizeButton_Click"
+                        ToolTip="Minimize">
                     <materialDesign:PackIcon Kind="WindowMinimize" Width="14" Height="14" />
                 </Button>
 
-                <!-- Maximize/Restore button: icon swaps with window state -->
-                <Button Style="{StaticResource WindowControlButtonStyle}" Click="MaximizeButton_Click" ToolTip="Maximize / Restore">
+                <Button Style="{StaticResource WindowControlButtonStyle}"
+                        Click="MaximizeButton_Click"
+                        ToolTip="Maximize / Restore">
                     <materialDesign:PackIcon Width="14" Height="14">
                         <materialDesign:PackIcon.Style>
                             <Style TargetType="materialDesign:PackIcon">
                                 <Setter Property="Kind" Value="WindowMaximize" />
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType=Window}}" Value="Maximized">
+                                    <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                 Value="Maximized">
                                         <Setter Property="Kind" Value="WindowRestore" />
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -223,29 +445,39 @@
                     </materialDesign:PackIcon>
                 </Button>
 
-                <Button Style="{StaticResource WindowCloseButtonStyle}" Click="CloseButton_Click" ToolTip="Close">
+                <Button Style="{StaticResource WindowCloseButtonStyle}"
+                        Click="CloseButton_Click"
+                        ToolTip="Close">
                     <materialDesign:PackIcon Kind="WindowClose" Width="14" Height="14" />
                 </Button>
             </StackPanel>
         </Grid>
 
-        <!-- ===== Main Area: Sidebar + Content ===== -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="224" />
+                <ColumnDefinition Width="236" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <!-- ===== Left Sidebar Navigation ===== -->
             <Border Grid.Column="0"
                     Background="{DynamicResource ZenSidebarPanelBrush}"
-                    BorderThickness="0,0,1,0"
-                    BorderBrush="{DynamicResource ZenDividerBrush}">
-                <StackPanel>
+                    BorderBrush="{DynamicResource ZenDividerBrush}"
+                    BorderThickness="0,0,1,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
-                    <!-- App logo / title -->
-                    <StackPanel Orientation="Horizontal" Margin="20,22,20,18" VerticalAlignment="Center">
-                        <Image Source="pack://application:,,,/Assets/logo.png" Width="32" Height="32" VerticalAlignment="Center" Margin="0,0,10,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <StackPanel Grid.Row="0"
+                                Orientation="Horizontal"
+                                Margin="20,22,20,18">
+                        <Image Source="pack://application:,,,/Assets/logo.png"
+                               Width="40"
+                               Height="40"
+                               Margin="0,0,10,0"
+                               RenderOptions.BitmapScalingMode="HighQuality" />
                         <TextBlock Text="XenUpdate"
                                    FontSize="20"
                                    FontWeight="Bold"
@@ -253,326 +485,609 @@
                                    VerticalAlignment="Center" />
                     </StackPanel>
 
-                    <Separator Margin="14,0,14,10" Background="{DynamicResource ZenDividerBrush}" />
-
-                    <!-- Navigation buttons -->
-                    <!-- Navigation: Buttons support Command binding; ListBoxItem does not -->
-                    <StackPanel>
-
-                        <Button x:Name="NavPrograms"
-                                Command="{Binding NavigateToCommand}"
-                                CommandParameter="{x:Static vm:AppPage.Programs}">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButtonStyle}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SelectedPage}" Value="{x:Static vm:AppPage.Programs}">
-                                            <Setter Property="Background" Value="{DynamicResource ZenNavItemSelectedBackgroundBrush}" />
-                                            <Setter Property="Foreground" Value="White" />
-                                            <Setter Property="TextElement.Foreground" Value="White" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="20" />
-                                    <ColumnDefinition Width="12" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <materialDesign:PackIcon Kind="PackageVariant"
-                                                         Width="20"
-                                                         Height="20"
-                                                         VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="2"
-                                           Text="Programs"
-                                           VerticalAlignment="Center"
-                                           TextWrapping="NoWrap"
-                                           TextTrimming="CharacterEllipsis" />
-                            </Grid>
-                        </Button>
-
-                        <Button x:Name="NavWindowsUpdates"
-                                Command="{Binding NavigateToCommand}"
-                                CommandParameter="{x:Static vm:AppPage.WindowsUpdates}">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButtonStyle}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SelectedPage}" Value="{x:Static vm:AppPage.WindowsUpdates}">
-                                            <Setter Property="Background" Value="{DynamicResource ZenNavItemSelectedBackgroundBrush}" />
-                                            <Setter Property="Foreground" Value="White" />
-                                            <Setter Property="TextElement.Foreground" Value="White" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="20" />
-                                    <ColumnDefinition Width="12" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <materialDesign:PackIcon Kind="MicrosoftWindows"
-                                                         Width="20"
-                                                         Height="20"
-                                                         VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="2"
-                                           Text="Windows Updates"
-                                           VerticalAlignment="Center"
-                                           TextWrapping="NoWrap"
-                                           TextTrimming="CharacterEllipsis" />
-                            </Grid>
-                        </Button>
-
-                        <Button x:Name="NavDrivers"
-                                Command="{Binding NavigateToCommand}"
-                                CommandParameter="{x:Static vm:AppPage.Drivers}">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButtonStyle}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SelectedPage}" Value="{x:Static vm:AppPage.Drivers}">
-                                            <Setter Property="Background" Value="{DynamicResource ZenNavItemSelectedBackgroundBrush}" />
-                                            <Setter Property="Foreground" Value="White" />
-                                            <Setter Property="TextElement.Foreground" Value="White" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="20" />
-                                    <ColumnDefinition Width="12" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <materialDesign:PackIcon Kind="Cpu64Bit"
-                                                         Width="20"
-                                                         Height="20"
-                                                         VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="2"
-                                           Text="Drivers"
-                                           VerticalAlignment="Center"
-                                           TextWrapping="NoWrap"
-                                           TextTrimming="CharacterEllipsis" />
-                            </Grid>
-                        </Button>
-
-                        <Button x:Name="NavSettings"
-                                Command="{Binding NavigateToCommand}"
-                                CommandParameter="{x:Static vm:AppPage.Settings}">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButtonStyle}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SelectedPage}" Value="{x:Static vm:AppPage.Settings}">
-                                            <Setter Property="Background" Value="{DynamicResource ZenNavItemSelectedBackgroundBrush}" />
-                                            <Setter Property="Foreground" Value="White" />
-                                            <Setter Property="TextElement.Foreground" Value="White" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="20" />
-                                    <ColumnDefinition Width="12" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <materialDesign:PackIcon Kind="Cog"
-                                                         Width="20"
-                                                         Height="20"
-                                                         VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="2"
-                                           Text="Settings"
-                                           VerticalAlignment="Center"
-                                           TextWrapping="NoWrap"
-                                           TextTrimming="CharacterEllipsis" />
-                            </Grid>
-                        </Button>
-
-                        <Button x:Name="NavHardwareHub"
-                                Command="{Binding NavigateToCommand}"
-                                CommandParameter="{x:Static vm:AppPage.HardwareHub}">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButtonStyle}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SelectedPage}" Value="{x:Static vm:AppPage.HardwareHub}">
-                                            <Setter Property="Background" Value="{DynamicResource ZenNavItemSelectedBackgroundBrush}" />
-                                            <Setter Property="Foreground" Value="White" />
-                                            <Setter Property="TextElement.Foreground" Value="White" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="20" />
-                                    <ColumnDefinition Width="12" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
+                    <ListBox x:Name="NavigationList"
+                             Grid.Row="1"
+                             SelectedIndex="0"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             ItemContainerStyle="{StaticResource SidebarItemStyle}">
+                        <ListBoxItem>
+                            <StackPanel Orientation="Horizontal">
                                 <materialDesign:PackIcon Kind="Chip"
                                                          Width="20"
                                                          Height="20"
+                                                         Margin="0,0,12,0"
                                                          VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="2"
-                                           Text="Hardware Hub"
-                                           VerticalAlignment="Center"
-                                           TextWrapping="NoWrap"
-                                           TextTrimming="CharacterEllipsis" />
-                            </Grid>
-                        </Button>
+                                <TextBlock Text="{Binding [HardwareHub], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
+                            </StackPanel>
+                        </ListBoxItem>
+                        <ListBoxItem>
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="PackageVariant"
+                                                         Width="20"
+                                                         Height="20"
+                                                         Margin="0,0,12,0"
+                                                         VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding [Apps], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
+                            </StackPanel>
+                        </ListBoxItem>
+                        <ListBoxItem>
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="MicrosoftWindows"
+                                                         Width="20"
+                                                         Height="20"
+                                                         Margin="0,0,12,0"
+                                                         VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding [System], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
+                            </StackPanel>
+                        </ListBoxItem>
+                        <ListBoxItem>
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Cpu64Bit"
+                                                         Width="20"
+                                                         Height="20"
+                                                         Margin="0,0,12,0"
+                                                         VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding [Drivers], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
+                            </StackPanel>
+                        </ListBoxItem>
+                    </ListBox>
 
+                    <StackPanel Grid.Row="2" Margin="14,0,14,18">
+                        <ProgressBar IsIndeterminate="True"
+                                     Height="4"
+                                     Margin="4,0,4,12"
+                                     Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                        <Border Background="{DynamicResource ZenGlassPanelBrush}"
+                                BorderBrush="{DynamicResource ZenGlassBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="8">
+                            <Button Command="{Binding CheckForUpdatesCommand}"
+                                    Style="{StaticResource MaterialDesignRaisedButton}"
+                                    Height="44"
+                                    Padding="12,0">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <materialDesign:PackIcon Kind="Refresh"
+                                                             Width="18"
+                                                             Height="18"
+                                                             Margin="0,0,8,0"
+                                                             VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding [Check], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </Border>
                     </StackPanel>
-                </StackPanel>
+                </Grid>
             </Border>
 
-            <!-- ===== Right Content Area ===== -->
-            <!-- ContentControl automatically uses the DataTemplate matching CurrentPage's type -->
-            <ContentControl Grid.Column="1"
-                            Content="{Binding CurrentPage}"
-                            Margin="0" />
-        </Grid>
-
-        <!-- ===== Bottom Log Drawer (collapsible) ===== -->
-        <!--
-            Structure:
-              - Always-visible clickable header (ToggleButton) with a chevron icon,
-                'Log Console' label and an error badge.
-              - Collapsible body (ListView + action buttons) shown only when IsOpen is true.
-            The drawer keeps multi-select / copy / clear behavior from the previous design.
-        -->
-        <Border Grid.Row="2"
-                Background="{DynamicResource ZenLogDrawerMatteBrush}"
-                BorderThickness="0,1,0,0"
-                BorderBrush="{DynamicResource ZenDividerBrush}">
-            <Grid>
+            <Grid Grid.Column="1" Margin="26">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <!-- Header bar (clickable toggle) -->
-                <Grid Grid.Row="0" Height="36">
+                <Grid Grid.Row="0" Margin="0,0,0,14">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <ToggleButton Grid.Column="0"
-                                  IsChecked="{Binding LogConsole.IsOpen, Mode=TwoWay}"
-                                  Style="{StaticResource LogDrawerHeaderToggleStyle}"
-                                  ToolTip="Show or hide the log console">
-                        <StackPanel Orientation="Horizontal">
-                            <!-- Chevron rotates 180° when the drawer is open. -->
-                            <materialDesign:PackIcon Kind="ChevronUp"
-                                                     Width="18"
-                                                     Height="18"
-                                                     VerticalAlignment="Center"
-                                                     Margin="0,0,8,0"
-                                                     RenderTransformOrigin="0.5,0.5">
-                                <materialDesign:PackIcon.RenderTransform>
-                                    <RotateTransform x:Name="LogChevronRotation" Angle="0" />
-                                </materialDesign:PackIcon.RenderTransform>
-                                <materialDesign:PackIcon.Style>
-                                    <Style TargetType="materialDesign:PackIcon">
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding LogConsole.IsOpen}" Value="True">
-                                                <Setter Property="RenderTransform">
-                                                    <Setter.Value>
-                                                        <RotateTransform Angle="180" />
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </materialDesign:PackIcon.Style>
-                            </materialDesign:PackIcon>
+                    <Button Grid.Column="1"
+                            Command="{Binding ToggleThemeCommand}"
+                            Style="{StaticResource MaterialDesignIconButton}"
+                            Width="44" Height="44"
+                            Margin="0,0,6,0"
+                            ToolTip="{Binding [ThemeTooltip], Source={x:Static loc:LocalizationManager.Instance}}">
+                        <materialDesign:PackIcon Width="20" Height="20"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center">
+                            <materialDesign:PackIcon.Style>
+                                <Style TargetType="materialDesign:PackIcon">
+                                    <Setter Property="Kind" Value="WeatherSunny" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsDarkMode}" Value="False">
+                                            <Setter Property="Kind" Value="WeatherNight" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </materialDesign:PackIcon.Style>
+                        </materialDesign:PackIcon>
+                    </Button>
 
-                            <TextBlock Text="Log Console"
-                                       FontSize="11"
-                                       FontWeight="SemiBold"
-                                       VerticalAlignment="Center"
-                                       Opacity="0.85" />
-
-                            <!-- Small badge shown only while errors are present. -->
-                            <Border Background="{DynamicResource ZenErrorBrush}"
-                                    CornerRadius="8"
-                                    Padding="6,1"
-                                    Margin="10,0,0,0"
-                                    VerticalAlignment="Center"
-                                    Visibility="{Binding LogConsole.HasErrors, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <TextBlock Text="{Binding LogConsole.ErrorCount, StringFormat={}{0} error(s)}"
-                                           FontSize="10"
-                                           FontWeight="SemiBold"
-                                           Foreground="White" />
-                            </Border>
-                        </StackPanel>
+                    <ToggleButton x:Name="SettingsToggle"
+                                  Grid.Column="2"
+                                  Style="{StaticResource ModernIconToggleButtonStyle}"
+                                  ToolTip="{Binding [SettingsTooltip], Source={x:Static loc:LocalizationManager.Instance}}">
+                        <materialDesign:PackIcon Kind="Cog"
+                                                 Width="20"
+                                                 Height="20"
+                                                 HorizontalAlignment="Center"
+                                                 VerticalAlignment="Center" />
                     </ToggleButton>
+                </Grid>
 
-                    <!-- Right-side header actions (visible only while the drawer is open). -->
-                    <StackPanel Grid.Column="1"
-                                Orientation="Horizontal"
-                                Margin="0,0,10,0"
-                                Visibility="{Binding LogConsole.IsOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <Button Content="Copy All"
-                                Click="CopyAllLogsButton_OnClick"
-                                Style="{StaticResource MaterialDesignFlatButton}"
-                                Padding="8,0"
-                                Height="28"
-                                FontSize="11"
-                                ToolTip="Copy all visible log entries to the clipboard" />
-                        <Button Content="Clear"
-                                Command="{Binding LogConsole.ClearEntriesCommand}"
-                                Style="{StaticResource MaterialDesignFlatButton}"
-                                Padding="8,0"
-                                Height="28"
-                                FontSize="11"
-                                ToolTip="Remove all current log entries" />
+                <Border Grid.Row="1"
+                        Background="#AA000000"
+                        Panel.ZIndex="100"
+                        Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                        <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}"
+                                     IsIndeterminate="True"
+                                     Width="60"
+                                     Height="60"
+                                     Foreground="{DynamicResource ZenPrimaryBrush}" />
+                        <TextBlock Text="Scanning for updates..."
+                                   Margin="0,14,0,0"
+                                   HorizontalAlignment="Center"
+                                   Foreground="White"
+                                   FontSize="14"
+                                   Opacity="0.9" />
                     </StackPanel>
-                </Grid>
+                </Border>
 
-                <!-- Drawer body (only rendered when IsOpen). -->
-                <Grid Grid.Row="1"
-                      Height="180"
-                      Visibility="{Binding LogConsole.IsOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <!--
-                        Virtualization + recycling keeps the log list fast even when
-                        bursts of entries arrive. Pixel-based scrolling stays smooth.
-                    -->
-                    <ListView x:Name="LogConsoleListView"
-                              ItemsSource="{Binding LogConsole.Entries}"
-                              Background="Transparent"
-                              BorderThickness="0"
-                              Margin="10,0,10,10"
-                              FontFamily="Consolas"
-                              FontSize="12"
-                              SelectionMode="Extended"
-                              VirtualizingPanel.IsVirtualizing="True"
-                              VirtualizingPanel.VirtualizationMode="Recycling"
-                              VirtualizingPanel.ScrollUnit="Pixel"
-                              ScrollViewer.CanContentScroll="True"
-                              PreviewKeyDown="LogConsoleListView_OnPreviewKeyDown"
-                              ScrollViewer.VerticalScrollBarVisibility="Auto">
-                        <ListView.ContextMenu>
-                            <ContextMenu Opened="LogConsoleContextMenu_OnOpened">
-                                <MenuItem x:Name="CopySelectedLogMenuItem"
-                                          Header="Copy Selected"
-                                          Click="CopySelectedLogMenuItem_OnClick" />
-                                <MenuItem x:Name="CopyAllLogsMenuItem"
-                                          Header="Copy All"
-                                          Click="CopyAllLogsMenuItem_OnClick" />
-                                <Separator />
-                                <MenuItem x:Name="ClearLogsMenuItem"
-                                          Header="Clear Logs"
-                                          Click="ClearLogsMenuItem_OnClick" />
-                            </ContextMenu>
-                        </ListView.ContextMenu>
-                        <ListView.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding}" Foreground="{DynamicResource ZenMutedTextBrush}" />
-                            </DataTemplate>
-                        </ListView.ItemTemplate>
-                    </ListView>
-                </Grid>
+                <TabControl Grid.Row="1"
+                            SelectedIndex="{Binding SelectedIndex, ElementName=NavigationList}"
+                            ItemContainerStyle="{StaticResource HiddenTabItemStyle}"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Padding="0">
+                    <TabItem>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0"
+                                       Text="Hardware Hub"
+                                       Style="{StaticResource PageTitleStyle}"
+                                       Margin="0,0,0,18" />
+
+                            <UniformGrid Grid.Row="1"
+                                         Columns="2"
+                                         Margin="0,0,0,22">
+                                <Border Style="{StaticResource GlassHardwarePanelStyle}"
+                                        Margin="0,0,10,0">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                            <materialDesign:PackIcon Kind="Gpu"
+                                                                     Width="24"
+                                                                     Height="24"
+                                                                     Margin="0,0,10,0"
+                                                                     Foreground="{DynamicResource ZenPrimaryBrush}" />
+                                            <TextBlock Text="GPU"
+                                                       FontWeight="SemiBold"
+                                                       Opacity="0.82"
+                                                       VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding HardwareProfile.GpuName, FallbackValue=Detecting}"
+                                                   FontSize="17"
+                                                   FontWeight="SemiBold"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Style="{StaticResource GlassHardwarePanelStyle}"
+                                        Margin="10,0,0,0">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                            <materialDesign:PackIcon Kind="Cpu64Bit"
+                                                                     Width="24"
+                                                                     Height="24"
+                                                                     Margin="0,0,10,0"
+                                                                     Foreground="{DynamicResource ZenPrimaryBrush}" />
+                                            <TextBlock Text="CPU"
+                                                       FontWeight="SemiBold"
+                                                       Opacity="0.82"
+                                                       VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding HardwareProfile.CpuName, FallbackValue=Detecting}"
+                                                   FontSize="17"
+                                                   FontWeight="SemiBold"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+                            </UniformGrid>
+
+                            <Border Grid.Row="2"
+                                    Style="{StaticResource GlassHardwarePanelStyle}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <materialDesign:PackIcon Kind="MonitorDashboard"
+                                                             Width="42"
+                                                             Height="42"
+                                                             Foreground="{DynamicResource ZenPrimaryBrush}"
+                                                             Margin="0,0,18,0" />
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="Hardware profile"
+                                                   FontSize="18"
+                                                   FontWeight="SemiBold"
+                                                   Margin="0,0,0,6" />
+                                        <TextBlock Text="Device-specific update discovery starts with the detected CPU and GPU profile."
+                                                   Opacity="0.75"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </TabItem>
+
+                    <TabItem>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Text="Apps"
+                                       Grid.Row="0"
+                                       Style="{StaticResource PageTitleStyle}"
+                                       Margin="0,0,0,16" />
+                            <Border Grid.Row="1"
+                                    CornerRadius="8"
+                                    ClipToBounds="True"
+                                    Background="{DynamicResource ZenDataGridSurfaceBrush}">
+                                <DataGrid ItemsSource="{Binding Apps}"
+                                          Style="{StaticResource UpdateGridStyle}"
+                                          RowStyle="{StaticResource ClickableDataGridRowStyle}"
+                                          RowDetailsVisibilityMode="VisibleWhenSelected"
+                                          RowDetailsTemplate="{StaticResource UpdateRowDetailsTemplate}">
+                                    <DataGrid.Columns>
+                                        <DataGridTemplateColumn Width="76" IsReadOnly="True">
+                                            <DataGridTemplateColumn.Header>
+                                                <CheckBox Content="{Binding [SelectAll], Source={x:Static loc:LocalizationManager.Instance}}"
+                                                          IsChecked="{Binding DataContext.IsAllAppsSelected, RelativeSource={RelativeSource AncestorType=DataGrid}, Mode=TwoWay}"
+                                                          Command="{Binding DataContext.ToggleSelectAllCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                          CommandParameter="Apps" />
+                                            </DataGridTemplateColumn.Header>
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                              HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTextColumn Header="{Binding [Name], Source={x:Static loc:LocalizationManager.Instance}}" Binding="{Binding Name}" Width="*" IsReadOnly="True" />
+                                        <DataGridTextColumn Header="{Binding [CurrentVersion], Source={x:Static loc:LocalizationManager.Instance}}" Binding="{Binding CurrentVersion}" Width="140" IsReadOnly="True" />
+                                        <DataGridTextColumn Header="{Binding [NewVersion], Source={x:Static loc:LocalizationManager.Instance}}" Binding="{Binding NewVersion}" Width="140" IsReadOnly="True" />
+                                        <DataGridTextColumn Header="{Binding [Size], Source={x:Static loc:LocalizationManager.Instance}}" Binding="{Binding DisplaySize}" Width="110" IsReadOnly="True" />
+                                        <DataGridTemplateColumn Header="" Width="90" IsReadOnly="True">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Padding="6,0"
+                                                            Height="28"
+                                                            Foreground="#E53935"
+                                                            Command="{Binding DataContext.IgnoreUpdateCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                            CommandParameter="{Binding}"
+                                                            Style="{StaticResource MaterialDesignFlatButton}"
+                                                            ToolTip="{Binding [BlacklistTooltip], Source={x:Static loc:LocalizationManager.Instance}}">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <materialDesign:PackIcon Kind="ShieldOff" Width="14" Height="14" Margin="0,0,4,0" VerticalAlignment="Center" />
+                                                            <TextBlock Text="{Binding [Blacklist], Source={x:Static loc:LocalizationManager.Instance}, FallbackValue=Blacklist}" VerticalAlignment="Center" FontSize="11" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Border>
+                        </Grid>
+                    </TabItem>
+
+                    <TabItem>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Text="System"
+                                       Grid.Row="0"
+                                       Style="{StaticResource PageTitleStyle}"
+                                       Margin="0,0,0,16" />
+                            <Border Grid.Row="1"
+                                    CornerRadius="8"
+                                    ClipToBounds="True"
+                                    Background="{DynamicResource ZenDataGridSurfaceBrush}">
+                                <DataGrid ItemsSource="{Binding System}"
+                                          Style="{StaticResource UpdateGridStyle}"
+                                          RowStyle="{StaticResource ClickableDataGridRowStyle}"
+                                          RowDetailsVisibilityMode="VisibleWhenSelected"
+                                          RowDetailsTemplate="{StaticResource UpdateRowDetailsTemplate}">
+                                    <DataGrid.Columns>
+                                        <DataGridTemplateColumn Width="76" IsReadOnly="True">
+                                            <DataGridTemplateColumn.Header>
+                                                <CheckBox Content="{Binding [SelectAll], Source={x:Static loc:LocalizationManager.Instance}}"
+                                                          IsChecked="{Binding DataContext.IsAllSystemSelected, RelativeSource={RelativeSource AncestorType=DataGrid}, Mode=TwoWay}"
+                                                          Command="{Binding DataContext.ToggleSelectAllCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                          CommandParameter="System" />
+                                            </DataGridTemplateColumn.Header>
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                              HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTextColumn Header="{Binding [Name], Source={x:Static loc:LocalizationManager.Instance}}" Binding="{Binding Name}" Width="*" IsReadOnly="True" />
+                                        <DataGridTextColumn Header="{Binding [CurrentVersion], Source={x:Static loc:LocalizationManager.Instance}}" Binding="{Binding CurrentVersion}" Width="140" IsReadOnly="True" />
+                                        <DataGridTextColumn Header="{Binding [NewVersion], Source={x:Static loc:LocalizationManager.Instance}}" Binding="{Binding NewVersion}" Width="140" IsReadOnly="True" />
+                                        <DataGridTextColumn Header="{Binding [Size], Source={x:Static loc:LocalizationManager.Instance}}" Binding="{Binding DisplaySize}" Width="110" IsReadOnly="True" />
+                                        <DataGridTemplateColumn Header="" Width="90" IsReadOnly="True">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Padding="6,0"
+                                                            Height="28"
+                                                            Foreground="#E53935"
+                                                            Command="{Binding DataContext.IgnoreUpdateCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                            CommandParameter="{Binding}"
+                                                            Style="{StaticResource MaterialDesignFlatButton}"
+                                                            ToolTip="{Binding [BlacklistTooltip], Source={x:Static loc:LocalizationManager.Instance}}">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <materialDesign:PackIcon Kind="ShieldOff" Width="14" Height="14" Margin="0,0,4,0" VerticalAlignment="Center" />
+                                                            <TextBlock Text="{Binding [Blacklist], Source={x:Static loc:LocalizationManager.Instance}, FallbackValue=Blacklist}" VerticalAlignment="Center" FontSize="11" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Border>
+                        </Grid>
+                    </TabItem>
+
+                    <TabItem>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Text="Drivers"
+                                       Grid.Row="0"
+                                       Style="{StaticResource PageTitleStyle}"
+                                       Margin="0,0,0,16" />
+                            <Border Grid.Row="1"
+                                    CornerRadius="8"
+                                    ClipToBounds="True"
+                                    Background="{DynamicResource ZenDataGridSurfaceBrush}">
+                                <DataGrid ItemsSource="{Binding Drivers}"
+                                          Style="{StaticResource UpdateGridStyle}"
+                                          RowStyle="{StaticResource ClickableDataGridRowStyle}"
+                                          RowDetailsVisibilityMode="VisibleWhenSelected"
+                                          RowDetailsTemplate="{StaticResource UpdateRowDetailsTemplate}">
+                                    <DataGrid.Columns>
+                                        <DataGridTemplateColumn Width="76" IsReadOnly="True">
+                                            <DataGridTemplateColumn.Header>
+                                                <CheckBox Content="{Binding [SelectAll], Source={x:Static loc:LocalizationManager.Instance}}"
+                                                          IsChecked="{Binding DataContext.IsAllDriversSelected, RelativeSource={RelativeSource AncestorType=DataGrid}, Mode=TwoWay}"
+                                                          Command="{Binding DataContext.ToggleSelectAllCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                          CommandParameter="Drivers" />
+                                            </DataGridTemplateColumn.Header>
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                              HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTextColumn Header="{Binding [Name], Source={x:Static loc:LocalizationManager.Instance}}" Binding="{Binding Name}" Width="*" IsReadOnly="True" />
+                                        <DataGridTextColumn Header="{Binding [CurrentVersion], Source={x:Static loc:LocalizationManager.Instance}}" Binding="{Binding CurrentVersion}" Width="140" IsReadOnly="True" />
+                                        <DataGridTextColumn Header="{Binding [NewVersion], Source={x:Static loc:LocalizationManager.Instance}}" Binding="{Binding NewVersion}" Width="140" IsReadOnly="True" />
+                                        <DataGridTextColumn Header="{Binding [Size], Source={x:Static loc:LocalizationManager.Instance}}" Binding="{Binding DisplaySize}" Width="110" IsReadOnly="True" />
+                                        <DataGridTemplateColumn Header="" Width="90" IsReadOnly="True">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Padding="6,0"
+                                                            Height="28"
+                                                            Foreground="#E53935"
+                                                            Command="{Binding DataContext.IgnoreUpdateCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                            CommandParameter="{Binding}"
+                                                            Style="{StaticResource MaterialDesignFlatButton}"
+                                                            ToolTip="{Binding [BlacklistTooltip], Source={x:Static loc:LocalizationManager.Instance}}">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <materialDesign:PackIcon Kind="ShieldOff" Width="14" Height="14" Margin="0,0,4,0" VerticalAlignment="Center" />
+                                                            <TextBlock Text="{Binding [Blacklist], Source={x:Static loc:LocalizationManager.Instance}, FallbackValue=Blacklist}" VerticalAlignment="Center" FontSize="11" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Border>
+                        </Grid>
+                    </TabItem>
+                </TabControl>
+
+                <!-- Empty state: shown after scan when no updates found -->
+                <Border Grid.Row="1"
+                        Panel.ZIndex="50"
+                        Visibility="{Binding HasNoUpdates, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                        <materialDesign:PackIcon Kind="ShieldCheck"
+                                                 Width="80"
+                                                 Height="80"
+                                                 Foreground="#4CAF50"
+                                                 HorizontalAlignment="Center" />
+                        <TextBlock Text="{Binding [EmptyStateTitle], Source={x:Static loc:LocalizationManager.Instance}}"
+                                   FontSize="20"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,16,0,6"
+                                   Foreground="{DynamicResource MaterialDesignBody}" />
+                        <TextBlock Text="{Binding [EmptyStateSubtitle], Source={x:Static loc:LocalizationManager.Instance}}"
+                                   FontSize="14"
+                                   HorizontalAlignment="Center"
+                                   Foreground="{DynamicResource MaterialDesignBodyLight}"
+                                   Opacity="0.7" />
+                    </StackPanel>
+                </Border>
+
+                <Button x:Name="ReviewButton"
+                        Grid.Row="2"
+                        Click="ReviewInstall_Click"
+                        Style="{StaticResource ModernButtonStyle}"
+                        HorizontalAlignment="Right"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Height="54"
+                        MinWidth="210"
+                        Margin="0,18,0,0"
+                        Padding="20,0"
+                        ToolTip="{Binding [ReviewTooltip], Source={x:Static loc:LocalizationManager.Instance}}">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <materialDesign:PackIcon Kind="PlaylistCheck"
+                                                 Width="22"
+                                                 Height="22"
+                                                 Margin="0,0,10,0"
+                                                 VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding [ReviewInstall], Source={x:Static loc:LocalizationManager.Instance}}"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                        <Border Background="{DynamicResource MaterialDesignSecondaryDarkBrush}"
+                                CornerRadius="10"
+                                Margin="10,0,0,0"
+                                Padding="7,2"
+                                MinWidth="22"
+                                VerticalAlignment="Center">
+                            <TextBlock Text="{Binding SelectedUpdateCount}"
+                                       Foreground="{DynamicResource MaterialDesignSecondaryDarkForeground}"
+                                       FontSize="12"
+                                       FontWeight="Bold"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
+                        </Border>
+                    </StackPanel>
+                </Button>
+
+                <Popup Grid.Row="0"
+                       PlacementTarget="{Binding ElementName=SettingsToggle}"
+                       Placement="Bottom"
+                       HorizontalOffset="-276"
+                       AllowsTransparency="True"
+                       StaysOpen="False"
+                       IsOpen="{Binding IsChecked, ElementName=SettingsToggle, Mode=TwoWay}">
+                    <Border Width="320"
+                            Padding="18"
+                            CornerRadius="14"
+                            Background="{DynamicResource MaterialDesignPaper}"
+                            TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+                            BorderBrush="{DynamicResource MaterialDesignDivider}"
+                            BorderThickness="1">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="28"
+                                              ShadowDepth="0"
+                                              Opacity="0.42"
+                                              Color="#000000" />
+                        </Border.Effect>
+                        <StackPanel>
+                            <TextBlock Text="{Binding [Settings], Source={x:Static loc:LocalizationManager.Instance}}"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       Margin="0,0,0,16" />
+
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding [Language], Source={x:Static loc:LocalizationManager.Instance}}"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,10,0"
+                                           FontSize="13" />
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding AvailableLanguages}"
+                                          SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}"
+                                          Style="{StaticResource MaterialDesignComboBox}"
+                                          Height="32" />
+                            </Grid>
+
+                            <CheckBox Content="{Binding [AutoCheck], Source={x:Static loc:LocalizationManager.Instance}}"
+                                      IsChecked="{Binding Settings.AutoCheckEnabled, Mode=TwoWay}"
+                                      Margin="0,0,0,10" />
+                            <CheckBox Content="{Binding [ScanStartup], Source={x:Static loc:LocalizationManager.Instance}}"
+                                      IsChecked="{Binding Settings.ScanOnStartup, Mode=TwoWay}"
+                                      Margin="0,0,0,10" />
+
+                            <Separator Margin="0,8,0,8" Opacity="0.25" />
+
+                            <Button Click="OpenBlacklist_Click"
+                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                    HorizontalAlignment="Left"
+                                    Padding="0,6"
+                                    Margin="0,0,0,4">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="ShieldLock"
+                                                             Width="16"
+                                                             Height="16"
+                                                             Margin="0,0,6,0"
+                                                             VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding [ManageBlacklist], Source={x:Static loc:LocalizationManager.Instance}}"
+                                               VerticalAlignment="Center"
+                                               FontSize="12" />
+                                </StackPanel>
+                            </Button>
+
+                            <Button Command="{Binding OpenLogViewerCommand}"
+                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                    HorizontalAlignment="Left"
+                                    Padding="0,6"
+                                    Margin="0,0,0,4">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="TextBoxSearch"
+                                                             Width="16"
+                                                             Height="16"
+                                                             Margin="0,0,6,0"
+                                                             VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding [OpenLogViewer], Source={x:Static loc:LocalizationManager.Instance}}"
+                                               VerticalAlignment="Center"
+                                               FontSize="12" />
+                                </StackPanel>
+                            </Button>
+
+                            <Button Command="{Binding CopyLogsToClipboardCommand}"
+                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                    HorizontalAlignment="Left"
+                                    Padding="0,6"
+                                    Opacity="0.8">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="ContentCopy"
+                                                             Width="16"
+                                                             Height="16"
+                                                             Margin="0,0,6,0"
+                                                             VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding [CopyErrorLogs], Source={x:Static loc:LocalizationManager.Instance}}"
+                                               VerticalAlignment="Center"
+                                               FontSize="12" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+                </Popup>
             </Grid>
-        </Border>
-
+        <Canvas x:Name="AnimationCanvas"
+                IsHitTestVisible="False"
+                Panel.ZIndex="9999" />
+        <materialDesign:Snackbar x:Name="MainSnackbar"
+                                  Grid.RowSpan="2"
+                                  VerticalAlignment="Bottom"
+                                  HorizontalAlignment="Stretch"
+                                  Panel.ZIndex="10000"
+                                  MessageQueue="{materialDesign:MessageQueue}" />
+        </Grid>
     </Grid>
 </Window>

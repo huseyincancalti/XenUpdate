@@ -29,10 +29,9 @@
         toward bottom-right. Stops stay close in luminance (not a loud wallpaper).
     -->
     <LinearGradientBrush x:Key="ZenAmbientBackgroundBrush" StartPoint="0,0" EndPoint="1,1" MappingMode="RelativeToBoundingBox">
-        <GradientStop Color="#0F172A" Offset="0" />
-        <GradientStop Color="#0E1228" Offset="0.42" />
-        <GradientStop Color="#16112F" Offset="0.72" />
-        <GradientStop Color="#1A1638" Offset="1" />
+        <GradientStop Color="#0F0C29" Offset="0" />
+        <GradientStop Color="#302B63" Offset="0.52" />
+        <GradientStop Color="#24243E" Offset="1" />
     </LinearGradientBrush>
 
     <!-- Sidebar: gentle vertical depth (top slightly darker) -->
@@ -52,8 +51,10 @@
         slightly. More opaque than the chrome container so rows stay readable.
     -->
     <SolidColorBrush x:Key="ZenDataGridSurfaceBrush"          Color="#E0111122" />
-    <!-- DataGrid row hover: subtle brightening so hovered rows are visible -->
-    <SolidColorBrush x:Key="ZenDataGridRowHoverBrush"        Color="#28FFFFFF" />
+    <!-- DataGrid row hover: soft white glass highlight -->
+    <SolidColorBrush x:Key="ZenDataGridRowHoverBrush"        Color="#1AFFFFFF" />
+    <!-- DataGrid row selected: glowing accent -->
+    <SolidColorBrush x:Key="ZenDataGridRowSelectedBrush"     Color="#33673AB7" />
     <!-- DataGrid column header: slightly lighter strip for visual separation -->
     <SolidColorBrush x:Key="ZenDataGridHeaderBrush"          Color="#18161440" />
     <SolidColorBrush x:Key="ZenDataGridHeaderForegroundBrush" Color="#94A3B8" />

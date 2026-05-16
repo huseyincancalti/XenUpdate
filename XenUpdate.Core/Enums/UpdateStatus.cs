@@ -21,6 +21,9 @@ public enum UpdateStatus
     /// <summary>The update was installed successfully.</summary>
     Succeeded,
 
+    /// <summary>The update was installed successfully and is ready to leave the queue.</summary>
+    Installed,
+
     /// <summary>The update failed to install. Check the log for details.</summary>
     Failed
 }

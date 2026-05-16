@@ -24,6 +24,17 @@ public sealed class AppSettings : INotifyPropertyChanged
         set => SetField(ref _scanOnStartup, value);
     }
 
+    private bool _autoCheckEnabled;
+
+    /// <summary>
+    /// If true, XenUpdate can automatically check for updates based on the user's preference.
+    /// </summary>
+    public bool AutoCheckEnabled
+    {
+        get => _autoCheckEnabled;
+        set => SetField(ref _autoCheckEnabled, value);
+    }
+
     private bool _minimizeToTray;
 
     /// <summary>
@@ -34,6 +45,30 @@ public sealed class AppSettings : INotifyPropertyChanged
     {
         get => _minimizeToTray;
         set => SetField(ref _minimizeToTray, value);
+    }
+
+    private string _language = "en";
+
+    /// <summary>
+    /// The UI language code (e.g. "en", "tr"). Default: "en".
+    /// </summary>
+    public string Language
+    {
+        get => _language;
+        set => SetField(ref _language, value);
+    }
+
+    private bool _runOnStartup;
+
+    /// <summary>
+    /// If true, XenUpdate registers itself in the Windows Run registry key so it
+    /// launches automatically (hidden, using <c>-background</c>) when Windows starts.
+    /// Default: false.
+    /// </summary>
+    public bool RunOnStartup
+    {
+        get => _runOnStartup;
+        set => SetField(ref _runOnStartup, value);
     }
 
     private AppTheme _theme = AppTheme.Dark;

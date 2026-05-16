@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using XenUpdate.Core.Enums;
 
 namespace XenUpdate.Core.Models;
@@ -19,6 +20,12 @@ public partial class CategorizedUpdateItem : ObservableObject
 
     /// <summary>Human-readable display name shown in the UI.</summary>
     public string Name { get; init; } = string.Empty;
+
+    /// <summary>Publisher / vendor name (e.g. "Microsoft Corporation").</summary>
+    public string Publisher { get; init; } = string.Empty;
+
+    /// <summary>Package identifier used by the provider (e.g. winget ID or KB number).</summary>
+    public string PackageId { get; init; } = string.Empty;
 
     /// <summary>The version currently installed on this machine.</summary>
     public string CurrentVersion { get; init; } = string.Empty;
@@ -52,5 +59,20 @@ public partial class CategorizedUpdateItem : ObservableObject
 
     /// <summary>Whether the user has selected this item for batch updating.</summary>
     [ObservableProperty]
-    private bool _isSelected;
+    private bool isSelected;
+
+    /// <summary>Installation progress percentage for queue and grid feedback.</summary>
+    [ObservableProperty]
+    private double progressPercentage;
+
+    [RelayCommand]
+    private void OpenReleaseNotes()
+    {
+        var query = Uri.EscapeDataString($"{Name} {NewVersion} release notes changelog");
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
+            $"https://www.google.com/search?q={query}")
+        {
+            UseShellExecute = true
+        });
+    }
 }
