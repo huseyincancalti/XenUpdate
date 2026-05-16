@@ -1,80 +1,98 @@
 <div align="center">
 
+<img src="img/logo.png" alt="XenUpdate Logo" width="120" />
+
 # ⚡ XenUpdate
 
-**A modern Windows desktop application that helps you manage software, Windows, and driver updates from a single interface.**
+**The Ultimate Background Updater for Windows.**
+*A premium, modern Windows desktop application that effortlessly manages software, Windows, and driver updates from a single, stunning interface.*
 
-Built with **.NET 8**, **WPF**, and **MVVM**, featuring a clean architecture focused on maintainability, responsiveness, and a modern user experience.
+[![.NET 8](https://img.shields.io/badge/.NET-8.0-blueviolet.svg)](https://dotnet.microsoft.com/)
+[![WPF](https://img.shields.io/badge/UI-WPF%20Glassmorphism-blue.svg)]()
 
 </div>
 
 ---
 
-## ✨ Features
+## 📥 Download & Install
 
-- **App Updates:** Scan and update installed applications via **Winget**.
-- **System Updates:** Scan and install **Windows Updates** & **Driver Updates**.
-- **Blacklist System:** Exclude specific apps you do not want to update.
-- **Modern UI:** Light and Dark theme support with status badges and progress feedback.
-- **Log Console:** Built-in console for debugging and sharing logs easily.
-- **Configuration:** JSON-based settings persistence.
-- **Admin Mode:** Administrator mode support for deep system updates.
+Experience the seamless update management. Download the latest compiled version directly from our Releases page:
 
-## 🏗️ Architecture
+👉 **[Download XenUpdate (Latest Release)](../../releases/latest)**
 
-XenUpdate uses a clean, layered architecture separating UI logic from update, storage, and system integration operations:
+> **💡 Pro Tip:** XenUpdate integrates deeply with your system. For the best experience and to avoid access errors, right-click the `.exe` and select **Run as Administrator**.
 
-    ZenUpdate.sln
-    ├── ZenUpdate.App              # WPF UI, Views, ViewModels, Themes
-    ├── ZenUpdate.Core             # Models, Interfaces, Enums
-    ├── ZenUpdate.Infrastructure   # Winget, Windows Update, Drivers, Logging, Storage
-    └── ZenUpdate.Tests            # Unit tests
-
-
-### 💻 Technologies
-- **.NET 8** & **WPF**
-- **CommunityToolkit.Mvvm**
-- **MaterialDesignInXamlToolkit**
-- **Winget** & **WUApiLib**
-- JSON settings storage
+### ⚠️ Windows SmartScreen Warning
+When you run XenUpdate for the first time, Windows SmartScreen may display a blue warning screen saying "Windows protected your PC". This is completely normal for new, open-source applications that haven't built up a long download history yet.
+**To run the app:** Click **"More info"** and then **"Run anyway"**.
+*(Since this project is entirely open-source, you can review all the code in this repository if you have any security concerns!)*
 
 ---
 
-## 🚀 Getting Started
+## ✨ Why XenUpdate? (Features)
 
-### 📥 Download
-You can download the latest version directly from the Releases page:  
-👉 **[Download XenUpdate from Releases](../../releases)**
+XenUpdate isn't just another updater; it's designed with a "Power User" mentality and AAA quality in mind.
 
-> **💡 Tip:** After downloading, run the application as **Administrator** for the best experience.
+- 🚀 **Unified Engine:** Scan and update third-party apps (via **Winget**), **Windows Updates**, and **Drivers** all in one place.
+- 🎨 **Premium UI/UX:** Stunning Glassmorphism design, smooth animations, and Light/Dark theme support.
+- 🥷 **Ninja Mode:** Starts minimized in your System Tray and silently checks for updates in the background.
+- 🛡️ **Safe & Smart:** Automatically creates **System Restore Points** before driver/system installations.
+- 🌍 **Multi-Language (Localization):** Fully JSON-based dynamic localization system. Switch languages on the fly!
+- 🛑 **Blacklist Manager:** Hide specific updates you don't want to see again.
+- 🐛 **Advanced Diagnostics:** Built-in Log Viewer and a custom Crash Reporter for easy debugging.
+- 🔄 **Self-Updating:** XenUpdate checks its own GitHub repository and notifies you when a new version is out!
+
+---
+
+## 🏗️ Architecture & Tech Stack
+
+XenUpdate is built on a clean, layered MVVM architecture, ensuring separation of concerns between UI logic, system integration, and data storage.
+
+### 💻 Technologies Used
+- **C# / .NET 8** & **WPF**
+- **CommunityToolkit.Mvvm** (For robust MVVM implementation)
+- **MaterialDesignInXamlToolkit** (For modern UI components)
+- **Winget & WUApiLib** (For fetching updates)
+- **H.NotifyIcon.Wpf** (For System Tray integration)
+
+### 📂 Project Structure
+```text
+XenUpdate.sln
+├── XenUpdate.App              # WPF UI, Views, ViewModels, Themes, Tray Icon
+├── XenUpdate.Core             # Interfaces, Models, Update Logic, LocalizationManager
+├── XenUpdate.Infrastructure   # Winget, Windows Update, Drivers, Storage, SystemRestore
+└── XenUpdate.Tests            # Unit tests
+```
 
 ### 🛠️ Build from Source
+If you want to contribute or build the project yourself:
 
 **Requirements**
 - Windows 10 / Windows 11
 - Visual Studio 2022
 - .NET 8 SDK
-- Winget
+- Winget (App Installer)
 
 **Steps**
 1. Clone the repository:
-       git clone https://github.com/your-username/XenUpdate.git
-       cd XenUpdate
-2. Open `ZenUpdate.sln` in **Visual Studio 2022**.
-3. Set `ZenUpdate.App` as the startup project.
-4. Build and run the application.
+   ```bash
+   git clone https://github.com/huseyincancalti/XenUpdate.git
+   cd XenUpdate
+   ```
+2. Open `XenUpdate.sln` in Visual Studio 2022.
+3. Set `XenUpdate.App` as the startup project.
+4. Build and run the application (preferably as Administrator).
 
 ---
 
-## ⚠️ Notes
-
-- XenUpdate interacts with system-level update tools. Some update operations may require **administrator privileges** or a **system restart**.
-- The application **does not** automatically restart your computer.
+## ⚠️ Notes & Disclaimer
+- XenUpdate interacts directly with Windows system-level tools. Some update operations (especially drivers and core OS updates) require administrator privileges.
+- The application does not forcefully restart your computer, but some updates may require a manual reboot to take full effect.
+- Always review what you are installing.
 
 ---
 
-## 👨‍💻 Developer
-
-Developed by **Hüseyin Can Çaltı** 🌐 **Website:** [huseyincancalti.github.io/karakedidub/](https://huseyincancalti.github.io/karakedidub/)
-
-⭐️ *If you like this project or find it useful, please consider giving it a star!*
+## 👨💻 Developed By
+**Hüseyin Can Çaltı** 
+🌐 Website: [huseyincancalti.github.io/karakedidub/](https://huseyincancalti.github.io/karakedidub/)  
+🐙 GitHub: [@huseyincancalti](https://github.com/huseyincancalti)
