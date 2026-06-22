@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
-using System.IO;
 using System.Windows;
 using System.Windows.Threading;
 using XenUpdate.App.Services;
@@ -13,7 +12,7 @@ using XenUpdate.Core.Models;
 namespace XenUpdate.App;
 
 /// <summary>
-/// Application entry point. Configures the DI container and launches <see cref="MainWindow"/>.
+/// Application entry point. Configures the DI container and launches the shell window.
 /// This is the only place in the application that knows about concrete service implementations.
 /// </summary>
 public partial class App : Application
@@ -27,12 +26,6 @@ public partial class App : Application
     /// </summary>
     public static bool IsBackgroundStartup { get; private set; }
 
-    /// <summary>
-    /// Called by WPF when the application starts.
-    /// Builds the service container and opens the main window.
-    /// Every step is individually guarded so a bad settings file or a broken
-    /// theme resource never prevents <see cref="MainWindow"/> from showing.
-    /// </summary>
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -43,13 +36,12 @@ public partial class App : Application
         IsBackgroundStartup = e.Args.Contains("-background", StringComparer.OrdinalIgnoreCase)
                            || e.Args.Contains("-minimized", StringComparer.OrdinalIgnoreCase);
 
-        // Migrate settings/blacklist from old %APPDATA%\XenUpdate to new %APPDATA%\XenUpdate.
-        MigrateAppDataFolder();
+        var useMocks = e.Args.Contains("--mock", StringComparer.OrdinalIgnoreCase);
 
         try
         {
             var serviceCollection = new ServiceCollection();
-            serviceCollection.AddXenUpdateServices();
+            serviceCollection.AddXenUpdateServices(useMocks);
             Services = serviceCollection.BuildServiceProvider();
         }
         catch (Exception ex)
@@ -60,8 +52,6 @@ public partial class App : Application
         }
 
         // Cosmetic: pre-apply the saved theme before any window is shown.
-        // Failures here are swallowed inside ApplySavedTheme so they cannot
-        // block the MainWindow.Show() call below.
         ApplySavedTheme();
 
         MainWindow? mainWindow = null;
@@ -76,16 +66,16 @@ public partial class App : Application
             return;
         }
 
-        MainViewModel? mainVm = null;
+        ShellViewModel? shellVm = null;
         try
         {
-            mainVm = Services.GetRequiredService<MainViewModel>();
-            mainWindow.DataContext = mainVm;
+            shellVm = Services.GetRequiredService<ShellViewModel>();
+            mainWindow.DataContext = shellVm;
         }
         catch (Exception ex)
         {
             // The window will still appear (empty); the user can at least close it.
-            Debug.WriteLine($"[XenUpdate] MainViewModel resolution failed: {ex}");
+            Debug.WriteLine($"[XenUpdate] ShellViewModel resolution failed: {ex}");
         }
 
         try
@@ -108,30 +98,24 @@ public partial class App : Application
             return;
         }
 
-        if (mainVm is not null)
+        if (shellVm is not null)
         {
-            _ = TriggerStartupScanAsync(mainVm);
+            _ = shellVm.RunStartupTasksAsync();
         }
     }
 
     /// <summary>
-    /// Reads the persisted settings once and asks <see cref="IThemeService"/> to apply
-    /// the saved <see cref="Core.Enums.AppTheme"/>. Failures fall back to the default
-    /// dark theme so a corrupt settings file never blocks startup.
+    /// Reads the persisted settings once and applies the saved <see cref="Core.Enums.AppTheme"/>.
+    /// Failures fall back to the default dark theme so a corrupt settings file never blocks startup.
     /// </summary>
     private static void ApplySavedTheme()
     {
         AppSettings settings;
         try
         {
-            // CRITICAL: We are on the WPF dispatcher thread. Calling
-            // `.GetAwaiter().GetResult()` directly on an async file read
-            // here deadlocks: the awaited continuation tries to resume on
-            // the dispatcher SynchronizationContext that we are blocking.
-            // Wrapping the call in Task.Run escapes the dispatcher context
-            // so the I/O continuation runs on a thread-pool thread instead.
-            // This is the real reason the previous startup hung whenever
-            // %APPDATA%\XenUpdate\settings.json existed.
+            // We are on the WPF dispatcher thread. Calling .GetAwaiter().GetResult()
+            // directly on an async file read here deadlocks; Task.Run escapes the
+            // dispatcher context so the I/O continuation runs on a thread-pool thread.
             settings = Task.Run(static () =>
                 Services.GetRequiredService<ISettingsRepository>().LoadAsync()
             ).GetAwaiter().GetResult();
@@ -148,8 +132,6 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            // Theme is purely cosmetic. Startup must continue even if the
-            // theme dictionaries cannot be merged for any reason.
             Debug.WriteLine($"[XenUpdate] Theme apply failed at startup: {ex}");
         }
     }
@@ -178,34 +160,6 @@ public partial class App : Application
         catch (Exception ex)
         {
             Debug.WriteLine($"[XenUpdate] Recovery window failed to show: {ex}");
-        }
-    }
-
-    /// <summary>
-    /// Waits for the SettingsViewModel to finish loading from disk,
-    /// then triggers a winget scan if <see cref="AppSettings.ScanOnStartup"/> is true.
-    /// </summary>
-    private static async Task TriggerStartupScanAsync(MainViewModel mainVm)
-    {
-        try
-        {
-            // Give the async InitializeAsync in SettingsViewModel time to complete.
-            await Task.Delay(400);
-
-            var settingsVm = Services.GetRequiredService<SettingsViewModel>();
-            if (!settingsVm.Settings.ScanOnStartup)
-            {
-                return;
-            }
-
-            if (mainVm.CheckForUpdatesCommand.CanExecute(null))
-            {
-                mainVm.CheckForUpdatesCommand.Execute(null);
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[XenUpdate] Startup scan trigger failed: {ex}");
         }
     }
 
@@ -240,10 +194,6 @@ public partial class App : Application
         Environment.Exit(1);
     }
 
-    /// <summary>
-    /// Called when the application is shutting down.
-    /// Disposes the service provider to clean up any disposable services.
-    /// </summary>
     protected override void OnExit(ExitEventArgs e)
     {
         if (Services is IDisposable disposable)
@@ -251,71 +201,5 @@ public partial class App : Application
             disposable.Dispose();
         }
         base.OnExit(e);
-    }
-
-    /// <summary>
-    /// One-time migration from the old <c>%APPDATA%\XenUpdate</c> folder to the new
-    /// <c>%APPDATA%\XenUpdate</c> folder. Copies settings.json, blacklist.json, and
-    /// the logs subfolder if they exist. Silently skipped if:
-    ///   - the old folder does not exist, or
-    ///   - the new folder already exists (migration was already done or user started fresh).
-    /// Failures are swallowed so they never block startup.
-    /// </summary>
-    private static void MigrateAppDataFolder()
-    {
-        try
-        {
-            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            var oldDir = Path.Combine(appData, "XenUpdate");
-            var newDir = Path.Combine(appData, "XenUpdate");
-
-            if (!Directory.Exists(oldDir) || Directory.Exists(newDir))
-            {
-                return;
-            }
-
-            Directory.CreateDirectory(newDir);
-
-            // Copy top-level files (settings.json, blacklist.json, etc.)
-            foreach (var file in Directory.GetFiles(oldDir))
-            {
-                var destFile = Path.Combine(newDir, Path.GetFileName(file));
-                try
-                {
-                    File.Copy(file, destFile, overwrite: false);
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"[XenUpdate] Migration: could not copy {file}: {ex.Message}");
-                }
-            }
-
-            // Copy logs subfolder
-            var oldLogs = Path.Combine(oldDir, "logs");
-            var newLogs = Path.Combine(newDir, "logs");
-            if (Directory.Exists(oldLogs))
-            {
-                Directory.CreateDirectory(newLogs);
-                foreach (var logFile in Directory.GetFiles(oldLogs))
-                {
-                    var destFile = Path.Combine(newLogs, Path.GetFileName(logFile));
-                    try
-                    {
-                        File.Copy(logFile, destFile, overwrite: false);
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"[XenUpdate] Migration: could not copy log {logFile}: {ex.Message}");
-                    }
-                }
-            }
-
-            Debug.WriteLine("[XenUpdate] AppData migration from XenUpdate to XenUpdate completed.");
-        }
-        catch (Exception ex)
-        {
-            // Migration is best-effort. Never crash on migration failure.
-            Debug.WriteLine($"[XenUpdate] AppData migration failed (non-fatal): {ex.Message}");
-        }
     }
 }

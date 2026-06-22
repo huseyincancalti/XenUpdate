@@ -1,6 +1,6 @@
-using System.Runtime.InteropServices;
 using XenUpdate.Core.Interfaces;
 using XenUpdate.Core.Models;
+using static XenUpdate.Infrastructure.WindowsUpdate.WuaComHelpers;
 
 namespace XenUpdate.Infrastructure.WindowsUpdate;
 
@@ -508,33 +508,6 @@ public sealed class DriverUpdateService : IDriverUpdateService
         }
     }
 
-    private static void TryAcceptEula(dynamic update)
-    {
-        try
-        {
-            if (!SafeConvertToBool(update.EulaAccepted))
-            {
-                update.AcceptEula();
-            }
-        }
-        catch
-        {
-            // Some updates do not expose EULA state consistently; safe to continue.
-        }
-    }
-
-    private static void TrySetOnline(dynamic searcher)
-    {
-        try { searcher.Online = true; }
-        catch { }
-    }
-
-    private static void TrySetForceQuiet(dynamic installer)
-    {
-        try { installer.ForceQuiet = true; }
-        catch { }
-    }
-
     private static string FirstNonEmpty(params string[] values)
     {
         foreach (var value in values)
@@ -548,31 +521,4 @@ public sealed class DriverUpdateService : IDriverUpdateService
         return string.Empty;
     }
 
-    private static int SafeConvertToInt(object? value)
-    {
-        try { return Convert.ToInt32(value); }
-        catch { return 0; }
-    }
-
-    private static bool SafeConvertToBool(object? value)
-    {
-        try { return Convert.ToBoolean(value); }
-        catch { return false; }
-    }
-
-    private static string SafeConvertToString(object? value)
-    {
-        return value?.ToString() ?? string.Empty;
-    }
-
-    private static void TryReleaseCom(object? obj)
-    {
-        if (obj is null)
-        {
-            return;
-        }
-
-        try { Marshal.FinalReleaseComObject(obj); }
-        catch { }
-    }
 }

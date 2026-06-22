@@ -1,54 +1,77 @@
+using System.Reflection;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using XenUpdate.App.Messages;
+using XenUpdate.Core.Interfaces;
 
 namespace XenUpdate.App.ViewModels;
 
-/// <summary>
-/// Represents the available navigation pages in the application.
-/// </summary>
+/// <summary>The navigable pages hosted by the shell.</summary>
 public enum AppPage
 {
     Programs,
     WindowsUpdates,
     Drivers,
-    Settings,
-    HardwareHub
+    HardwareHub,
+    Settings
 }
 
 /// <summary>
-/// The top-level ViewModel for the application shell (MainWindow).
-/// Manages navigation between pages and owns the log console ViewModel.
+/// Top-level ViewModel for the application shell (the main window).
+/// Owns page navigation plus window-level concerns: tray actions, the app self-update
+/// banner, and one-shot startup tasks. The title-bar theme toggle binds through
+/// <see cref="Settings"/> so theme state has a single owner (the Settings page).
 /// </summary>
 public sealed partial class ShellViewModel : ObservableObject
 {
-    /// <summary>The ViewModel for the log console panel displayed at the bottom of the window.</summary>
-    public LogConsoleViewModel LogConsole { get; }
-
-    /// <summary>The currently displayed page ViewModel, bound to the ContentControl in MainWindow.</summary>
-    [ObservableProperty]
-    private ObservableObject? _currentPage;
-
-    /// <summary>The currently active navigation selection.</summary>
-    [ObservableProperty]
-    private AppPage _selectedPage = AppPage.Programs;
-
-    // Page ViewModels are injected so they remain singletons across navigation.
     private readonly ProgramsViewModel _programsVm;
     private readonly WindowsUpdatesViewModel _windowsUpdatesVm;
     private readonly DriversViewModel _driversVm;
     private readonly SettingsViewModel _settingsVm;
     private readonly HardwareHubViewModel _hardwareHubVm;
+    private readonly IAppUpdateService _appUpdateService;
+    private readonly ISettingsRepository _settingsRepository;
+    private readonly ILoggerService _logger;
 
-    /// <summary>
-    /// Initializes the shell with all page ViewModels injected by the DI container.
-    /// </summary>
+    private string _appUpdateUrl = string.Empty;
+
+    public LogConsoleViewModel LogConsole { get; }
+
+    /// <summary>The Settings page VM. Also the single source of theme state for the title-bar toggle.</summary>
+    public SettingsViewModel Settings => _settingsVm;
+
+    /// <summary>The page ViewModel shown in the shell's content area.</summary>
+    [ObservableProperty]
+    private ObservableObject? _currentPage;
+
+    /// <summary>The active navigation selection.</summary>
+    [ObservableProperty]
+    private AppPage _selectedPage = AppPage.Programs;
+
+    /// <summary>True when a newer XenUpdate release is available; drives the title-bar banner.</summary>
+    [ObservableProperty]
+    private bool _hasAppUpdate;
+
+    /// <summary>Set by the window: brings the window to the foreground (tray "Open").</summary>
+    public Action? RequestShowWindow { get; set; }
+
+    /// <summary>Set by the window: shuts the application down (tray "Exit").</summary>
+    public Action? RequestCloseApp { get; set; }
+
+    /// <summary>Set by the window: opens the log viewer window.</summary>
+    public Action? RequestOpenLogViewer { get; set; }
+
     public ShellViewModel(
         ProgramsViewModel programsVm,
         WindowsUpdatesViewModel windowsUpdatesVm,
         DriversViewModel driversVm,
         SettingsViewModel settingsVm,
         HardwareHubViewModel hardwareHubVm,
-        LogConsoleViewModel logConsole)
+        LogConsoleViewModel logConsole,
+        IAppUpdateService appUpdateService,
+        ISettingsRepository settingsRepository,
+        ILoggerService logger)
     {
         _programsVm = programsVm;
         _windowsUpdatesVm = windowsUpdatesVm;
@@ -56,27 +79,92 @@ public sealed partial class ShellViewModel : ObservableObject
         _settingsVm = settingsVm;
         _hardwareHubVm = hardwareHubVm;
         LogConsole = logConsole;
+        _appUpdateService = appUpdateService;
+        _settingsRepository = settingsRepository;
+        _logger = logger;
 
-        // Show Programs page on startup.
         NavigateTo(AppPage.Programs);
     }
 
-    /// <summary>
-    /// Switches the main content area to the given page.
-    /// Called when the user clicks a navigation item.
-    /// </summary>
     [RelayCommand]
     public void NavigateTo(AppPage page)
     {
         SelectedPage = page;
         CurrentPage = page switch
         {
-            AppPage.Programs      => _programsVm,
+            AppPage.Programs       => _programsVm,
             AppPage.WindowsUpdates => _windowsUpdatesVm,
-            AppPage.Drivers       => _driversVm,
-            AppPage.Settings      => _settingsVm,
-            AppPage.HardwareHub   => _hardwareHubVm,
-            _                     => _programsVm
+            AppPage.Drivers        => _driversVm,
+            AppPage.HardwareHub    => _hardwareHubVm,
+            AppPage.Settings       => _settingsVm,
+            _                      => _programsVm
         };
+    }
+
+    [RelayCommand]
+    private void ShowWindow() => RequestShowWindow?.Invoke();
+
+    [RelayCommand]
+    private void ExitApplication() => RequestCloseApp?.Invoke();
+
+    [RelayCommand]
+    private void OpenLogViewer() => RequestOpenLogViewer?.Invoke();
+
+    [RelayCommand]
+    private void DownloadAppUpdate()
+    {
+        if (string.IsNullOrWhiteSpace(_appUpdateUrl))
+        {
+            return;
+        }
+
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(_appUpdateUrl)
+        {
+            UseShellExecute = true
+        });
+    }
+
+    /// <summary>
+    /// One-shot work after the window is shown: app self-update check, then (only if the
+    /// user enabled it) a Programs scan. Centralizing this here is what removes the old
+    /// double-scan race between App startup and the view model constructor.
+    /// </summary>
+    public async Task RunStartupTasksAsync()
+    {
+        await CheckForAppUpdateAsync();
+
+        try
+        {
+            var settings = await _settingsRepository.LoadAsync();
+            if (settings.ScanOnStartup && _programsVm.ScanCommand.CanExecute(null))
+            {
+                _programsVm.ScanCommand.Execute(null);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Info($"Startup scan trigger failed (non-fatal): {ex.Message}");
+        }
+    }
+
+    private async Task CheckForAppUpdateAsync()
+    {
+        try
+        {
+            var currentVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0.0";
+            var (hasUpdate, url) = await _appUpdateService.CheckForAppUpdatesAsync(currentVersion);
+
+            if (hasUpdate)
+            {
+                _appUpdateUrl = url;
+                HasAppUpdate = true;
+                WeakReferenceMessenger.Default.Send(
+                    new NotificationMessage("A new version of XenUpdate is available!"));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Info($"App update check failed (non-fatal): {ex.Message}");
+        }
     }
 }
