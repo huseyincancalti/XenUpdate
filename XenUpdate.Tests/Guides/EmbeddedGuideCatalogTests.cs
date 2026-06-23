@@ -25,7 +25,7 @@ public sealed class EmbeddedGuideCatalogTests
     [Fact]
     public async Task GetGuidesAsync_LoadsWellFormedGuides()
     {
-        var guides = await _catalog.GetGuidesAsync();
+        var guides = await _catalog.GetGuidesAsync("en");
 
         Assert.NotEmpty(guides);
         Assert.All(guides, g =>
@@ -40,7 +40,7 @@ public sealed class EmbeddedGuideCatalogTests
     [Fact]
     public async Task GetGuidesAsync_IncludesNvidiaGraphicsDriverGuide()
     {
-        var guides = await _catalog.GetGuidesAsync();
+        var guides = await _catalog.GetGuidesAsync("en");
 
         var nvidia = Assert.Single(guides, g => g.RequiredGpuVendor == "NVIDIA");
         Assert.Equal(GuideCategory.GraphicsDriver, nvidia.Category);

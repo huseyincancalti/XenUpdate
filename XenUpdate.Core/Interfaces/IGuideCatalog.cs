@@ -8,6 +8,6 @@ namespace XenUpdate.Core.Interfaces;
 /// </summary>
 public interface IGuideCatalog
 {
-    /// <summary>Returns every guide definition in the catalog.</summary>
-    Task<IReadOnlyList<GuideItem>> GetGuidesAsync();
+    /// <summary>Returns every guide definition for the given language code (falls back to English).</summary>
+    Task<IReadOnlyList<GuideItem>> GetGuidesAsync(string languageCode);
 }

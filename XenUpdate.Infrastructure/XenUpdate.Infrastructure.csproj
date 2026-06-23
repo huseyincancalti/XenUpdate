@@ -17,7 +17,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Guides\guides.json" />
+    <EmbeddedResource Include="Guides\guides.en.json" WithCulture="false" />
+    <EmbeddedResource Include="Guides\guides.tr.json" WithCulture="false" />
   </ItemGroup>
 
   <!--

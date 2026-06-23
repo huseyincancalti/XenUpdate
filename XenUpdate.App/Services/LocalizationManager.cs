@@ -15,6 +15,12 @@ public sealed class LocalizationManager : ObservableObject
     /// <summary>The single shared instance used across the application.</summary>
     public static LocalizationManager Instance { get; } = new();
 
+    /// <summary>The currently active language code (e.g. "en", "tr").</summary>
+    public string CurrentLanguage { get; private set; } = "en";
+
+    /// <summary>Raised after the language changes, for consumers that don't bind to the indexer.</summary>
+    public event Action? LanguageChanged;
+
     private Dictionary<string, string> _strings = new(StringComparer.OrdinalIgnoreCase);
 
     private LocalizationManager()
@@ -42,16 +48,15 @@ public sealed class LocalizationManager : ObservableObject
                 "Assets", "Locales",
                 $"{languageCode}.json");
 
-            if (!File.Exists(filePath))
+            if (File.Exists(filePath))
             {
-                return;
-            }
-
-            var json = File.ReadAllText(filePath);
-            var loaded = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
-            if (loaded is not null)
-            {
-                _strings = new Dictionary<string, string>(loaded, StringComparer.OrdinalIgnoreCase);
+                var json = File.ReadAllText(filePath);
+                var loaded = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+                if (loaded is not null)
+                {
+                    _strings = new Dictionary<string, string>(loaded, StringComparer.OrdinalIgnoreCase);
+                    CurrentLanguage = languageCode;
+                }
             }
         }
         catch
@@ -59,7 +64,8 @@ public sealed class LocalizationManager : ObservableObject
             // Keep existing strings if the file cannot be loaded.
         }
 
-        // Notify WPF that every indexed binding is stale.
+        // Notify WPF that every indexed binding is stale, then non-binding consumers.
         OnPropertyChanged(Binding.IndexerName);
+        LanguageChanged?.Invoke();
     }
 }

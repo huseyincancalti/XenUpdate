@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using XenUpdate.App.Services;
 using XenUpdate.Core.Interfaces;
 using XenUpdate.Core.Models;
 
@@ -46,7 +48,13 @@ public sealed partial class HardwareHubViewModel : ObservableObject
         _guideCatalog = guideCatalog;
         _completionStore = completionStore;
         _logger = logger;
+
+        // Reload guides in the chosen language when the user switches languages.
+        LocalizationManager.Instance.LanguageChanged += OnLanguageChanged;
     }
+
+    private void OnLanguageChanged() =>
+        Application.Current?.Dispatcher.InvokeAsync(async () => await LoadGuidesAsync());
 
     /// <summary>Detects hardware and loads the applicable guides. Called from the view's Loaded event.</summary>
     public async Task InitializeAsync()
@@ -76,7 +84,7 @@ public sealed partial class HardwareHubViewModel : ObservableObject
 
     private async Task LoadGuidesAsync()
     {
-        var all = await _guideCatalog.GetGuidesAsync();
+        var all = await _guideCatalog.GetGuidesAsync(LocalizationManager.Instance.CurrentLanguage);
         var completed = await _completionStore.GetCompletedIdsAsync();
         var completedSet = new HashSet<string>(completed, StringComparer.OrdinalIgnoreCase);
 

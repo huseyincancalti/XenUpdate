@@ -1,0 +1,47 @@
+[
+  {
+    "Id": "gpu-nvidia",
+    "Title": "NVIDIA ekran kartı sürücünü güncelle",
+    "Why": "NVIDIA sürücüleri Windows Update üzerinden düzenli ve güncel gelmez. Taze sürücüler oyun çökmelerini düzeltir, performansı artırır ve güvenlik açıklarını kapatır — bu yüzden en iyisi doğrudan NVIDIA'dan almaktır.",
+    "Category": "GraphicsDriver",
+    "RequiredGpuVendor": "NVIDIA",
+    "OfficialUrl": "https://www.nvidia.com/download/index.aspx",
+    "Steps": [
+      "Aşağıdaki \"Resmi sayfayı aç\"a tıkla — NVIDIA sürücü indirme sitesi açılır.",
+      "Ürün tipini (GeForce), seriyi ve tam GPU modelini, sonra Windows sürümünü seç.",
+      "En yeni Game Ready sürücüsünü (yaratıcı işler için Studio sürücüsü) indir.",
+      "İndirilen kurulumu çalıştır ve \"Express\" (Hızlı) kurulumu seç.",
+      "İstenirse bilgisayarını yeniden başlat, sonra geri dön ve bu rehberi tamamlandı işaretle."
+    ]
+  },
+  {
+    "Id": "gpu-amd",
+    "Title": "AMD Radeon ekran kartı sürücünü güncelle",
+    "Why": "AMD Radeon sürücüleri Windows Update'ten çoğu zaman geç veya eksik gelir. Resmi AMD paketi (Adrenalin) en yeni düzeltmeleri, oyun optimizasyonlarını ve güvenlik yamalarını getirir.",
+    "Category": "GraphicsDriver",
+    "RequiredGpuVendor": "AMD",
+    "OfficialUrl": "https://www.amd.com/en/support/download/drivers.html",
+    "Steps": [
+      "Aşağıdaki \"Resmi sayfayı aç\"a tıkla — AMD destek sitesi açılır.",
+      "\"Search\" (Ara) ya da ürün seçiciyle tam Radeon modelini bul.",
+      "Windows sürümün için önerilen Adrenalin Edition sürücüsünü indir.",
+      "Kurulumu çalıştır ve önerilen (Hızlı) kurulumu seç.",
+      "İstenirse bilgisayarını yeniden başlat, sonra bu rehberi tamamlandı işaretle."
+    ]
+  },
+  {
+    "Id": "gpu-intel",
+    "Title": "Intel ekran kartı sürücünü güncelle",
+    "Why": "PC üreticinden gelen Intel tümleşik grafik sürücüleri geride kalabilir. Intel'in kendi sürücüsü en yeni kararlılık ve performans düzeltmelerini ekler — ancak bazı dizüstülerde üreticinin sürümü gerekir, o yüzden Intel kurulumu uyarırsa dizüstü üreticinden güncelle.",
+    "Category": "GraphicsDriver",
+    "RequiredGpuVendor": "Intel",
+    "OfficialUrl": "https://www.intel.com/content/www/us/en/download-center/home.html",
+    "Steps": [
+      "Aşağıdaki \"Resmi sayfayı aç\"a tıkla — Intel İndirme Merkezi açılır.",
+      "\"Graphics\" (Grafik) ara ve Intel grafiğinle eşleşen sürücüyü seç (ör. Iris Xe / UHD).",
+      "Windows sürümün için en yeni kurulumu (.exe) indir.",
+      "Çalıştır; Intel, sürücüyü PC üreticinin özelleştirdiğini söylerse onun yerine dizüstü üreticinden al.",
+      "İstenirse yeniden başlat, sonra bu rehberi tamamlandı işaretle."
+    ]
+  }
+]
