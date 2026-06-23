@@ -40,6 +40,7 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IHardwareScannerService, MockHardwareScannerService>();
             services.AddSingleton<ISystemRestoreService, MockSystemRestoreService>();
             services.AddSingleton<IAppUpdateService, MockAppUpdateService>();
+            services.AddSingleton<INvidiaDriverService, MockNvidiaDriverService>();
             services.AddTransient<IWingetScanner, MockWingetScanner>();
             services.AddTransient<IWingetInstaller, MockWingetInstaller>();
             services.AddTransient<IWindowsUpdateService, MockWindowsUpdateService>();
@@ -50,6 +51,7 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IHardwareScannerService, HardwareScannerService>();
             services.AddSingleton<ISystemRestoreService, WindowsSystemRestoreService>();
             services.AddSingleton<IAppUpdateService, GitHubAppUpdateService>();
+            services.AddSingleton<INvidiaDriverService, NvidiaDriverService>();
             services.AddTransient<ProcessRunner>();
             services.AddTransient<WingetOutputParser>();
             services.AddTransient<IWingetScanner, WingetScanner>();

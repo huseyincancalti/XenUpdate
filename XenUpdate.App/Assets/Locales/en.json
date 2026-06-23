@@ -87,6 +87,7 @@
   "GuidesEmptyTitle": "No guided updates apply right now",
   "GuidesEmptyBody": "When your hardware needs a manual update (GPU, BIOS, firmware) that Windows can't handle automatically, step-by-step guides will appear here.",
   "OpenApp": "Open {0}",
+  "UpdateBadge": "Update available: v{0} → v{1}",
   "GuideCompleted": "Done! You've completed this guide.",
   "NextStep": "Next step",
   "PreviousStep": "Previous step",

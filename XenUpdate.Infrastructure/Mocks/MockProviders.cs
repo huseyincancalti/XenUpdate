@@ -110,3 +110,16 @@ public sealed class MockAppUpdateService : IAppUpdateService
     public Task<(bool HasUpdate, string UpdateUrl)> CheckForAppUpdatesAsync(string currentVersion) =>
         Task.FromResult((false, string.Empty));
 }
+
+public sealed class MockNvidiaDriverService : INvidiaDriverService
+{
+    public Task<DriverUpdateStatus> CheckAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(new DriverUpdateStatus
+        {
+            Checked = true,
+            InstalledVersion = "566.14",
+            LatestVersion = "566.36",
+            UpdateAvailable = true,
+            DownloadUrl = "https://www.nvidia.com/download/index.aspx"
+        });
+}

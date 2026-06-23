@@ -18,6 +18,7 @@ public sealed partial class HardwareHubViewModel : ObservableObject
     private readonly IGuideCatalog _guideCatalog;
     private readonly IGuideCompletionStore _completionStore;
     private readonly IInstalledAppDetector _appDetector;
+    private readonly INvidiaDriverService _nvidiaService;
     private readonly ILoggerService _logger;
 
     [ObservableProperty]
@@ -41,12 +42,14 @@ public sealed partial class HardwareHubViewModel : ObservableObject
         IGuideCatalog guideCatalog,
         IGuideCompletionStore completionStore,
         IInstalledAppDetector appDetector,
+        INvidiaDriverService nvidiaService,
         ILoggerService logger)
     {
         _hardwareScanner = hardwareScanner;
         _guideCatalog = guideCatalog;
         _completionStore = completionStore;
         _appDetector = appDetector;
+        _nvidiaService = nvidiaService;
         _logger = logger;
 
         LocalizationManager.Instance.LanguageChanged += OnLanguageChanged;
@@ -91,7 +94,16 @@ public sealed partial class HardwareHubViewModel : ObservableObject
                 ? _appDetector.FindExecutable(guide.AppLaunch.ExeCandidates)
                 : null;
 
-            Guides.Add(new GuideCardViewModel(guide, appPath, completedSet, _completionStore, _logger));
+            DriverUpdateStatus? status = null;
+            if (string.Equals(guide.RequiredGpuVendor, "NVIDIA", StringComparison.OrdinalIgnoreCase))
+            {
+                status = await _nvidiaService.CheckAsync();
+                // If we reliably know the driver is current, don't clutter the user with a guide.
+                if (status.Checked && !status.UpdateAvailable)
+                    continue;
+            }
+
+            Guides.Add(new GuideCardViewModel(guide, appPath, completedSet, status, _completionStore, _logger));
         }
 
         OnPropertyChanged(nameof(HasGuides));

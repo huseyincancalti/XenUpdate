@@ -19,6 +19,7 @@ public sealed partial class GuideCardViewModel : ObservableObject
     private readonly IGuideCompletionStore _store;
     private readonly ILoggerService _logger;
     private readonly string? _appExePath;
+    private readonly DriverUpdateStatus? _driverStatus;
 
     public string Title => _guide.Title;
     public string Why => _guide.Why;
@@ -29,6 +30,14 @@ public sealed partial class GuideCardViewModel : ObservableObject
 
     /// <summary>True when there is an app or URL to open from the launch step.</summary>
     public bool HasLaunchTarget { get; }
+
+    /// <summary>True when a newer driver was detected; drives the version badge.</summary>
+    public bool HasUpdateBadge => _driverStatus is { Checked: true, UpdateAvailable: true };
+
+    /// <summary>e.g. "Update available: v566.14 → v566.36".</summary>
+    public string UpdateBadgeText => HasUpdateBadge
+        ? string.Format(LocalizationManager.Instance["UpdateBadge"], _driverStatus!.InstalledVersion, _driverStatus.LatestVersion)
+        : string.Empty;
 
     [ObservableProperty]
     private int _currentIndex;
@@ -58,11 +67,13 @@ public sealed partial class GuideCardViewModel : ObservableObject
         GuideItem guide,
         string? appExePath,
         ISet<string> completedStepIds,
+        DriverUpdateStatus? driverStatus,
         IGuideCompletionStore store,
         ILoggerService logger)
     {
         _guide = guide;
         _appExePath = appExePath;
+        _driverStatus = driverStatus;
         _store = store;
         _logger = logger;
 
