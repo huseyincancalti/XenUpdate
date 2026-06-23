@@ -91,6 +91,23 @@ public sealed class WingetInstallerTests
             installer.InstallUpdateAsync(item, new Progress<int>(), CreateCancelledToken()));
     }
 
+    [Fact]
+    public async Task InstallUpdateAsync_RejectsUnsafePackageId_WithoutRunningWinget()
+    {
+        var runner = new FakeProcessRunner(new ProcessExecutionResult("ok", string.Empty, 0));
+        var installer = new WingetInstaller(runner, new FakeLoggerService());
+        var item = new AppUpdateItem
+        {
+            DisplayName = "Evil",
+            WingetPackageId = "Foo --uninstall Bar"
+        };
+
+        var success = await installer.InstallUpdateAsync(item, new Progress<int>(), CancellationToken.None);
+
+        Assert.False(success);
+        Assert.Equal(string.Empty, runner.LastExecutable);
+    }
+
     private static CancellationToken CreateCancelledToken()
     {
         var cancellationTokenSource = new CancellationTokenSource();

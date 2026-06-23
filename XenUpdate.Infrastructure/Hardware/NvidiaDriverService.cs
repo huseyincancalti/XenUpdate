@@ -93,7 +93,7 @@ public sealed class NvidiaDriverService : INvidiaDriverService
     }
 
     // WMI reports e.g. "32.0.16.1062"; NVIDIA's marketing version is the last 5 digits → "610.62".
-    private static string? ToMarketingVersion(string wmiVersion)
+    internal static string? ToMarketingVersion(string wmiVersion)
     {
         var digits = new string(wmiVersion.Where(char.IsDigit).ToArray());
         if (digits.Length < 5)
@@ -189,7 +189,7 @@ public sealed class NvidiaDriverService : INvidiaDriverService
         return null;
     }
 
-    private static bool IsNewer(string latest, string installed)
+    internal static bool IsNewer(string latest, string installed)
     {
         if (Version.TryParse(latest, out var l) && Version.TryParse(installed, out var i))
             return l > i;
