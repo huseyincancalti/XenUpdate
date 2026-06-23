@@ -48,6 +48,14 @@
             <TextBlock Text="{Binding [GuidesRecommended], Source={x:Static loc:LocalizationManager.Instance}}"
                        FontWeight="SemiBold" Opacity="0.7" Margin="0,0,0,8" />
 
+            <Border Background="#2E7D32" CornerRadius="8" Padding="12,9" Margin="0,0,0,12" HorizontalAlignment="Left"
+                    Visibility="{Binding HasCurrentDriverNote, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="CheckCircle" Width="18" Height="18" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <TextBlock Text="{Binding CurrentDriverNote}" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
+                </StackPanel>
+            </Border>
+
             <ItemsControl ItemsSource="{Binding Guides}"
                           Visibility="{Binding HasGuides, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <ItemsControl.ItemTemplate>

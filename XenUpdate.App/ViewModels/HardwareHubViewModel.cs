@@ -30,6 +30,14 @@ public sealed partial class HardwareHubViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = string.Empty;
 
+    /// <summary>Set when a GPU driver was checked and found current — a reassuring "you're up to date" note.</summary>
+    [ObservableProperty]
+    private string? _currentDriverNote;
+
+    public bool HasCurrentDriverNote => !string.IsNullOrWhiteSpace(CurrentDriverNote);
+
+    partial void OnCurrentDriverNoteChanged(string? value) => OnPropertyChanged(nameof(HasCurrentDriverNote));
+
     /// <summary>The interactive guide cards that apply to the detected hardware.</summary>
     public ObservableCollection<GuideCardViewModel> Guides { get; } = new();
 
@@ -87,6 +95,7 @@ public sealed partial class HardwareHubViewModel : ObservableObject
         var completed = await _completionStore.GetCompletedIdsAsync();
         var completedSet = new HashSet<string>(completed, StringComparer.OrdinalIgnoreCase);
 
+        CurrentDriverNote = null;
         Guides.Clear();
         foreach (var guide in all.Where(AppliesToCurrentHardware))
         {
@@ -98,9 +107,13 @@ public sealed partial class HardwareHubViewModel : ObservableObject
             if (string.Equals(guide.RequiredGpuVendor, "NVIDIA", StringComparison.OrdinalIgnoreCase))
             {
                 status = await _nvidiaService.CheckAsync();
-                // If we reliably know the driver is current, don't clutter the user with a guide.
+                // If we reliably know the driver is current, don't show a guide — show a
+                // reassuring "you're up to date" note instead so the page never looks broken.
                 if (status.Checked && !status.UpdateAvailable)
+                {
+                    CurrentDriverNote = string.Format(LocalizationManager.Instance["DriverCurrent"], status.InstalledVersion);
                     continue;
+                }
             }
 
             Guides.Add(new GuideCardViewModel(guide, appPath, completedSet, status, _completionStore, _logger));

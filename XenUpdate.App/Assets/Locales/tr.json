@@ -88,6 +88,7 @@
   "GuidesEmptyBody": "Donanımın, Windows'un otomatik halledemediği bir manuel güncelleme (GPU, BIOS, ürün yazılımı) gerektirdiğinde adım adım rehberler burada görünür.",
   "OpenApp": "{0}'i Aç",
   "UpdateBadge": "Güncelleme var: v{0} → v{1}",
+  "DriverCurrent": "NVIDIA sürücün güncel (v{0})",
   "GuideCompleted": "Tamamlandı! Bu rehberi bitirdin.",
   "NextStep": "Sonraki adım",
   "PreviousStep": "Önceki adım",
