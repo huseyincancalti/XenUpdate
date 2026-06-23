@@ -86,6 +86,12 @@
   "GuideDone": "Tamam",
   "GuidesEmptyTitle": "Şu an uygulanacak rehberli güncelleme yok",
   "GuidesEmptyBody": "Donanımın, Windows'un otomatik halledemediği bir manuel güncelleme (GPU, BIOS, ürün yazılımı) gerektirdiğinde adım adım rehberler burada görünür.",
+  "OpenApp": "{0}'i Aç",
+  "GuideCompleted": "Tamamlandı! Bu rehberi bitirdin.",
+  "StatusDetectingHardware": "Donanım algılanıyor…",
+  "StatusGuidesFailed": "Rehberler yüklenemedi.",
+  "StatusGuidesCount": "Donanımın için {0} rehberli güncelleme.",
+  "StatusGuidesNone": "Şu an uygulanacak rehberli güncelleme yok.",
 
   "StatusProgramsInitial": "Başlamak için 'Güncellemeleri Tara'ya bas.",
   "StatusWindowsUpdatesInitial": "Taramak için 'Güncellemeleri Denetle'ye bas.",

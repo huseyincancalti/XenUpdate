@@ -33,6 +33,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IThemeService, ThemeService>();
         services.AddSingleton<IGuideCatalog, EmbeddedGuideCatalog>();
         services.AddSingleton<IGuideCompletionStore, JsonGuideCompletionStore>();
+        services.AddSingleton<IInstalledAppDetector, InstalledAppDetector>();
 
         if (useMocks)
         {

@@ -86,6 +86,12 @@
   "GuideDone": "Done",
   "GuidesEmptyTitle": "No guided updates apply right now",
   "GuidesEmptyBody": "When your hardware needs a manual update (GPU, BIOS, firmware) that Windows can't handle automatically, step-by-step guides will appear here.",
+  "OpenApp": "Open {0}",
+  "GuideCompleted": "Done! You've completed this guide.",
+  "StatusDetectingHardware": "Detecting hardware…",
+  "StatusGuidesFailed": "Could not load guides.",
+  "StatusGuidesCount": "{0} guided update(s) for your hardware.",
+  "StatusGuidesNone": "No guided updates apply right now.",
 
   "StatusProgramsInitial": "Press 'Scan for Updates' to start.",
   "StatusWindowsUpdatesInitial": "Press 'Check for Updates' to scan.",

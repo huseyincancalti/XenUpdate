@@ -14,153 +14,189 @@
 
             <TextBlock Text="{Binding [GuidesTitle], Source={x:Static loc:LocalizationManager.Instance}}" Style="{StaticResource PageTitleStyle}" />
 
-            <ProgressBar IsIndeterminate="True"
-                         Height="4"
-                         Margin="0,0,0,12"
+            <ProgressBar IsIndeterminate="True" Height="4" Margin="0,0,0,12"
                          Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
             <!-- Detected hardware -->
-            <TextBlock Text="{Binding [GuidesDetectedHardware], Source={x:Static loc:LocalizationManager.Instance}}" FontWeight="SemiBold" Opacity="0.7" Margin="0,0,0,8" />
+            <TextBlock Text="{Binding [GuidesDetectedHardware], Source={x:Static loc:LocalizationManager.Instance}}"
+                       FontWeight="SemiBold" Opacity="0.7" Margin="0,0,0,8" />
             <StackPanel Orientation="Horizontal" Margin="0,0,0,22">
                 <Border Style="{StaticResource ZenGlassPanelStyle}" Width="300" Padding="20" Margin="0,0,16,0">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                            <materialDesign:PackIcon Kind="Gpu" Width="22" Height="22"
-                                                     Foreground="{DynamicResource ZenPrimaryBrush}"
-                                                     VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <materialDesign:PackIcon Kind="Gpu" Width="22" Height="22" Foreground="{DynamicResource ZenPrimaryBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
                             <TextBlock Text="GPU" FontSize="13" FontWeight="SemiBold" Opacity="0.7" VerticalAlignment="Center" />
                         </StackPanel>
-                        <TextBlock Text="{Binding Hardware.GpuName, FallbackValue='Detecting…'}"
-                                   FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,6" />
-                        <Border Background="{DynamicResource ZenNavItemSelectedBackgroundBrush}"
-                                CornerRadius="6" Padding="8,3" HorizontalAlignment="Left">
-                            <TextBlock Text="{Binding Hardware.GpuVendor, FallbackValue='Unknown'}"
-                                       FontSize="11" FontWeight="SemiBold" Foreground="White" />
+                        <TextBlock Text="{Binding Hardware.GpuName, FallbackValue='…'}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,6" />
+                        <Border Background="{DynamicResource ZenNavItemSelectedBackgroundBrush}" CornerRadius="6" Padding="8,3" HorizontalAlignment="Left">
+                            <TextBlock Text="{Binding Hardware.GpuVendor, FallbackValue='—'}" FontSize="11" FontWeight="SemiBold" Foreground="White" />
                         </Border>
                     </StackPanel>
                 </Border>
-
                 <Border Style="{StaticResource ZenGlassPanelStyle}" Width="300" Padding="20">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                            <materialDesign:PackIcon Kind="Cpu64Bit" Width="22" Height="22"
-                                                     Foreground="{DynamicResource ZenPrimaryBrush}"
-                                                     VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <materialDesign:PackIcon Kind="Cpu64Bit" Width="22" Height="22" Foreground="{DynamicResource ZenPrimaryBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
                             <TextBlock Text="CPU" FontSize="13" FontWeight="SemiBold" Opacity="0.7" VerticalAlignment="Center" />
                         </StackPanel>
-                        <TextBlock Text="{Binding Hardware.CpuName, FallbackValue='Detecting…'}"
-                                   FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Hardware.CpuName, FallbackValue='…'}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
             </StackPanel>
 
             <!-- Recommended guides -->
-            <TextBlock Text="{Binding [GuidesRecommended], Source={x:Static loc:LocalizationManager.Instance}}" FontWeight="SemiBold" Opacity="0.7" Margin="0,0,0,8" />
+            <TextBlock Text="{Binding [GuidesRecommended], Source={x:Static loc:LocalizationManager.Instance}}"
+                       FontWeight="SemiBold" Opacity="0.7" Margin="0,0,0,8" />
 
             <ItemsControl ItemsSource="{Binding Guides}"
                           Visibility="{Binding HasGuides, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border Padding="20" Margin="0,0,0,14">
+                        <Border Padding="20" Margin="0,0,0,16">
                             <Border.Style>
                                 <Style TargetType="Border" BasedOn="{StaticResource ZenGlassPanelStyle}">
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsCompleted}" Value="True">
-                                            <Setter Property="Opacity" Value="0.55" />
+                                            <Setter Property="Opacity" Value="0.7" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </Border.Style>
                             <StackPanel>
-                                <Grid Margin="0,0,0,8">
+
+                                <!-- header: title + progress -->
+                                <Grid Margin="0,0,0,6">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{Binding Title}"
-                                               FontSize="16" FontWeight="SemiBold"
-                                               TextWrapping="Wrap" VerticalAlignment="Center" />
-                                    <Border Grid.Column="1"
-                                            Background="#2E7D32" CornerRadius="6" Padding="9,3"
-                                            VerticalAlignment="Center"
-                                            Visibility="{Binding IsCompleted, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <materialDesign:PackIcon Kind="Check" Width="14" Height="14"
-                                                                     Foreground="White" VerticalAlignment="Center" Margin="0,0,4,0" />
-                                            <TextBlock Text="{Binding [GuideDone], Source={x:Static loc:LocalizationManager.Instance}}" Foreground="White" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                        </StackPanel>
-                                    </Border>
+                                    <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="{Binding ProgressText}" FontSize="13" Opacity="0.7" VerticalAlignment="Center" Margin="12,0,0,0" />
                                 </Grid>
 
-                                <TextBlock Text="{Binding Why}" Opacity="0.8" TextWrapping="Wrap" Margin="0,0,0,12" />
+                                <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressPercent, Mode=OneWay}" Height="6" Margin="0,0,0,12"
+                                             Foreground="{DynamicResource ZenPrimaryBrush}" Background="{DynamicResource ZenGlassPanelBrush}" />
 
+                                <TextBlock Text="{Binding Why}" Opacity="0.8" TextWrapping="Wrap" Margin="0,0,0,14" />
+
+                                <!-- interactive steps -->
                                 <ItemsControl ItemsSource="{Binding Steps}" Margin="0,0,0,14">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                                                <materialDesign:PackIcon Kind="ChevronRight" Width="16" Height="16"
-                                                                         Opacity="0.5" VerticalAlignment="Top" Margin="0,1,8,0" />
-                                                <TextBlock Text="{Binding}" TextWrapping="Wrap" />
-                                            </StackPanel>
+                                            <Border Padding="10" Margin="0,0,0,8" CornerRadius="8" BorderThickness="1" BorderBrush="Transparent" Background="Transparent">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                <Setter Property="BorderBrush" Value="{DynamicResource ZenPrimaryBrush}" />
+                                                                <Setter Property="Background" Value="{DynamicResource ZenNavItemSelectedBackgroundBrush}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <Button Grid.Column="0"
+                                                            Command="{Binding DataContext.ToggleStepCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                            CommandParameter="{Binding}"
+                                                            Cursor="Hand" Width="30" Height="30" Margin="0,0,12,0" VerticalAlignment="Top">
+                                                        <Button.Template>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border x:Name="c" Width="30" Height="30" CornerRadius="15" BorderThickness="1.5"
+                                                                        BorderBrush="{DynamicResource ZenGlassBorderBrush}" Background="Transparent">
+                                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                                </Border>
+                                                                <ControlTemplate.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsDone}" Value="True">
+                                                                        <Setter TargetName="c" Property="Background" Value="#2E7D32" />
+                                                                        <Setter TargetName="c" Property="BorderBrush" Value="#2E7D32" />
+                                                                    </DataTrigger>
+                                                                </ControlTemplate.Triggers>
+                                                            </ControlTemplate>
+                                                        </Button.Template>
+                                                        <Grid>
+                                                            <TextBlock Text="{Binding Number}" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource ZenTextBrush}"
+                                                                       HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Visibility" Value="Visible" />
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsDone}" Value="True">
+                                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                            <materialDesign:PackIcon Kind="Check" Width="18" Height="18" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                                <materialDesign:PackIcon.Style>
+                                                                    <Style TargetType="materialDesign:PackIcon">
+                                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsDone}" Value="True">
+                                                                                <Setter Property="Visibility" Value="Visible" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </materialDesign:PackIcon.Style>
+                                                            </materialDesign:PackIcon>
+                                                        </Grid>
+                                                    </Button>
+
+                                                    <TextBlock Grid.Column="1" Text="{Binding Text}" TextWrapping="Wrap" VerticalAlignment="Center">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Foreground" Value="{DynamicResource ZenTextBrush}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsDone}" Value="True">
+                                                                        <Setter Property="Opacity" Value="0.5" />
+                                                                        <Setter Property="TextDecorations" Value="Strikethrough" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Grid>
+                                            </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
 
-                                <StackPanel Orientation="Horizontal">
-                                    <Button Command="{Binding DataContext.OpenGuideCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                            CommandParameter="{Binding}"
-                                            Style="{StaticResource MaterialDesignRaisedButton}"
-                                            Margin="0,0,8,0">
-                                        <StackPanel Orientation="Horizontal">
-                                            <materialDesign:PackIcon Kind="OpenInNew" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,6,0" />
-                                            <TextBlock Text="{Binding [OpenOfficialPage], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" />
-                                        </StackPanel>
-                                    </Button>
+                                <!-- primary adaptive action -->
+                                <Button Command="{Binding PrimaryActionCommand}"
+                                        Style="{StaticResource MaterialDesignRaisedButton}"
+                                        HorizontalAlignment="Left">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="OpenInNew" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                        <TextBlock Text="{Binding PrimaryActionText}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
 
-                                    <Button Command="{Binding DataContext.ToggleCompleteCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                            CommandParameter="{Binding}"
-                                            Style="{StaticResource MaterialDesignOutlinedButton}">
-                                        <Grid>
-                                            <TextBlock Text="{Binding [MarkAsDone], Source={x:Static loc:LocalizationManager.Instance}}">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="Visibility" Value="Visible" />
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsCompleted}" Value="True">
-                                                                <Setter Property="Visibility" Value="Collapsed" />
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                            <TextBlock Text="{Binding [MarkAsNotDone], Source={x:Static loc:LocalizationManager.Instance}}">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="Visibility" Value="Collapsed" />
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsCompleted}" Value="True">
-                                                                <Setter Property="Visibility" Value="Visible" />
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                        </Grid>
-                                    </Button>
-                                </StackPanel>
+                                <!-- completion banner -->
+                                <Border Background="#2E7D32" CornerRadius="8" Padding="12,10" Margin="0,12,0,0"
+                                        Visibility="{Binding IsCompleted, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="CheckCircle" Width="20" Height="20" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                        <TextBlock Text="{Binding [GuideCompleted], Source={x:Static loc:LocalizationManager.Instance}}" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Border>
+
                             </StackPanel>
                         </Border>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            <!-- Empty state -->
+            <!-- empty state -->
             <Border Style="{StaticResource ZenGlassPanelStyle}" Padding="24"
                     Visibility="{Binding ShowEmptyState, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <StackPanel>
                     <TextBlock Text="{Binding [GuidesEmptyTitle], Source={x:Static loc:LocalizationManager.Instance}}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,6" TextWrapping="Wrap" />
-                    <TextBlock Opacity="0.75" TextWrapping="Wrap"
-                               Text="{Binding [GuidesEmptyBody], Source={x:Static loc:LocalizationManager.Instance}}" />
+                    <TextBlock Opacity="0.75" TextWrapping="Wrap" Text="{Binding [GuidesEmptyBody], Source={x:Static loc:LocalizationManager.Instance}}" />
                 </StackPanel>
             </Border>
 

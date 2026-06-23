@@ -12,6 +12,20 @@
       "Download the latest Game Ready Driver (or Studio Driver if you do creative work).",
       "Run the downloaded installer and choose \"Express\" installation.",
       "Restart your PC if it asks, then come back and mark this guide as done."
+    ],
+    "AppLaunch": {
+      "DisplayName": "NVIDIA App",
+      "ExeCandidates": [
+        "%ProgramFiles%\\NVIDIA Corporation\\NVIDIA App\\CEF\\NVIDIA app.exe",
+        "%ProgramFiles%\\NVIDIA Corporation\\NVIDIA GeForce Experience\\NVIDIA GeForce Experience.exe"
+      ]
+    },
+    "AppSteps": [
+      "Click \"Open NVIDIA App\" below — it launches the NVIDIA App you already have.",
+      "Open the \"Drivers\" tab.",
+      "Click \"Check for updates\", then download the latest driver.",
+      "Choose \"Express installation\" and let it finish.",
+      "Restart if asked, then mark this guide as done."
     ]
   },
   {

@@ -12,6 +12,20 @@
       "En yeni Game Ready sürücüsünü (yaratıcı işler için Studio sürücüsü) indir.",
       "İndirilen kurulumu çalıştır ve \"Express\" (Hızlı) kurulumu seç.",
       "İstenirse bilgisayarını yeniden başlat, sonra geri dön ve bu rehberi tamamlandı işaretle."
+    ],
+    "AppLaunch": {
+      "DisplayName": "NVIDIA App",
+      "ExeCandidates": [
+        "%ProgramFiles%\\NVIDIA Corporation\\NVIDIA App\\CEF\\NVIDIA app.exe",
+        "%ProgramFiles%\\NVIDIA Corporation\\NVIDIA GeForce Experience\\NVIDIA GeForce Experience.exe"
+      ]
+    },
+    "AppSteps": [
+      "Aşağıdaki \"NVIDIA App'i Aç\"a tıkla — zaten yüklü olan NVIDIA App açılır.",
+      "\"Drivers\" (Sürücüler) sekmesini aç.",
+      "\"Check for updates\" (Güncellemeleri denetle), sonra en yeni sürücüyü indir.",
+      "\"Express installation\" (Hızlı kurulum) seç ve bitmesini bekle.",
+      "İstenirse yeniden başlat, sonra bu rehberi tamamlandı işaretle."
     ]
   },
   {
