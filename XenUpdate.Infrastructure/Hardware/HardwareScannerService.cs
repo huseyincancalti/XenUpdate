@@ -14,37 +14,40 @@ public sealed class HardwareScannerService : IHardwareScannerService
     {
         return Task.Run(() =>
         {
-            var gpuName = QueryFirstString("SELECT Name FROM Win32_VideoController", "Name");
+            var gpuNames = QueryAllStrings("SELECT Name FROM Win32_VideoController", "Name");
+            var gpuName = PickPrimaryGpu(gpuNames);
             var cpuName = QueryFirstString("SELECT Name FROM Win32_Processor", "Name");
-            var gpuVendor = ParseGpuVendor(gpuName);
 
             return new HardwareProfile
             {
                 GpuName = gpuName,
-                GpuVendor = gpuVendor,
+                GpuVendor = ParseGpuVendor(gpuName),
                 CpuName = cpuName
             };
         });
     }
 
-    private static string QueryFirstString(string wqlQuery, string propertyName)
+    /// <summary>
+    /// Picks the GPU that guided driver updates should target. Hybrid-graphics laptops report
+    /// several video controllers (e.g. an Intel iGPU plus an NVIDIA/AMD dGPU) and the WMI order
+    /// is not guaranteed, so prefer a discrete vendor over the integrated one. Public for testing.
+    /// </summary>
+    public static string PickPrimaryGpu(IReadOnlyList<string> gpuNames)
     {
-        try
-        {
-            using var searcher = new ManagementObjectSearcher(wqlQuery);
-            using var results = searcher.Get();
+        if (gpuNames.Count == 0)
+            return string.Empty;
 
-            foreach (ManagementObject obj in results)
-                return obj[propertyName]?.ToString()?.Trim() ?? string.Empty;
-        }
-        catch (ManagementException)
+        foreach (var name in gpuNames)
         {
+            if (ParseGpuVendor(name) is "NVIDIA" or "AMD")
+                return name;
         }
 
-        return string.Empty;
+        return gpuNames[0];
     }
 
-    private static string ParseGpuVendor(string gpuName)
+    /// <summary>Parses the GPU vendor ("NVIDIA", "AMD", "Intel", or "Unknown") from a controller name. Public for testing.</summary>
+    public static string ParseGpuVendor(string gpuName)
     {
         if (string.IsNullOrWhiteSpace(gpuName))
             return "Unknown";
@@ -61,5 +64,33 @@ public sealed class HardwareScannerService : IHardwareScannerService
             return "Intel";
 
         return "Unknown";
+    }
+
+    private static List<string> QueryAllStrings(string wqlQuery, string propertyName)
+    {
+        var values = new List<string>();
+        try
+        {
+            using var searcher = new ManagementObjectSearcher(wqlQuery);
+            using var results = searcher.Get();
+
+            foreach (ManagementObject obj in results)
+            {
+                var value = obj[propertyName]?.ToString()?.Trim();
+                if (!string.IsNullOrWhiteSpace(value))
+                    values.Add(value);
+            }
+        }
+        catch (ManagementException)
+        {
+        }
+
+        return values;
+    }
+
+    private static string QueryFirstString(string wqlQuery, string propertyName)
+    {
+        var all = QueryAllStrings(wqlQuery, propertyName);
+        return all.Count > 0 ? all[0] : string.Empty;
     }
 }
