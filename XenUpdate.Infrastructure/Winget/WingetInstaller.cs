@@ -34,6 +34,11 @@ public sealed class WingetInstaller : IWingetInstaller
         return $"upgrade --id \"{escapedPackageId}\" --exact --silent --accept-package-agreements --accept-source-agreements --disable-interactivity";
     }
 
+    // winget package ids are vendor.product style — letters, digits, '.', '-', '_', '+'.
+    // Reject anything else so a malformed/hostile id can't inject extra winget arguments.
+    private static bool IsSafePackageId(string packageId) =>
+        packageId.All(c => char.IsLetterOrDigit(c) || c is '.' or '-' or '_' or '+');
+
     /// <inheritdoc />
     public async Task<bool> InstallUpdateAsync(
         AppUpdateItem item,
@@ -43,6 +48,12 @@ public sealed class WingetInstaller : IWingetInstaller
         if (string.IsNullOrWhiteSpace(item.WingetPackageId))
         {
             _logger.Warning($"Skipped {item.DisplayName} because it does not have a winget package ID.");
+            return false;
+        }
+
+        if (!IsSafePackageId(item.WingetPackageId))
+        {
+            _logger.Warning($"Skipped {item.DisplayName}: package id '{item.WingetPackageId}' has unexpected characters.");
             return false;
         }
 

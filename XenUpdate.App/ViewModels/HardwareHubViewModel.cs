@@ -21,6 +21,9 @@ public sealed partial class HardwareHubViewModel : ObservableObject
     private readonly INvidiaDriverService _nvidiaService;
     private readonly ILoggerService _logger;
 
+    private bool _initialized;
+    private DriverUpdateStatus? _nvidiaStatusCache;
+
     [ObservableProperty]
     private HardwareProfile _hardware = new();
 
@@ -73,6 +76,9 @@ public sealed partial class HardwareHubViewModel : ObservableObject
     /// <summary>Detects hardware and loads the applicable guides. Called from the view's Loaded event.</summary>
     public async Task InitializeAsync()
     {
+        if (_initialized)
+            return;
+
         IsLoading = true;
         StatusMessage = LocalizationManager.Instance["StatusDetectingHardware"];
 
@@ -80,6 +86,7 @@ public sealed partial class HardwareHubViewModel : ObservableObject
         {
             Hardware = await _hardwareScanner.GetCurrentHardwareAsync();
             await LoadGuidesAsync();
+            _initialized = true;
         }
         catch (Exception ex)
         {
@@ -110,7 +117,7 @@ public sealed partial class HardwareHubViewModel : ObservableObject
             DriverUpdateStatus? status = null;
             if (string.Equals(guide.RequiredGpuVendor, "NVIDIA", StringComparison.OrdinalIgnoreCase))
             {
-                status = await _nvidiaService.CheckAsync();
+                status = _nvidiaStatusCache ??= await _nvidiaService.CheckAsync();
                 // If we reliably know the driver is current, don't show a guide — show a
                 // reassuring "you're up to date" note instead so the page never looks broken.
                 if (status.Checked && !status.UpdateAvailable)

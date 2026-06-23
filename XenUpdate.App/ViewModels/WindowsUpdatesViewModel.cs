@@ -113,6 +113,7 @@ public sealed partial class WindowsUpdatesViewModel : ObservableObject
         }
 
         ResetCancellation();
+        _operationCts!.CancelAfter(TimeSpan.FromMinutes(5));
         ClearInstallFeedback();
 
         IsBusy = true;
