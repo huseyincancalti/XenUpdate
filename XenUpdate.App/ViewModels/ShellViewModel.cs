@@ -101,6 +101,15 @@ public sealed partial class ShellViewModel : ObservableObject
         };
     }
 
+    /// <summary>Kicks off a scan on every source page in parallel — a convenience over per-page scans.</summary>
+    [RelayCommand]
+    private void ScanAll()
+    {
+        if (_programsVm.ScanCommand.CanExecute(null)) _programsVm.ScanCommand.Execute(null);
+        if (_windowsUpdatesVm.ScanCommand.CanExecute(null)) _windowsUpdatesVm.ScanCommand.Execute(null);
+        if (_driversVm.ScanCommand.CanExecute(null)) _driversVm.ScanCommand.Execute(null);
+    }
+
     [RelayCommand]
     private void ShowWindow() => RequestShowWindow?.Invoke();
 

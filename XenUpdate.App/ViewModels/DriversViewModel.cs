@@ -18,6 +18,7 @@ public sealed partial class DriversViewModel : ObservableObject
     private const string NoDriverUpdatesMessage = "No driver updates found. Your devices look current for now.";
 
     private readonly IDriverUpdateService _service;
+    private readonly ISystemRestoreService _restoreService;
     private readonly ILoggerService _logger;
 
     private CancellationTokenSource? _operationCts;
@@ -86,9 +87,10 @@ public sealed partial class DriversViewModel : ObservableObject
     /// <summary>
     /// Initializes the DriversViewModel with its required services.
     /// </summary>
-    public DriversViewModel(IDriverUpdateService service, ILoggerService logger)
+    public DriversViewModel(IDriverUpdateService service, ISystemRestoreService restoreService, ILoggerService logger)
     {
         _service = service;
+        _restoreService = restoreService;
         _logger = logger;
 
         Updates.CollectionChanged += OnUpdatesCollectionChanged;
@@ -179,6 +181,14 @@ public sealed partial class DriversViewModel : ObservableObject
         IsInstallBatchRunning = true;
         _logger.Info("Driver install batch started.");
         _logger.Info($"{selectedUpdates.Count} driver update(s) selected for installation.");
+
+        // Safety: take a system restore point before touching drivers so a bad driver can be
+        // rolled back. Continue even if it fails (e.g. System Restore disabled), but say which.
+        StatusMessage = "Creating a system restore point before installing drivers...";
+        var restoreCreated = await _restoreService.CreateRestorePointAsync("XenUpdate driver update");
+        _logger.Info(restoreCreated
+            ? "System restore point created before driver install."
+            : "Could not create a system restore point; continuing with driver install.");
 
         var succeededItems = new List<DriverUpdateItem>();
         var failedCount = 0;

@@ -251,6 +251,7 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="20,22,20,18">
@@ -301,6 +302,18 @@
                             </StackPanel>
                         </ListBoxItem>
                     </ListBox>
+
+                    <Border Grid.Row="2" Margin="14,0,14,18">
+                        <Button Command="{Binding ScanAllCommand}"
+                                Style="{StaticResource MaterialDesignRaisedButton}"
+                                Height="44"
+                                ToolTip="Scan apps, Windows updates and drivers together">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <materialDesign:PackIcon Kind="Refresh" Width="18" Height="18" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                <TextBlock Text="Scan All" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </Border>
                 </Grid>
             </Border>
 
