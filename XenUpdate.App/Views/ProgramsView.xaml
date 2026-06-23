@@ -179,6 +179,7 @@
                 -->
                     <DataGridTemplateColumn Header="Application"
                                             Width="*"
+                                            MinWidth="160"
                                             IsReadOnly="True"
                                             SortMemberPath="DisplayName">
                         <DataGridTemplateColumn.CellTemplate>
@@ -193,7 +194,7 @@
                     </DataGridTemplateColumn>
 
                     <DataGridTemplateColumn Header="Package ID"
-                                            Width="220"
+                                            Width="190"
                                             IsReadOnly="True"
                                             SortMemberPath="WingetPackageId">
                         <DataGridTemplateColumn.CellTemplate>
@@ -208,7 +209,7 @@
                     </DataGridTemplateColumn>
 
                     <DataGridTemplateColumn Header="Publisher"
-                                            Width="170"
+                                            Width="150"
                                             IsReadOnly="True"
                                             SortMemberPath="Publisher">
                         <DataGridTemplateColumn.CellTemplate>

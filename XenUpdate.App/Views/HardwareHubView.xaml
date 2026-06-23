@@ -60,7 +60,16 @@
                           Visibility="{Binding HasGuides, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border Style="{StaticResource ZenGlassPanelStyle}" Padding="20" Margin="0,0,0,14">
+                        <Border Padding="20" Margin="0,0,0,14">
+                            <Border.Style>
+                                <Style TargetType="Border" BasedOn="{StaticResource ZenGlassPanelStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                                            <Setter Property="Opacity" Value="0.55" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
                             <StackPanel>
                                 <Grid Margin="0,0,0,8">
                                     <Grid.ColumnDefinitions>
