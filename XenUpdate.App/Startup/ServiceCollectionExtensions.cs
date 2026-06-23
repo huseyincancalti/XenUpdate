@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using XenUpdate.App.Services;
 using XenUpdate.Core.Interfaces;
+using XenUpdate.Infrastructure.Guides;
 using XenUpdate.Infrastructure.Hardware;
 using XenUpdate.Infrastructure.Logging;
 using XenUpdate.Infrastructure.Mocks;
@@ -30,6 +31,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IBlacklistRepository, BlacklistRepository>();
         services.AddSingleton<ISettingsRepository, SettingsRepository>();
         services.AddSingleton<IThemeService, ThemeService>();
+        services.AddSingleton<IGuideCatalog, EmbeddedGuideCatalog>();
+        services.AddSingleton<IGuideCompletionStore, JsonGuideCompletionStore>();
 
         if (useMocks)
         {

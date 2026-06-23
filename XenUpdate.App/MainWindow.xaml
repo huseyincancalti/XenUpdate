@@ -291,8 +291,8 @@
                         </ListBoxItem>
                         <ListBoxItem Tag="{x:Static vm:AppPage.HardwareHub}">
                             <StackPanel Orientation="Horizontal">
-                                <materialDesign:PackIcon Kind="Chip" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center" />
-                                <TextBlock Text="Hardware Hub" VerticalAlignment="Center" FontWeight="SemiBold" />
+                                <materialDesign:PackIcon Kind="MapMarkerPath" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center" />
+                                <TextBlock Text="Guides" VerticalAlignment="Center" FontWeight="SemiBold" />
                             </StackPanel>
                         </ListBoxItem>
                         <ListBoxItem Tag="{x:Static vm:AppPage.Settings}">
