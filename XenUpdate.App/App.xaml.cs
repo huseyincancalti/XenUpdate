@@ -128,12 +128,34 @@ public partial class App : Application
 
         try
         {
+            ApplyLanguage(settings);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[XenUpdate] Language apply failed at startup: {ex}");
+        }
+
+        try
+        {
             Services.GetRequiredService<IThemeService>().ApplyTheme(settings.Theme);
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[XenUpdate] Theme apply failed at startup: {ex}");
         }
+    }
+
+    /// <summary>Applies the saved UI language, or auto-detects it from the OS on first run.</summary>
+    private static void ApplyLanguage(AppSettings settings)
+    {
+        var lang = !string.IsNullOrWhiteSpace(settings.Language) ? settings.Language : DetectOsLanguage();
+        LocalizationManager.Instance.ChangeLanguage(lang);
+    }
+
+    private static string DetectOsLanguage()
+    {
+        var ui = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+        return ui.Equals("tr", StringComparison.OrdinalIgnoreCase) ? "tr" : "en";
     }
 
     /// <summary>

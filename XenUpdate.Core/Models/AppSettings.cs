@@ -47,10 +47,11 @@ public sealed class AppSettings : INotifyPropertyChanged
         set => SetField(ref _minimizeToTray, value);
     }
 
-    private string _language = "en";
+    private string _language = string.Empty;
 
     /// <summary>
-    /// The UI language code (e.g. "en", "tr"). Default: "en".
+    /// The UI language code (e.g. "en", "tr"). Empty means "not chosen yet" — the app
+    /// auto-detects from the OS on first run.
     /// </summary>
     public string Language
     {

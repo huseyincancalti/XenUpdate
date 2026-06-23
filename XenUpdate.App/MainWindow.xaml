@@ -7,6 +7,7 @@
         xmlns:tb="http://www.hardcodet.net/taskbar"
         xmlns:vm="clr-namespace:XenUpdate.App.ViewModels"
         xmlns:views="clr-namespace:XenUpdate.App.Views"
+        xmlns:loc="clr-namespace:XenUpdate.App.Services"
         Title="XenUpdate"
         Icon="pack://application:,,,/Assets/AppIcon.ico"
         Height="720"
@@ -175,7 +176,7 @@
                         FontSize="11" FontWeight="SemiBold" Foreground="White"
                         Background="#E53935" BorderThickness="0" Cursor="Hand"
                         VerticalAlignment="Center"
-                        ToolTip="A new version of XenUpdate is available — click to download">
+                        ToolTip="{Binding [NewVersionTooltip], Source={x:Static loc:LocalizationManager.Instance}}">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
@@ -191,12 +192,12 @@
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Button.Template>
-                    New Version Available!
+                    <TextBlock Text="{Binding [NewVersionAvailable], Source={x:Static loc:LocalizationManager.Instance}}" />
                 </Button>
 
                 <Button Command="{Binding Settings.ToggleThemeCommand}"
                         Style="{StaticResource WindowControlButtonStyle}"
-                        ToolTip="Switch theme">
+                        ToolTip="{Binding [ThemeTooltip], Source={x:Static loc:LocalizationManager.Instance}}">
                     <materialDesign:PackIcon Width="16" Height="16">
                         <materialDesign:PackIcon.Style>
                             <Style TargetType="materialDesign:PackIcon">
@@ -211,11 +212,11 @@
                     </materialDesign:PackIcon>
                 </Button>
 
-                <Button Style="{StaticResource WindowControlButtonStyle}" Click="MinimizeButton_Click" ToolTip="Minimize">
+                <Button Style="{StaticResource WindowControlButtonStyle}" Click="MinimizeButton_Click" ToolTip="{Binding [MinimizeTooltip], Source={x:Static loc:LocalizationManager.Instance}}">
                     <materialDesign:PackIcon Kind="WindowMinimize" Width="14" Height="14" />
                 </Button>
 
-                <Button Style="{StaticResource WindowControlButtonStyle}" Click="MaximizeButton_Click" ToolTip="Maximize / Restore">
+                <Button Style="{StaticResource WindowControlButtonStyle}" Click="MaximizeButton_Click" ToolTip="{Binding [MaximizeTooltip], Source={x:Static loc:LocalizationManager.Instance}}">
                     <materialDesign:PackIcon Width="14" Height="14">
                         <materialDesign:PackIcon.Style>
                             <Style TargetType="materialDesign:PackIcon">
@@ -230,7 +231,7 @@
                     </materialDesign:PackIcon>
                 </Button>
 
-                <Button Style="{StaticResource WindowCloseButtonStyle}" Click="CloseButton_Click" ToolTip="Close">
+                <Button Style="{StaticResource WindowCloseButtonStyle}" Click="CloseButton_Click" ToolTip="{Binding [CloseTooltip], Source={x:Static loc:LocalizationManager.Instance}}">
                     <materialDesign:PackIcon Kind="WindowClose" Width="14" Height="14" />
                 </Button>
             </StackPanel>
@@ -274,31 +275,31 @@
                         <ListBoxItem Tag="{x:Static vm:AppPage.Programs}">
                             <StackPanel Orientation="Horizontal">
                                 <materialDesign:PackIcon Kind="PackageVariant" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center" />
-                                <TextBlock Text="Programs" VerticalAlignment="Center" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding [NavPrograms], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
                             </StackPanel>
                         </ListBoxItem>
                         <ListBoxItem Tag="{x:Static vm:AppPage.WindowsUpdates}">
                             <StackPanel Orientation="Horizontal">
                                 <materialDesign:PackIcon Kind="MicrosoftWindows" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center" />
-                                <TextBlock Text="Windows Updates" VerticalAlignment="Center" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding [NavWindowsUpdates], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
                             </StackPanel>
                         </ListBoxItem>
                         <ListBoxItem Tag="{x:Static vm:AppPage.Drivers}">
                             <StackPanel Orientation="Horizontal">
                                 <materialDesign:PackIcon Kind="Cpu64Bit" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center" />
-                                <TextBlock Text="Drivers" VerticalAlignment="Center" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding [NavDrivers], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
                             </StackPanel>
                         </ListBoxItem>
                         <ListBoxItem Tag="{x:Static vm:AppPage.HardwareHub}">
                             <StackPanel Orientation="Horizontal">
                                 <materialDesign:PackIcon Kind="MapMarkerPath" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center" />
-                                <TextBlock Text="Guides" VerticalAlignment="Center" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding [NavGuides], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
                             </StackPanel>
                         </ListBoxItem>
                         <ListBoxItem Tag="{x:Static vm:AppPage.Settings}">
                             <StackPanel Orientation="Horizontal">
                                 <materialDesign:PackIcon Kind="Cog" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center" />
-                                <TextBlock Text="Settings" VerticalAlignment="Center" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding [NavSettings], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
                             </StackPanel>
                         </ListBoxItem>
                     </ListBox>
@@ -307,10 +308,10 @@
                         <Button Command="{Binding ScanAllCommand}"
                                 Style="{StaticResource MaterialDesignRaisedButton}"
                                 Height="44"
-                                ToolTip="Scan apps, Windows updates and drivers together">
+                                ToolTip="{Binding [ScanAllTooltip], Source={x:Static loc:LocalizationManager.Instance}}">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                 <materialDesign:PackIcon Kind="Refresh" Width="18" Height="18" Margin="0,0,8,0" VerticalAlignment="Center" />
-                                <TextBlock Text="Scan All" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding [ScanAll], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
                     </Border>

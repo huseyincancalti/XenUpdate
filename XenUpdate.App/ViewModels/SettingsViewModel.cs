@@ -56,6 +56,34 @@ public sealed partial class SettingsViewModel : ObservableObject
     /// <summary>The list of blacklist entries shown in the Settings UI.</summary>
     public ObservableCollection<BlacklistEntry> BlacklistEntries { get; } = new();
 
+    /// <summary>A selectable UI language: its code plus a display name.</summary>
+    public sealed record LanguageOption(string Code, string Display);
+
+    /// <summary>The languages the user can choose from in the dropdown.</summary>
+    public IReadOnlyList<LanguageOption> AvailableLanguages { get; } = new[]
+    {
+        new LanguageOption("en", "English"),
+        new LanguageOption("tr", "Türkçe")
+    };
+
+    /// <summary>The active UI language code, bound to the language dropdown.</summary>
+    [ObservableProperty]
+    private string _selectedLanguageCode = "en";
+
+    partial void OnSelectedLanguageCodeChanged(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return;
+
+        LocalizationManager.Instance.ChangeLanguage(value);
+
+        if (!string.Equals(Settings.Language, value, StringComparison.OrdinalIgnoreCase))
+        {
+            Settings.Language = value;
+            _ = SaveAsync();
+        }
+    }
+
     /// <summary>
     /// Initializes the SettingsViewModel with its required repositories.
     /// </summary>
@@ -97,6 +125,12 @@ public sealed partial class SettingsViewModel : ObservableObject
 
             // Ensure toggle icon reflects the loaded theme (covers cold-start with Light saved).
             OnPropertyChanged(nameof(IsLightTheme));
+
+            // Reflect the active language in the dropdown (persists the OS-detected default).
+            SelectedLanguageCode = !string.IsNullOrWhiteSpace(Settings.Language)
+                ? Settings.Language
+                : (System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName
+                    .Equals("tr", StringComparison.OrdinalIgnoreCase) ? "tr" : "en");
 
             await ReloadBlacklistEntriesAsync();
             StatusMessage = "Settings loaded.";
