@@ -4,11 +4,17 @@ using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using XenUpdate.App.Collections;
+using XenUpdate.App.Services;
 using XenUpdate.Core.Enums;
 using XenUpdate.Core.Interfaces;
 using XenUpdate.Core.Models;
 
 namespace XenUpdate.App.ViewModels;
+
+file static class L
+{
+    public static string T(string key) => LocalizationManager.Instance[key];
+}
 
 /// <summary>
 /// ViewModel for the Programs page.
@@ -16,8 +22,6 @@ namespace XenUpdate.App.ViewModels;
 /// </summary>
 public sealed partial class ProgramsViewModel : ObservableObject
 {
-    private const string NoUpdatesMessage = "No application updates found. All clear for now.";
-
     private readonly IWingetScanner _scanner;
     private readonly IWingetInstaller _installer;
     private readonly IBlacklistRepository _blacklistRepository;
@@ -56,7 +60,7 @@ public sealed partial class ProgramsViewModel : ObservableObject
 
     /// <summary>Short status line shown below the DataGrid.</summary>
     [ObservableProperty]
-    private string _statusMessage = "Press 'Scan for Updates' to start.";
+    private string _statusMessage = L.T("StatusProgramsInitial");
 
     /// <summary>True after the user has completed at least one scan attempt.</summary>
     [ObservableProperty]
@@ -150,7 +154,7 @@ public sealed partial class ProgramsViewModel : ObservableObject
         IsScanning = true;
         HasScanned = false;
         HasUpdates = false;
-        StatusMessage = "Scanning for updates...";
+        StatusMessage = L.T("StatusScanning");
         Updates.Clear();
 
         try
@@ -174,17 +178,17 @@ public sealed partial class ProgramsViewModel : ObservableObject
             HasScanned = true;
 
             StatusMessage = Updates.Count == 0
-                ? NoUpdatesMessage
-                : $"{Updates.Count} update(s) available.";
+                ? L.T("ProgramsEmptyTitle")
+                : string.Format(L.T("StatusUpdatesAvailable"), Updates.Count);
         }
         catch (OperationCanceledException)
         {
-            StatusMessage = "Scan cancelled.";
+            StatusMessage = L.T("StatusScanCancelled");
             _logger.Info("Programs scan was cancelled by the user.");
         }
         catch (Exception ex)
         {
-            StatusMessage = "Scan failed. See the log for details.";
+            StatusMessage = L.T("StatusScanFailed");
             _logger.Error("Programs scan encountered an unexpected error.", ex);
         }
         finally

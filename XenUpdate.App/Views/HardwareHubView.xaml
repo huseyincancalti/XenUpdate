@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:vm="clr-namespace:XenUpdate.App.ViewModels"
+             xmlns:loc="clr-namespace:XenUpdate.App.Services"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
@@ -11,7 +12,7 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24">
         <StackPanel>
 
-            <TextBlock Text="Update Guides" Style="{StaticResource PageTitleStyle}" />
+            <TextBlock Text="{Binding [GuidesTitle], Source={x:Static loc:LocalizationManager.Instance}}" Style="{StaticResource PageTitleStyle}" />
 
             <ProgressBar IsIndeterminate="True"
                          Height="4"
@@ -19,7 +20,7 @@
                          Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
             <!-- Detected hardware -->
-            <TextBlock Text="Detected hardware" FontWeight="SemiBold" Opacity="0.7" Margin="0,0,0,8" />
+            <TextBlock Text="{Binding [GuidesDetectedHardware], Source={x:Static loc:LocalizationManager.Instance}}" FontWeight="SemiBold" Opacity="0.7" Margin="0,0,0,8" />
             <StackPanel Orientation="Horizontal" Margin="0,0,0,22">
                 <Border Style="{StaticResource ZenGlassPanelStyle}" Width="300" Padding="20" Margin="0,0,16,0">
                     <StackPanel>
@@ -54,7 +55,7 @@
             </StackPanel>
 
             <!-- Recommended guides -->
-            <TextBlock Text="Recommended guides" FontWeight="SemiBold" Opacity="0.7" Margin="0,0,0,8" />
+            <TextBlock Text="{Binding [GuidesRecommended], Source={x:Static loc:LocalizationManager.Instance}}" FontWeight="SemiBold" Opacity="0.7" Margin="0,0,0,8" />
 
             <ItemsControl ItemsSource="{Binding Guides}"
                           Visibility="{Binding HasGuides, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -86,7 +87,7 @@
                                         <StackPanel Orientation="Horizontal">
                                             <materialDesign:PackIcon Kind="Check" Width="14" Height="14"
                                                                      Foreground="White" VerticalAlignment="Center" Margin="0,0,4,0" />
-                                            <TextBlock Text="Done" Foreground="White" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding [GuideDone], Source={x:Static loc:LocalizationManager.Instance}}" Foreground="White" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Border>
                                 </Grid>
@@ -112,22 +113,39 @@
                                             Margin="0,0,8,0">
                                         <StackPanel Orientation="Horizontal">
                                             <materialDesign:PackIcon Kind="OpenInNew" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,6,0" />
-                                            <TextBlock Text="Open official page" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding [OpenOfficialPage], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
 
                                     <Button Command="{Binding DataContext.ToggleCompleteCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                            CommandParameter="{Binding}">
-                                        <Button.Style>
-                                            <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignOutlinedButton}">
-                                                <Setter Property="Content" Value="Mark as done" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsCompleted}" Value="True">
-                                                        <Setter Property="Content" Value="Mark as not done" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Button.Style>
+                                            CommandParameter="{Binding}"
+                                            Style="{StaticResource MaterialDesignOutlinedButton}">
+                                        <Grid>
+                                            <TextBlock Text="{Binding [MarkAsDone], Source={x:Static loc:LocalizationManager.Instance}}">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <TextBlock Text="{Binding [MarkAsNotDone], Source={x:Static loc:LocalizationManager.Instance}}">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Grid>
                                     </Button>
                                 </StackPanel>
                             </StackPanel>
@@ -140,9 +158,9 @@
             <Border Style="{StaticResource ZenGlassPanelStyle}" Padding="24"
                     Visibility="{Binding ShowEmptyState, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <StackPanel>
-                    <TextBlock Text="No guided updates apply right now" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,6" />
+                    <TextBlock Text="{Binding [GuidesEmptyTitle], Source={x:Static loc:LocalizationManager.Instance}}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,6" TextWrapping="Wrap" />
                     <TextBlock Opacity="0.75" TextWrapping="Wrap"
-                               Text="When your hardware needs a manual update (GPU, BIOS, firmware) that Windows can't handle automatically, step-by-step guides will appear here." />
+                               Text="{Binding [GuidesEmptyBody], Source={x:Static loc:LocalizationManager.Instance}}" />
                 </StackPanel>
             </Border>
 

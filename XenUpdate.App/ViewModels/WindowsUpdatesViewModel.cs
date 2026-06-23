@@ -3,11 +3,17 @@ using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using XenUpdate.App.Collections;
+using XenUpdate.App.Services;
 using XenUpdate.Core.Enums;
 using XenUpdate.Core.Interfaces;
 using XenUpdate.Core.Models;
 
 namespace XenUpdate.App.ViewModels;
+
+file static class L
+{
+    public static string T(string key) => LocalizationManager.Instance[key];
+}
 
 /// <summary>
 /// ViewModel for the Windows Updates page.
@@ -15,8 +21,6 @@ namespace XenUpdate.App.ViewModels;
 /// </summary>
 public sealed partial class WindowsUpdatesViewModel : ObservableObject
 {
-    private const string NoWindowsUpdatesMessage = "No Windows updates found. All clear for now.";
-
     private readonly IWindowsUpdateService _service;
     private readonly ILoggerService _logger;
 
@@ -47,7 +51,7 @@ public sealed partial class WindowsUpdatesViewModel : ObservableObject
 
     /// <summary>Short status line shown below the page content.</summary>
     [ObservableProperty]
-    private string _statusMessage = "Press 'Check for Updates' to scan.";
+    private string _statusMessage = L.T("StatusWindowsUpdatesInitial");
 
     /// <summary>True after the user has completed at least one scan attempt.</summary>
     [ObservableProperty]
@@ -116,7 +120,7 @@ public sealed partial class WindowsUpdatesViewModel : ObservableObject
         HasUpdates = false;
         HasScanned = false;
         Updates.Clear();
-        StatusMessage = "Scanning for Windows Updates... This may take up to two minutes.";
+        StatusMessage = L.T("StatusScanningSlow");
 
         try
         {
@@ -134,16 +138,16 @@ public sealed partial class WindowsUpdatesViewModel : ObservableObject
             HasScanned = true;
 
             StatusMessage = HasUpdates
-                ? $"{Updates.Count} update(s) available."
-                : NoWindowsUpdatesMessage;
+                ? string.Format(L.T("StatusUpdatesAvailable"), Updates.Count)
+                : L.T("WindowsUpdatesEmptyTitle");
         }
         catch (OperationCanceledException)
         {
-            StatusMessage = "Scan cancelled.";
+            StatusMessage = L.T("StatusScanCancelled");
         }
         catch (Exception ex)
         {
-            StatusMessage = "Scan failed. See the log for details.";
+            StatusMessage = L.T("StatusScanFailed");
             _logger.Error("Windows Update scan failed.", ex);
         }
         finally

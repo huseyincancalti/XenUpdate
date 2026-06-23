@@ -3,11 +3,17 @@ using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using XenUpdate.App.Collections;
+using XenUpdate.App.Services;
 using XenUpdate.Core.Enums;
 using XenUpdate.Core.Interfaces;
 using XenUpdate.Core.Models;
 
 namespace XenUpdate.App.ViewModels;
+
+file static class L
+{
+    public static string T(string key) => LocalizationManager.Instance[key];
+}
 
 /// <summary>
 /// ViewModel for the Drivers page.
@@ -15,8 +21,6 @@ namespace XenUpdate.App.ViewModels;
 /// </summary>
 public sealed partial class DriversViewModel : ObservableObject
 {
-    private const string NoDriverUpdatesMessage = "No driver updates found. Your devices look current for now.";
-
     private readonly IDriverUpdateService _service;
     private readonly ISystemRestoreService _restoreService;
     private readonly ILoggerService _logger;
@@ -48,7 +52,7 @@ public sealed partial class DriversViewModel : ObservableObject
 
     /// <summary>Short status message shown below the page content.</summary>
     [ObservableProperty]
-    private string _statusMessage = "Press 'Scan for Driver Updates' to start.";
+    private string _statusMessage = L.T("StatusDriversInitial");
 
     /// <summary>True after the user has completed at least one driver scan attempt.</summary>
     [ObservableProperty]
@@ -115,7 +119,7 @@ public sealed partial class DriversViewModel : ObservableObject
         HasScanned = false;
         HasUpdates = false;
         Updates.Clear();
-        StatusMessage = "Scanning for driver updates... This may take up to two minutes.";
+        StatusMessage = L.T("StatusScanningSlow");
 
         try
         {
@@ -131,16 +135,16 @@ public sealed partial class DriversViewModel : ObservableObject
             HasScanned = true;
 
             StatusMessage = HasUpdates
-                ? $"{Updates.Count} driver update(s) available."
-                : NoDriverUpdatesMessage;
+                ? string.Format(L.T("StatusUpdatesAvailable"), Updates.Count)
+                : L.T("DriversEmptyTitle");
         }
         catch (OperationCanceledException)
         {
-            StatusMessage = "Scan cancelled.";
+            StatusMessage = L.T("StatusScanCancelled");
         }
         catch (Exception ex)
         {
-            StatusMessage = "Driver update scan failed. See the log for details.";
+            StatusMessage = L.T("StatusScanFailed");
             _logger.Error("Driver update scan failed.", ex);
         }
         finally
