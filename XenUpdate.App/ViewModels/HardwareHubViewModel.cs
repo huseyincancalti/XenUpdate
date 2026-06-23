@@ -64,7 +64,11 @@ public sealed partial class HardwareHubViewModel : ObservableObject
     }
 
     private void OnLanguageChanged() =>
-        Application.Current?.Dispatcher.InvokeAsync(async () => await LoadGuidesAsync());
+        Application.Current?.Dispatcher.InvokeAsync(async () =>
+        {
+            try { await LoadGuidesAsync(); }
+            catch (Exception ex) { _logger.Error("Reloading guides after language change failed.", ex); }
+        });
 
     /// <summary>Detects hardware and loads the applicable guides. Called from the view's Loaded event.</summary>
     public async Task InitializeAsync()

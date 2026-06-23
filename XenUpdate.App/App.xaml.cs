@@ -26,6 +26,9 @@ public partial class App : Application
     /// </summary>
     public static bool IsBackgroundStartup { get; private set; }
 
+    // Guards against the dispatcher and domain handlers both opening the crash window.
+    private static int _crashReporting;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -203,6 +206,11 @@ public partial class App : Application
 
     private static void ShowCrashReporter(Exception ex)
     {
+        if (Interlocked.Exchange(ref _crashReporting, 1) != 0)
+        {
+            return;
+        }
+
         try
         {
             var win = new CrashReporterWindow(ex);

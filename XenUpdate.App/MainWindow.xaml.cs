@@ -9,6 +9,8 @@ namespace XenUpdate.App;
 
 public partial class MainWindow : Window
 {
+    private bool _exitRequested;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -43,7 +45,11 @@ public partial class MainWindow : Window
             WindowState = WindowState.Normal;
             Activate();
         };
-        vm.RequestCloseApp = () => System.Windows.Application.Current.Shutdown();
+        vm.RequestCloseApp = () =>
+        {
+            _exitRequested = true;
+            System.Windows.Application.Current.Shutdown();
+        };
         vm.RequestOpenLogViewer = () =>
         {
             var logWin = new Views.LogViewerWindow { Owner = this };
@@ -53,9 +59,19 @@ public partial class MainWindow : Window
 
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
-        // Closing hides to tray; the app exits only via the tray "Exit" command.
-        e.Cancel = true;
-        Hide();
+        // Respect the user's choice: minimize-to-tray hides on close; otherwise actually exit.
+        // An explicit tray "Exit" (_exitRequested) always closes.
+        if (!_exitRequested)
+        {
+            var minimizeToTray = (DataContext as ShellViewModel)?.Settings.Settings.MinimizeToTray ?? false;
+            if (minimizeToTray)
+            {
+                e.Cancel = true;
+                Hide();
+            }
+        }
+
+        base.OnClosing(e);
     }
 
     private void NavList_SelectionChanged(object sender, SelectionChangedEventArgs e)
