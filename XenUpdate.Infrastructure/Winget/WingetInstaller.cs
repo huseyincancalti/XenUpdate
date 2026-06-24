@@ -31,18 +31,33 @@ public sealed class WingetInstaller : IWingetInstaller
     public static string BuildUpgradeArguments(string packageId)
     {
         var escapedPackageId = packageId.Replace("\"", string.Empty);
-        return $"upgrade --id \"{escapedPackageId}\" --exact --silent --accept-package-agreements --accept-source-agreements --disable-interactivity";
+        // Note: we deliberately do NOT pass --disable-interactivity. That flag also suppresses
+        // winget's download progress (the "12.4 MB / 84.0 MB" lines we parse for the live size).
+        // --silent keeps the *installer* quiet and the --accept-* flags pre-answer the only
+        // prompts an --exact --id upgrade can raise, so dropping it does not risk a hang.
+        return $"upgrade --id \"{escapedPackageId}\" --exact --silent --accept-package-agreements --accept-source-agreements";
     }
+
+    // winget package ids are vendor.product style — letters, digits, '.', '-', '_', '+'.
+    // Reject anything else so a malformed/hostile id can't inject extra winget arguments.
+    private static bool IsSafePackageId(string packageId) =>
+        packageId.All(c => char.IsLetterOrDigit(c) || c is '.' or '-' or '_' or '+');
 
     /// <inheritdoc />
     public async Task<bool> InstallUpdateAsync(
         AppUpdateItem item,
-        IProgress<int> progress,
+        IProgress<InstallProgress> progress,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(item.WingetPackageId))
         {
             _logger.Warning($"Skipped {item.DisplayName} because it does not have a winget package ID.");
+            return false;
+        }
+
+        if (!IsSafePackageId(item.WingetPackageId))
+        {
+            _logger.Warning($"Skipped {item.DisplayName}: package id '{item.WingetPackageId}' has unexpected characters.");
             return false;
         }
 
@@ -53,10 +68,16 @@ public sealed class WingetInstaller : IWingetInstaller
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCts.CancelAfter(InstallTimeout);
 
+        // winget redraws its download/install progress with carriage returns. Reading stdout
+        // line-by-line surfaces each redraw, so we can report the live "downloaded / total"
+        // size and percentage. If winget emits no such lines (some silent installers), the
+        // progress simply stays indeterminate until the final 100% — no regression.
+        var lineProgress = new Progress<string>(line => ReportLine(line, progress));
+
         ProcessExecutionResult result;
         try
         {
-            result = await _processRunner.RunAsync("winget", arguments, timeoutCts.Token);
+            result = await _processRunner.RunAsync("winget", arguments, timeoutCts.Token, lineProgress);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
@@ -77,14 +98,26 @@ public sealed class WingetInstaller : IWingetInstaller
         return LogAndReturnInstallResult(item, result, progress);
     }
 
+    // Parses one stdout line and forwards a progress update when it carries a size or percent.
+    private static void ReportLine(string line, IProgress<InstallProgress> progress)
+    {
+        var downloadText = WingetProgressParser.TryParseDownload(line, out var size) ? size : null;
+        var percent = WingetProgressParser.TryParsePercent(line, out var value) ? value : -1;
+
+        if (downloadText is not null || percent >= 0)
+        {
+            progress.Report(new InstallProgress(percent, downloadText));
+        }
+    }
+
     private bool LogAndReturnInstallResult(
         AppUpdateItem item,
         ProcessExecutionResult result,
-        IProgress<int> progress)
+        IProgress<InstallProgress> progress)
     {
         if (result.Succeeded)
         {
-            progress.Report(100);
+            progress.Report(new InstallProgress(100));
             _logger.Info($"Install completed successfully for {item.DisplayName} ({item.WingetPackageId}). Exit code: {result.ExitCode}.");
             return true;
         }
@@ -97,8 +130,28 @@ public sealed class WingetInstaller : IWingetInstaller
             _logger.Warning($"Winget stderr summary for {item.WingetPackageId}: {stderrSummary}");
         }
 
+        var failureReason = MapWingetExitCode(result.ExitCode);
+        progress.Report(new InstallProgress(0, FailureReason: failureReason));
+
         return false;
     }
+
+    // Maps known winget and Windows INTERNET_* HRESULTs to human-readable strings.
+    // Covers the most common real-world failures: network issues, policy blocks, hash errors.
+    private static string MapWingetExitCode(int exitCode) => exitCode switch
+    {
+        -2147012889 => "No internet — server could not be reached",
+        -2147012867 => "Connection timed out",
+        -2147012895 => "Connection refused by server",
+        -2147012894 => "Connection dropped",
+        -2147012696 => "Secure connection failed (TLS/SSL error)",
+        -1978335220 => "No applicable installer for this system",
+        -1978335191 => "Package is already up to date",
+        -1978335215 => "Install blocked by policy or security software",
+        -1978335212 => "Installer hash mismatch — download may be corrupt",
+        -1978335210 => "Installer returned an error",
+        _ => $"Install failed (exit code {exitCode})"
+    };
 
     private static string BuildOutputSummary(string output)
     {

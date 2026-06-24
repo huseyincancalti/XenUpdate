@@ -1,7 +1,8 @@
 <UserControl x:Class="XenUpdate.App.Views.ProgramsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:loc="clr-namespace:XenUpdate.App.Services">
     <!--
         DataContext is set automatically by MainWindow's DataTemplate binding.
         DataContext type: ProgramsViewModel
@@ -16,24 +17,24 @@
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0"
-                   Text="Programs"
+                   Text="{Binding [ProgramsTitle], Source={x:Static loc:LocalizationManager.Instance}}"
                    Style="{StaticResource PageTitleStyle}" />
 
         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12">
 
-            <Button Content="Scan for Updates"
+            <Button Content="{Binding [ScanForUpdates], Source={x:Static loc:LocalizationManager.Instance}}"
                     Command="{Binding ScanCommand}"
                     Style="{StaticResource MaterialDesignRaisedButton}"
                     Padding="14,8"
                     Margin="0,0,8,0" />
 
-            <Button Content="Update Selected"
+            <Button Content="{Binding [UpdateSelected], Source={x:Static loc:LocalizationManager.Instance}}"
                     Command="{Binding InstallSelectedCommand}"
                     Style="{StaticResource MaterialDesignOutlinedButton}"
                     Padding="14,8"
                     Margin="0,0,8,0" />
 
-            <Button Content="Cancel"
+            <Button Content="{Binding [Cancel], Source={x:Static loc:LocalizationManager.Instance}}"
                     Command="{Binding CancelScanCommand}"
                     Style="{StaticResource MaterialDesignOutlinedButton}"
                     Padding="14,8"
@@ -142,43 +143,60 @@
                       RowStyle="{StaticResource ZenDataGridRowStyle}"
                       CellStyle="{StaticResource ZenDataGridCellStyle}"
                       PreviewMouseRightButtonDown="ProgramsDataGrid_OnPreviewMouseRightButtonDown"
+                      PreviewMouseLeftButtonUp="ProgramsDataGrid_OnPreviewMouseLeftButtonUp"
                       materialDesign:DataGridAssist.CellPadding="8 6"
                       materialDesign:DataGridAssist.ColumnHeaderPadding="8 6">
                 <DataGrid.ContextMenu>
                     <ContextMenu Opened="ProgramsContextMenu_OnOpened">
                         <MenuItem x:Name="CopyPackageIdMenuItem"
-                                  Header="Copy Package ID"
+                                  Header="{Binding [CtxCopyPackageId], Source={x:Static loc:LocalizationManager.Instance}}"
                                   Click="CopyPackageIdMenuItem_OnClick" />
                         <MenuItem x:Name="CopyAppNameMenuItem"
-                                  Header="Copy App Name"
+                                  Header="{Binding [CtxCopyAppName], Source={x:Static loc:LocalizationManager.Instance}}"
                                   Click="CopyAppNameMenuItem_OnClick" />
                         <MenuItem x:Name="CopyAppNameAndPackageIdMenuItem"
-                                  Header="Copy App Name + Package ID"
+                                  Header="{Binding [CtxCopyAppNameAndId], Source={x:Static loc:LocalizationManager.Instance}}"
                                   Click="CopyAppNameAndPackageIdMenuItem_OnClick" />
                         <MenuItem x:Name="CopySelectedPackageIdsMenuItem"
-                                  Header="Copy Selected Package IDs"
+                                  Header="{Binding [CtxCopySelectedIds], Source={x:Static loc:LocalizationManager.Instance}}"
                                   Click="CopySelectedPackageIdsMenuItem_OnClick" />
                         <Separator />
                         <MenuItem x:Name="AddToBlacklistMenuItem"
-                                  Header="Add to Blacklist"
+                                  Header="{Binding [CtxAddToBlacklist], Source={x:Static loc:LocalizationManager.Instance}}"
                                   Click="AddToBlacklistMenuItem_OnClick" />
                         <MenuItem x:Name="AddSelectedToBlacklistMenuItem"
-                                  Header="Add Selected to Blacklist"
+                                  Header="{Binding [CtxAddSelectedToBlacklist], Source={x:Static loc:LocalizationManager.Instance}}"
                                   Click="AddSelectedToBlacklistMenuItem_OnClick" />
                     </ContextMenu>
                 </DataGrid.ContextMenu>
                 <DataGrid.Columns>
 
-                    <DataGridCheckBoxColumn Header=""
-                                            Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"
-                                            Width="40" />
+                    <!--
+                        Selection checkbox. Centered and purely a visual indicator
+                        (IsHitTestVisible=False): the whole row is the click target via the
+                        DataGrid's PreviewMouseLeftButtonUp handler, so clicking anywhere on a
+                        row toggles its checkbox. This gives a clearly centered box and a large,
+                        obvious hit area instead of a cramped ~16 px glyph.
+                    -->
+                    <DataGridTemplateColumn Header="" Width="44" CanUserResize="False" CanUserSort="False" IsReadOnly="True">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <CheckBox IsChecked="{Binding IsSelected, Mode=OneWay}"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          IsHitTestVisible="False"
+                                          Focusable="False" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
 
                 <!--
                     Template column gives us text trimming and a full-name tooltip.
                     Width="*" expands to fill all remaining space left by the fixed columns.
                 -->
-                    <DataGridTemplateColumn Header="Application"
+                    <DataGridTemplateColumn Header="{Binding [ColApplication], Source={x:Static loc:LocalizationManager.Instance}}"
                                             Width="*"
+                                            MinWidth="160"
                                             IsReadOnly="True"
                                             SortMemberPath="DisplayName">
                         <DataGridTemplateColumn.CellTemplate>
@@ -192,8 +210,8 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
 
-                    <DataGridTemplateColumn Header="Package ID"
-                                            Width="220"
+                    <DataGridTemplateColumn Header="{Binding [ColPackageId], Source={x:Static loc:LocalizationManager.Instance}}"
+                                            Width="190"
                                             IsReadOnly="True"
                                             SortMemberPath="WingetPackageId">
                         <DataGridTemplateColumn.CellTemplate>
@@ -207,8 +225,8 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
 
-                    <DataGridTemplateColumn Header="Publisher"
-                                            Width="170"
+                    <DataGridTemplateColumn Header="{Binding [ColPublisher], Source={x:Static loc:LocalizationManager.Instance}}"
+                                            Width="150"
                                             IsReadOnly="True"
                                             SortMemberPath="Publisher">
                         <DataGridTemplateColumn.CellTemplate>
@@ -222,17 +240,17 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
 
-                    <DataGridTextColumn Header="Current Ver."
+                    <DataGridTextColumn Header="{Binding [ColCurrentVer], Source={x:Static loc:LocalizationManager.Instance}}"
                                         Binding="{Binding CurrentVersion}"
                                         Width="110"
                                         IsReadOnly="True" />
 
-                    <DataGridTextColumn Header="New Ver."
+                    <DataGridTextColumn Header="{Binding [ColNewVer], Source={x:Static loc:LocalizationManager.Instance}}"
                                         Binding="{Binding AvailableVersion}"
                                         Width="110"
                                         IsReadOnly="True" />
 
-                    <DataGridTemplateColumn Header="Status"
+                    <DataGridTemplateColumn Header="{Binding [ColStatus], Source={x:Static loc:LocalizationManager.Instance}}"
                                             Width="110"
                                             IsReadOnly="True"
                                             SortMemberPath="Status"
@@ -246,13 +264,34 @@
                     Padding="24"
                     Visibility="{Binding IsEmptyStateVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="No application updates found. All clear for now."
+                    <TextBlock Text="{Binding [ProgramsEmptyTitle], Source={x:Static loc:LocalizationManager.Instance}}"
                                FontSize="18"
                                FontWeight="SemiBold"
-                               Margin="0,0,0,8" />
-                    <TextBlock Text="Your installed programs are already up to date, so there is nothing to install right now."
+                               Margin="0,0,0,8"
+                               TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding [ProgramsEmptyBody], Source={x:Static loc:LocalizationManager.Instance}}"
                                Opacity="0.7"
                                TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <!-- Scan error panel: shown when a scan throws (network down, permissions, etc.) -->
+            <Border Style="{StaticResource ZenGlassPanelStyle}"
+                    Padding="24"
+                    Visibility="{Binding HasScanFailed, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <materialDesign:PackIcon Kind="AlertCircleOutline"
+                                                 Width="24" Height="24"
+                                                 Foreground="{DynamicResource ZenBadgeFailedForegroundBrush}"
+                                                 Margin="0,0,10,0" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding [ScanErrorTitle], Source={x:Static loc:LocalizationManager.Instance}}"
+                                   FontSize="18" FontWeight="SemiBold"
+                                   VerticalAlignment="Center"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding [ScanErrorBody], Source={x:Static loc:LocalizationManager.Instance}}"
+                               Opacity="0.7" TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
         </Grid>

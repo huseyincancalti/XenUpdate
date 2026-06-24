@@ -1,0 +1,61 @@
+[
+  {
+    "Id": "gpu-nvidia",
+    "Title": "Update your NVIDIA graphics driver",
+    "Why": "NVIDIA GPU drivers are not delivered reliably through Windows Update. Fresh drivers fix game crashes, improve performance, and patch security issues — so it's best to get them straight from NVIDIA.",
+    "Category": "GraphicsDriver",
+    "RequiredGpuVendor": "NVIDIA",
+    "OfficialUrl": "https://www.nvidia.com/download/index.aspx",
+    "Steps": [
+      "Click \"Open official page\" below to go to NVIDIA's driver download site.",
+      "Pick your product type (GeForce), series, and exact GPU model, then your Windows version.",
+      "Download the latest Game Ready Driver (or Studio Driver if you do creative work).",
+      "Run the downloaded installer and choose \"Express\" installation.",
+      "Restart your PC if it asks, then come back and mark this guide as done."
+    ],
+    "AppLaunch": {
+      "DisplayName": "NVIDIA App",
+      "ExeCandidates": [
+        "%ProgramFiles%\\NVIDIA Corporation\\NVIDIA App\\CEF\\NVIDIA app.exe",
+        "%ProgramFiles%\\NVIDIA Corporation\\NVIDIA GeForce Experience\\NVIDIA GeForce Experience.exe"
+      ]
+    },
+    "AppSteps": [
+      "Click \"Open NVIDIA App\" below — it launches the NVIDIA App you already have.",
+      "Open the \"Drivers\" tab.",
+      "Click \"Check for updates\", then download the latest driver.",
+      "Choose \"Express installation\" and let it finish.",
+      "Restart if asked, then mark this guide as done."
+    ]
+  },
+  {
+    "Id": "gpu-amd",
+    "Title": "Update your AMD Radeon graphics driver",
+    "Why": "AMD Radeon drivers often arrive late or incomplete through Windows Update. The official AMD package (Adrenalin) brings the newest fixes, game optimizations, and security patches.",
+    "Category": "GraphicsDriver",
+    "RequiredGpuVendor": "AMD",
+    "OfficialUrl": "https://www.amd.com/en/support/download/drivers.html",
+    "Steps": [
+      "Click \"Open official page\" below to go to AMD's support site.",
+      "Use \"Search\" or the product selector to find your exact Radeon model.",
+      "Download the recommended Adrenalin Edition driver for your Windows version.",
+      "Run the installer and choose the recommended (Express) installation.",
+      "Restart your PC if asked, then mark this guide as done."
+    ]
+  },
+  {
+    "Id": "gpu-intel",
+    "Title": "Update your Intel graphics driver",
+    "Why": "Intel integrated graphics drivers from your PC maker can lag behind. Intel's own driver adds the latest stability and performance fixes — though on some laptops the maker's version is required, so update via your laptop maker if Intel's installer warns you.",
+    "Category": "GraphicsDriver",
+    "RequiredGpuVendor": "Intel",
+    "OfficialUrl": "https://www.intel.com/content/www/us/en/download-center/home.html",
+    "Steps": [
+      "Click \"Open official page\" below to open Intel's Download Center.",
+      "Search for \"Graphics\" and pick the driver matching your Intel graphics (e.g. Iris Xe / UHD).",
+      "Download the latest installer (.exe) for your Windows version.",
+      "Run it; if Intel says your PC maker customized the driver, get it from your laptop maker instead.",
+      "Restart if asked, then mark this guide as done."
+    ]
+  }
+]

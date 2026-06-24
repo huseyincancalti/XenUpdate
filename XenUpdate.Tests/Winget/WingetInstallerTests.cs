@@ -16,7 +16,7 @@ public sealed class WingetInstallerTests
         var arguments = WingetInstaller.BuildUpgradeArguments("Microsoft.VisualStudioCode");
 
         Assert.Equal(
-            "upgrade --id \"Microsoft.VisualStudioCode\" --exact --silent --accept-package-agreements --accept-source-agreements --disable-interactivity",
+            "upgrade --id \"Microsoft.VisualStudioCode\" --exact --silent --accept-package-agreements --accept-source-agreements",
             arguments);
     }
 
@@ -32,12 +32,12 @@ public sealed class WingetInstallerTests
             WingetPackageId = "Microsoft.VisualStudioCode"
         };
 
-        var success = await installer.InstallUpdateAsync(item, new Progress<int>(), CancellationToken.None);
+        var success = await installer.InstallUpdateAsync(item, new Progress<InstallProgress>(), CancellationToken.None);
 
         Assert.True(success);
         Assert.Equal("winget", runner.LastExecutable);
         Assert.Equal(
-            "upgrade --id \"Microsoft.VisualStudioCode\" --exact --silent --accept-package-agreements --accept-source-agreements --disable-interactivity",
+            "upgrade --id \"Microsoft.VisualStudioCode\" --exact --silent --accept-package-agreements --accept-source-agreements",
             runner.LastArguments);
     }
 
@@ -53,7 +53,7 @@ public sealed class WingetInstallerTests
             WingetPackageId = "Google.Chrome"
         };
 
-        var success = await installer.InstallUpdateAsync(item, new Progress<int>(), CancellationToken.None);
+        var success = await installer.InstallUpdateAsync(item, new Progress<InstallProgress>(), CancellationToken.None);
 
         Assert.False(success);
     }
@@ -70,7 +70,7 @@ public sealed class WingetInstallerTests
             WingetPackageId = "Microsoft.PowerToys"
         };
 
-        var success = await installer.InstallUpdateAsync(item, new Progress<int>(), CancellationToken.None);
+        var success = await installer.InstallUpdateAsync(item, new Progress<InstallProgress>(), CancellationToken.None);
 
         Assert.False(success);
     }
@@ -88,7 +88,24 @@ public sealed class WingetInstallerTests
         };
 
         await Assert.ThrowsAsync<OperationCanceledException>(() =>
-            installer.InstallUpdateAsync(item, new Progress<int>(), CreateCancelledToken()));
+            installer.InstallUpdateAsync(item, new Progress<InstallProgress>(), CreateCancelledToken()));
+    }
+
+    [Fact]
+    public async Task InstallUpdateAsync_RejectsUnsafePackageId_WithoutRunningWinget()
+    {
+        var runner = new FakeProcessRunner(new ProcessExecutionResult("ok", string.Empty, 0));
+        var installer = new WingetInstaller(runner, new FakeLoggerService());
+        var item = new AppUpdateItem
+        {
+            DisplayName = "Evil",
+            WingetPackageId = "Foo --uninstall Bar"
+        };
+
+        var success = await installer.InstallUpdateAsync(item, new Progress<InstallProgress>(), CancellationToken.None);
+
+        Assert.False(success);
+        Assert.Equal(string.Empty, runner.LastExecutable);
     }
 
     private static CancellationToken CreateCancelledToken()
@@ -120,7 +137,8 @@ public sealed class WingetInstallerTests
         public override Task<ProcessExecutionResult> RunAsync(
             string executable,
             string arguments,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            IProgress<string>? outputProgress = null)
         {
             LastExecutable = executable;
             LastArguments = arguments;

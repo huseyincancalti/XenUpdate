@@ -1,98 +1,111 @@
 <div align="center">
 
-<img src="img/logo.png" alt="XenUpdate Logo" width="120" />
+<img src="img/logo.png" alt="XenUpdate Logo" width="110" />
 
-# ⚡ XenUpdate
+# XenUpdate
 
-**The Ultimate Background Updater for Windows.**
-*A premium, modern Windows desktop application that effortlessly manages software, Windows, and driver updates from a single, stunning interface.*
+**One place for every Windows update.**
+
+Windows scatters its updates across a dozen tools — the Microsoft Store, `winget`, Windows Update, Device Manager, GPU driver pages, BIOS download portals. XenUpdate pulls all of it into a single, clean interface. It also goes further: for updates that can't be automated (GPU drivers, BIOS, firmware), it detects your exact hardware and walks you through the process step by step.
 
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-blueviolet.svg)](https://dotnet.microsoft.com/)
-[![WPF](https://img.shields.io/badge/UI-WPF%20Glassmorphism-blue.svg)]()
+[![WPF](https://img.shields.io/badge/UI-WPF-blue.svg)]()
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 </div>
 
 ---
 
-## 📥 Download & Install
+## Download
 
-Experience the seamless update management. Download the latest compiled version directly from our Releases page:
+Grab the latest release from the [Releases page](../../releases/latest).
 
-👉 **[Download XenUpdate (Latest Release)](../../releases/latest)**
+**XenUpdate ships self-contained** — the .NET 8 runtime is bundled inside the zip. Nothing to install. Unzip and run.
 
-> **💡 Pro Tip:** XenUpdate integrates deeply with your system. For the best experience and to avoid access errors, right-click the `.exe` and select **Run as Administrator**.
+> **Run as Administrator** is recommended. Some operations (driver installs, Windows Updates, System Restore points) require elevated privileges.
 
-### ⚠️ Windows SmartScreen Warning
-When you run XenUpdate for the first time, Windows SmartScreen may display a blue warning screen saying "Windows protected your PC". This is completely normal for new, open-source applications that haven't built up a long download history yet.
-**To run the app:** Click **"More info"** and then **"Run anyway"**.
-*(Since this project is entirely open-source, you can review all the code in this repository if you have any security concerns!)*
+### Windows SmartScreen
 
----
-
-## ✨ Why XenUpdate? (Features)
-
-XenUpdate isn't just another updater; it's designed with a "Power User" mentality and AAA quality in mind.
-
-- 🚀 **Unified Engine:** Scan and update third-party apps (via **Winget**), **Windows Updates**, and **Drivers** all in one place.
-- 🎨 **Premium UI/UX:** Stunning Glassmorphism design, smooth animations, and Light/Dark theme support.
-- 🥷 **Ninja Mode:** Starts minimized in your System Tray and silently checks for updates in the background.
-- 🛡️ **Safe & Smart:** Automatically creates **System Restore Points** before driver/system installations.
-- 🌍 **Multi-Language (Localization):** Fully JSON-based dynamic localization system. Switch languages on the fly!
-- 🛑 **Blacklist Manager:** Hide specific updates you don't want to see again.
-- 🐛 **Advanced Diagnostics:** Built-in Log Viewer and a custom Crash Reporter for easy debugging.
-- 🔄 **Self-Updating:** XenUpdate checks its own GitHub repository and notifies you when a new version is out!
+The first time you launch XenUpdate, SmartScreen may show a "Windows protected your PC" warning. This is normal for new open-source apps that haven't built up a download history yet.
+Click **"More info" → "Run anyway"** to proceed. The full source code is available here if you want to verify anything.
 
 ---
 
-## 🏗️ Architecture & Tech Stack
+## What it does
 
-XenUpdate is built on a clean, layered MVVM architecture, ensuring separation of concerns between UI logic, system integration, and data storage.
+| Feature | Details |
+|---|---|
+| **App updates** | Scans via `winget`, shows live download sizes, updates selected apps |
+| **Windows Updates** | Lists pending OS updates via the Windows Update API, installs selected |
+| **Driver updates** | Scans via Windows Update for pending driver packages |
+| **Guided Advisor** | Detects your GPU/CPU, checks whether a newer driver actually exists (live NVIDIA check), and walks you through manual updates (BIOS, firmware, GPU) step by step |
+| **Scan All** | One button kicks off all three scans simultaneously |
+| **System Restore** | Creates a restore point automatically before driver/system installs |
+| **Offline awareness** | Dims the UI and shows a badge in the title bar when the network is down |
+| **Blacklist** | Hide specific packages you never want to see in update results |
+| **Tray mode** | Minimize to system tray; background checks run silently |
+| **Drop-in languages** | Add a new locale by dropping a translated `xx.json` into `Assets/Locales` — no rebuild needed |
+| **Light / Dark theme** | Toggle anytime from Settings |
+| **Self-updating** | Checks its own GitHub releases and notifies you when a new version is out |
 
-### 💻 Technologies Used
-- **C# / .NET 8** & **WPF**
-- **CommunityToolkit.Mvvm** (For robust MVVM implementation)
-- **MaterialDesignInXamlToolkit** (For modern UI components)
-- **Winget & WUApiLib** (For fetching updates)
-- **H.NotifyIcon.Wpf** (For System Tray integration)
+---
 
-### 📂 Project Structure
-```text
+## Architecture
+
+XenUpdate is a WPF/.NET 8 app built on a clean layered MVVM architecture.
+
+**Tech stack**
+- C# / .NET 8 · WPF
+- [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) — MVVM, commands, messaging
+- [MaterialDesignInXamlToolkit](https://github.com/MaterialDesignInXAML/MaterialDesignInXamlToolkit) — UI components
+- [H.NotifyIcon.Wpf](https://github.com/HavenDV/H.NotifyIcon) — system tray
+- WUApiLib (COM) — Windows Update API
+- `winget` CLI — third-party app updates
+
+**Project layout**
+
+```
 XenUpdate.sln
-├── XenUpdate.App              # WPF UI, Views, ViewModels, Themes, Tray Icon
-├── XenUpdate.Core             # Interfaces, Models, Update Logic, LocalizationManager
-├── XenUpdate.Infrastructure   # Winget, Windows Update, Drivers, Storage, SystemRestore
-└── XenUpdate.Tests            # Unit tests
+├── XenUpdate.App             # WPF shell, views, view-models, themes, tray, localization
+├── XenUpdate.Core            # Interfaces, models, enums (no dependencies)
+├── XenUpdate.Infrastructure  # winget, WUA, drivers, NVIDIA, system restore, storage
+└── XenUpdate.Tests           # Unit tests (~60)
 ```
 
-### 🛠️ Build from Source
-If you want to contribute or build the project yourself:
+**Build from source**
 
-**Requirements**
-- Windows 10 / Windows 11
-- Visual Studio 2022
-- .NET 8 SDK
-- Winget (App Installer)
+Requirements: Windows 10/11 · Visual Studio 2022 · .NET 8 SDK · winget installed
 
-**Steps**
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/huseyincancalti/XenUpdate.git
-   cd XenUpdate
-   ```
-2. Open `XenUpdate.sln` in Visual Studio 2022.
-3. Set `XenUpdate.App` as the startup project.
-4. Build and run the application (preferably as Administrator).
+```bash
+git clone https://github.com/huseyincancalti/XenUpdate.git
+cd XenUpdate
+# Open XenUpdate.sln in Visual Studio 2022, set XenUpdate.App as startup project, run as Admin
+```
 
----
+Or from the command line:
 
-## ⚠️ Notes & Disclaimer
-- XenUpdate interacts directly with Windows system-level tools. Some update operations (especially drivers and core OS updates) require administrator privileges.
-- The application does not forcefully restart your computer, but some updates may require a manual reboot to take full effect.
-- Always review what you are installing.
+```bash
+dotnet build XenUpdate.sln -c Release
+```
+
+Self-contained portable publish (replicates the release zip):
+
+```bash
+dotnet publish XenUpdate.App/XenUpdate.App.csproj -c Release -r win-x64 --self-contained true
+```
 
 ---
 
-## 👨💻 Developed By
-**Hüseyin Can Çaltı** 
-🌐 Website: [huseyincancalti.github.io/karakedidub/](https://huseyincancalti.github.io/karakedidub/)  
-🐙 GitHub: [@huseyincancalti](https://github.com/huseyincancalti)
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+---
+
+<div align="center">
+
+**Developed by Hüseyin Can Çaltı**
+
+[karakedidub.com](https://karakedidub.com) · [hsyncalti2@gmail.com](mailto:hsyncalti2@gmail.com) · [@huseyincancalti](https://github.com/huseyincancalti)
+
+</div>

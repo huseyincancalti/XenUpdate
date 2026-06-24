@@ -216,4 +216,64 @@ public sealed class WingetOutputParserTests
 
         Assert.Empty(results);
     }
+
+    // -------------------------------------------------------------------------
+    // Locale / format robustness (position-based parsing)
+    // -------------------------------------------------------------------------
+
+    // Builds a fixed-width row so the header and data columns line up exactly,
+    // independent of how wide any particular field is.
+    private static string Row(string name, string id, string version, string available, string source) =>
+        name.PadRight(28) + id.PadRight(26) + version.PadRight(16) + available.PadRight(18) + source;
+
+    [Fact]
+    public void Parse_WithLocalizedTurkishHeader_ParsesByColumnPosition()
+    {
+        // Turkish Windows localizes the winget column headers. Matching the literal word
+        // "Available" would fail and return nothing; columns must be found by position.
+        var output = string.Join("\n",
+            Row("Ad", "Kimlik", "Sürüm", "Kullanılabilir", "Kaynak"),
+            new string('-', 110),
+            Row("Örnek Uygulama", "Ornek.App", "1.0.0", "2.0.0", "winget"),
+            "1 yükseltme kullanılabilir.");
+
+        var results = _parser.Parse(output);
+
+        Assert.Single(results);
+        Assert.Equal("Ornek.App", results[0].WingetPackageId);
+        Assert.Equal("2.0.0", results[0].AvailableVersion);
+    }
+
+    [Fact]
+    public void Parse_WithoutSourceColumn_StillParses()
+    {
+        var output = string.Join("\n",
+            "Name".PadRight(28) + "Id".PadRight(26) + "Version".PadRight(16) + "Available",
+            new string('-', 90),
+            "My App".PadRight(28) + "My.App".PadRight(26) + "1.0".PadRight(16) + "1.5",
+            "1 upgrades available.");
+
+        var results = _parser.Parse(output);
+
+        Assert.Single(results);
+        Assert.Equal("My.App", results[0].WingetPackageId);
+        Assert.Equal("1.5", results[0].AvailableVersion);
+    }
+
+    [Fact]
+    public void Parse_WithWiderColumnSpacing_StillParses()
+    {
+        // Different winget builds pad columns to different widths; parsing must adapt.
+        var output = string.Join("\n",
+            "Name".PadRight(40) + "Id".PadRight(40) + "Version".PadRight(20) + "Available".PadRight(20) + "Source",
+            new string('-', 130),
+            "Wide Spacing App".PadRight(40) + "Wide.App".PadRight(40) + "3.0".PadRight(20) + "3.1".PadRight(20) + "winget",
+            "1 upgrades available.");
+
+        var results = _parser.Parse(output);
+
+        Assert.Single(results);
+        Assert.Equal("Wide.App", results[0].WingetPackageId);
+        Assert.Equal("3.1", results[0].AvailableVersion);
+    }
 }

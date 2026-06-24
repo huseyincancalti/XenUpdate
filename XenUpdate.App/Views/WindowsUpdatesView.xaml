@@ -1,7 +1,8 @@
 <UserControl x:Class="XenUpdate.App.Views.WindowsUpdatesView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:loc="clr-namespace:XenUpdate.App.Services">
     <!--
         DataContext is set automatically by MainWindow's DataTemplate binding.
         DataContext type: WindowsUpdatesViewModel
@@ -16,22 +17,22 @@
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0"
-                   Text="Windows Updates"
+                   Text="{Binding [WindowsUpdatesTitle], Source={x:Static loc:LocalizationManager.Instance}}"
                    Style="{StaticResource PageTitleStyle}" />
 
         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12">
 
-            <Button Content="Check for Updates"
+            <Button Content="{Binding [CheckForUpdates], Source={x:Static loc:LocalizationManager.Instance}}"
                     Command="{Binding ScanCommand}"
                     Style="{StaticResource MaterialDesignRaisedButton}"
                     Margin="0,0,8,0" />
 
-            <Button Content="Install Selected"
+            <Button Content="{Binding [InstallSelected], Source={x:Static loc:LocalizationManager.Instance}}"
                     Command="{Binding InstallSelectedCommand}"
                     Style="{StaticResource MaterialDesignOutlinedButton}"
                     Margin="0,0,8,0" />
 
-            <Button Content="Cancel"
+            <Button Content="{Binding [Cancel], Source={x:Static loc:LocalizationManager.Instance}}"
                     Command="{Binding CancelScanCommand}"
                     Style="{StaticResource MaterialDesignOutlinedButton}"
                     Margin="0,0,8,0"
@@ -102,16 +103,16 @@
                 <DataGrid.ContextMenu>
                     <ContextMenu Opened="WindowsUpdatesContextMenu_OnOpened">
                         <MenuItem x:Name="CopyUpdateTitleMenuItem"
-                                  Header="Copy Update Title"
+                                  Header="{Binding [CtxCopyUpdateTitle], Source={x:Static loc:LocalizationManager.Instance}}"
                                   Click="CopyUpdateTitleMenuItem_OnClick" />
                         <MenuItem x:Name="CopyKbArticleMenuItem"
-                                  Header="Copy KB Article"
+                                  Header="{Binding [CtxCopyKbArticle], Source={x:Static loc:LocalizationManager.Instance}}"
                                   Click="CopyKbArticleMenuItem_OnClick" />
                         <MenuItem x:Name="CopyUpdateTitleAndKbMenuItem"
-                                  Header="Copy Update Title + KB"
+                                  Header="{Binding [CtxCopyUpdateTitleAndKb], Source={x:Static loc:LocalizationManager.Instance}}"
                                   Click="CopyUpdateTitleAndKbMenuItem_OnClick" />
                         <MenuItem x:Name="CopySelectedUpdateTitlesMenuItem"
-                                  Header="Copy Selected Titles"
+                                  Header="{Binding [CtxCopySelectedTitles], Source={x:Static loc:LocalizationManager.Instance}}"
                                   Click="CopySelectedUpdateTitlesMenuItem_OnClick" />
                     </ContextMenu>
                 </DataGrid.ContextMenu>
@@ -122,7 +123,7 @@
                                             Width="40"
                                             IsReadOnly="False" />
 
-                    <DataGridTemplateColumn Header="Update"
+                    <DataGridTemplateColumn Header="{Binding [ColUpdate], Source={x:Static loc:LocalizationManager.Instance}}"
                                             Width="*"
                                             IsReadOnly="True"
                                             SortMemberPath="DisplayName">
@@ -137,7 +138,7 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
 
-                    <DataGridTemplateColumn Header="KB Article"
+                    <DataGridTemplateColumn Header="{Binding [ColKbArticle], Source={x:Static loc:LocalizationManager.Instance}}"
                                             Width="120"
                                             IsReadOnly="True"
                                             SortMemberPath="KbArticleId">
@@ -152,7 +153,7 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
 
-                    <DataGridTemplateColumn Header="Severity"
+                    <DataGridTemplateColumn Header="{Binding [ColSeverity], Source={x:Static loc:LocalizationManager.Instance}}"
                                             Width="110"
                                             IsReadOnly="True"
                                             SortMemberPath="MsrcSeverity">
@@ -167,7 +168,7 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
 
-                    <DataGridTemplateColumn Header="Status"
+                    <DataGridTemplateColumn Header="{Binding [ColStatus], Source={x:Static loc:LocalizationManager.Instance}}"
                                             Width="110"
                                             IsReadOnly="True"
                                             SortMemberPath="Status"
@@ -181,11 +182,12 @@
                     Padding="24"
                     Visibility="{Binding IsEmptyStateVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="No Windows updates found. All clear for now."
+                    <TextBlock Text="{Binding [WindowsUpdatesEmptyTitle], Source={x:Static loc:LocalizationManager.Instance}}"
                                FontSize="18"
                                FontWeight="SemiBold"
-                               Margin="0,0,0,8" />
-                    <TextBlock Text="Your system is up to date, so there is nothing to review here at the moment."
+                               Margin="0,0,0,8"
+                               TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding [WindowsUpdatesEmptyBody], Source={x:Static loc:LocalizationManager.Instance}}"
                                Opacity="0.7"
                                TextWrapping="Wrap" />
                 </StackPanel>

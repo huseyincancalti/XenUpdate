@@ -44,6 +44,19 @@ public partial class ProgramsView : UserControl
         row.Focus();
     }
 
+    /// <summary>
+    /// Toggles the clicked row's selection checkbox. The checkbox is hit-test invisible, so
+    /// the entire row is the click target — clicking anywhere on a row checks/unchecks it.
+    /// Row highlighting (used by the context menu) is left intact.
+    /// </summary>
+    private void ProgramsDataGrid_OnPreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (FindVisualParent<DataGridRow>(e.OriginalSource as DependencyObject)?.Item is AppUpdateItem item)
+        {
+            item.IsSelected = !item.IsSelected;
+        }
+    }
+
     private void ProgramsContextMenu_OnOpened(object sender, RoutedEventArgs e)
     {
         var hasContextItem = GetContextItem() is not null;

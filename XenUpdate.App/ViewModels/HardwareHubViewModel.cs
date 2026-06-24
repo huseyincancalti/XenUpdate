@@ -1,39 +1,31 @@
-using CommunityToolkit.Mvvm.ComponentModel;
 using System.Collections.ObjectModel;
-using XenUpdate.Core.Enums;
+using System.Windows;
+using CommunityToolkit.Mvvm.ComponentModel;
+using XenUpdate.App.Services;
 using XenUpdate.Core.Interfaces;
 using XenUpdate.Core.Models;
-using XenUpdate.Infrastructure.Hardware;
 
 namespace XenUpdate.App.ViewModels;
 
 /// <summary>
-/// ViewModel for the Hardware Hub page.
-/// Aggregates all update providers, filters by <see cref="UpdateCategory"/>,
-/// and exposes detected CPU/GPU info via <see cref="HardwareProfile"/>.
+/// The guided-update center: detects the machine's CPU/GPU, then surfaces the applicable guides
+/// as interactive step-by-step cards (with an adaptive "open the installed vendor tool" action).
+/// This is the product's differentiating feature — manual updates that can't be automated.
 /// </summary>
 public sealed partial class HardwareHubViewModel : ObservableObject
 {
-    // ── Observable collections ────────────────────────────────────────────────
+    private readonly IHardwareScannerService _hardwareScanner;
+    private readonly IGuideCatalog _guideCatalog;
+    private readonly IGuideCompletionStore _completionStore;
+    private readonly IInstalledAppDetector _appDetector;
+    private readonly INvidiaDriverService _nvidiaService;
+    private readonly ILoggerService _logger;
 
-    /// <summary>App (Winget) updates sourced from all providers.</summary>
-    public ObservableCollection<CategorizedUpdateItem> AppUpdates { get; } = new();
+    private bool _initialized;
+    private DriverUpdateStatus? _nvidiaStatusCache;
 
-    /// <summary>Windows OS updates sourced from all providers.</summary>
-    public ObservableCollection<CategorizedUpdateItem> SystemUpdates { get; } = new();
-
-    /// <summary>Driver updates sourced from all providers.</summary>
-    public ObservableCollection<CategorizedUpdateItem> DriverUpdates { get; } = new();
-
-    // ── Hardware profile ──────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Detected GPU/CPU info resolved by <see cref="HardwareDetector"/> at construction time.
-    /// </summary>
     [ObservableProperty]
     private HardwareProfile _hardware = new();
-
-    // ── Loading state ─────────────────────────────────────────────────────────
 
     [ObservableProperty]
     private bool _isLoading;
@@ -41,74 +33,132 @@ public sealed partial class HardwareHubViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = string.Empty;
 
-    // ── Construction ──────────────────────────────────────────────────────────
+    /// <summary>Set when a GPU driver was checked and found current — a reassuring "you're up to date" note.</summary>
+    [ObservableProperty]
+    private string? _currentDriverNote;
 
-    private readonly IEnumerable<IUpdateProvider> _providers;
+    public bool HasCurrentDriverNote => !string.IsNullOrWhiteSpace(CurrentDriverNote);
 
-    /// <summary>
-    /// Initialises the ViewModel. Hardware detection runs synchronously on a
-    /// thread-pool thread so it never blocks the UI dispatcher.
-    /// Call <see cref="InitializeAsync"/> from the view's Loaded event to pull
-    /// update data from all providers.
-    /// </summary>
-    public HardwareHubViewModel(IEnumerable<IUpdateProvider> providers)
+    partial void OnCurrentDriverNoteChanged(string? value) => OnPropertyChanged(nameof(HasCurrentDriverNote));
+
+    /// <summary>The interactive guide cards that apply to the detected hardware.</summary>
+    public ObservableCollection<GuideCardViewModel> Guides { get; } = new();
+
+    public bool HasGuides => Guides.Count > 0;
+
+    public bool ShowEmptyState => !IsLoading && !HasGuides;
+
+    public HardwareHubViewModel(
+        IHardwareScannerService hardwareScanner,
+        IGuideCatalog guideCatalog,
+        IGuideCompletionStore completionStore,
+        IInstalledAppDetector appDetector,
+        INvidiaDriverService nvidiaService,
+        ILoggerService logger)
     {
-        _providers = providers;
+        _hardwareScanner = hardwareScanner;
+        _guideCatalog = guideCatalog;
+        _completionStore = completionStore;
+        _appDetector = appDetector;
+        _nvidiaService = nvidiaService;
+        _logger = logger;
 
-        // Run blocking WMI queries off the UI thread.
-        Task.Run(() => Hardware = HardwareDetector.GetSystemHardware());
+        LocalizationManager.Instance.LanguageChanged += OnLanguageChanged;
     }
 
-    // ── Commands / init ───────────────────────────────────────────────────────
+    private void OnLanguageChanged() =>
+        Application.Current?.Dispatcher.InvokeAsync(async () =>
+        {
+            try { await LoadGuidesAsync(); }
+            catch (Exception ex) { _logger.Error("Reloading guides after language change failed.", ex); }
+        });
 
-    /// <summary>
-    /// Queries all registered <see cref="IUpdateProvider"/> instances and
-    /// populates the three category collections.
-    /// Safe to call multiple times (clears previous results on each call).
-    /// </summary>
+    /// <summary>Detects hardware and loads the applicable guides. Called from the view's Loaded event.</summary>
     public async Task InitializeAsync()
     {
-        IsLoading = true;
-        StatusMessage = "Loading updates…";
+        if (_initialized)
+            return;
 
-        AppUpdates.Clear();
-        SystemUpdates.Clear();
-        DriverUpdates.Clear();
+        IsLoading = true;
+        StatusMessage = LocalizationManager.Instance["StatusDetectingHardware"];
 
         try
         {
-            foreach (var provider in _providers)
-            {
-                var items = await provider.GetUpdatesAsync().ConfigureAwait(true);
-
-                foreach (var item in items)
-                {
-                    switch (item.Category)
-                    {
-                        case UpdateCategory.Apps:
-                            AppUpdates.Add(item);
-                            break;
-                        case UpdateCategory.System:
-                            SystemUpdates.Add(item);
-                            break;
-                        case UpdateCategory.Drivers:
-                            DriverUpdates.Add(item);
-                            break;
-                        // HardwareHub items intentionally omitted from lists here;
-                        // the Hardware tab shows static HardwareProfile info only.
-                    }
-                }
-            }
-
-            StatusMessage = $"Found {AppUpdates.Count + SystemUpdates.Count + DriverUpdates.Count} update(s).";
+            Hardware = await _hardwareScanner.GetCurrentHardwareAsync();
+            await LoadGuidesAsync();
+            _initialized = true;
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error loading updates: {ex.Message}";
+            StatusMessage = LocalizationManager.Instance["StatusGuidesFailed"];
+            _logger.Error("Guide center initialization failed.", ex);
         }
         finally
         {
             IsLoading = false;
+            OnPropertyChanged(nameof(ShowEmptyState));
         }
     }
+
+    private async Task LoadGuidesAsync()
+    {
+        var all = await _guideCatalog.GetGuidesAsync(LocalizationManager.Instance.CurrentLanguage);
+        var completed = await _completionStore.GetCompletedIdsAsync();
+        var completedSet = new HashSet<string>(completed, StringComparer.OrdinalIgnoreCase);
+
+        CurrentDriverNote = null;
+        Guides.Clear();
+        foreach (var guide in all.Where(AppliesToCurrentHardware))
+        {
+            var appPath = guide.AppLaunch is { ExeCandidates.Count: > 0 }
+                ? _appDetector.FindExecutable(guide.AppLaunch.ExeCandidates)
+                : null;
+
+            DriverUpdateStatus? status = null;
+            if (string.Equals(guide.RequiredGpuVendor, "NVIDIA", StringComparison.OrdinalIgnoreCase))
+            {
+                // Only cache successful checks. A network failure returns Checked=false and must
+                // not be cached; otherwise a transient outage permanently hides the "driver current"
+                // note until the app restarts.
+                if (_nvidiaStatusCache is null)
+                {
+                    var fresh = await _nvidiaService.CheckAsync();
+                    if (fresh.Checked)
+                        _nvidiaStatusCache = fresh;
+                    status = fresh;
+                }
+                else
+                {
+                    status = _nvidiaStatusCache;
+                }
+
+                // If we reliably know the driver is current, don't show a guide — show a
+                // reassuring "you're up to date" note instead so the page never looks broken.
+                if (status.Checked && !status.UpdateAvailable)
+                {
+                    CurrentDriverNote = string.Format(LocalizationManager.Instance["DriverCurrent"], status.InstalledVersion);
+                    continue;
+                }
+            }
+
+            Guides.Add(new GuideCardViewModel(guide, appPath, completedSet, status, _completionStore, _logger));
+        }
+
+        OnPropertyChanged(nameof(HasGuides));
+        OnPropertyChanged(nameof(ShowEmptyState));
+
+        StatusMessage = HasGuides
+            ? string.Format(LocalizationManager.Instance["StatusGuidesCount"], Guides.Count)
+            : LocalizationManager.Instance["StatusGuidesNone"];
+    }
+
+    private bool AppliesToCurrentHardware(GuideItem guide)
+    {
+        if (string.IsNullOrWhiteSpace(guide.RequiredGpuVendor))
+            return true;
+
+        return string.Equals(guide.RequiredGpuVendor, Hardware.GpuVendor, StringComparison.OrdinalIgnoreCase);
+    }
+
+    partial void OnIsLoadingChanged(bool value) => OnPropertyChanged(nameof(ShowEmptyState));
 }

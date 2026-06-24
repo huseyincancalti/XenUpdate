@@ -4,11 +4,17 @@ using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using XenUpdate.App.Collections;
+using XenUpdate.App.Services;
 using XenUpdate.Core.Enums;
 using XenUpdate.Core.Interfaces;
 using XenUpdate.Core.Models;
 
 namespace XenUpdate.App.ViewModels;
+
+file static class L
+{
+    public static string T(string key) => LocalizationManager.Instance[key];
+}
 
 /// <summary>
 /// ViewModel for the Programs page.
@@ -16,8 +22,6 @@ namespace XenUpdate.App.ViewModels;
 /// </summary>
 public sealed partial class ProgramsViewModel : ObservableObject
 {
-    private const string NoUpdatesMessage = "No application updates found. All clear for now.";
-
     private readonly IWingetScanner _scanner;
     private readonly IWingetInstaller _installer;
     private readonly IBlacklistRepository _blacklistRepository;
@@ -44,6 +48,10 @@ public sealed partial class ProgramsViewModel : ObservableObject
 
     private CancellationTokenSource? _blacklistRestoreDebounceCts;
 
+    // Captured from the failure-reason progress event during a single item install.
+    // Reset to null before each item; read once after InstallUpdateAsync returns false.
+    private string? _lastItemFailureReason;
+
     /// <summary>True while any operation (scan or install) is running. Drives command enable/disable.</summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ScanCommand))]
@@ -56,7 +64,7 @@ public sealed partial class ProgramsViewModel : ObservableObject
 
     /// <summary>Short status line shown below the DataGrid.</summary>
     [ObservableProperty]
-    private string _statusMessage = "Press 'Scan for Updates' to start.";
+    private string _statusMessage = L.T("StatusProgramsInitial");
 
     /// <summary>True after the user has completed at least one scan attempt.</summary>
     [ObservableProperty]
@@ -97,6 +105,10 @@ public sealed partial class ProgramsViewModel : ObservableObject
     /// <summary>Shows extra progress detail for the current application update.</summary>
     [ObservableProperty]
     private string _currentInstallDetailText = string.Empty;
+
+    /// <summary>True when the last scan attempt threw an exception (network outage, permission error, etc.).</summary>
+    [ObservableProperty]
+    private bool _hasScanFailed;
 
     /// <summary>True when the Programs empty-state panel should be shown instead of the grid.</summary>
     public bool IsEmptyStateVisible => HasScanned && !HasUpdates && !IsBusy;
@@ -150,7 +162,8 @@ public sealed partial class ProgramsViewModel : ObservableObject
         IsScanning = true;
         HasScanned = false;
         HasUpdates = false;
-        StatusMessage = "Scanning for updates...";
+        HasScanFailed = false;
+        StatusMessage = L.T("StatusScanning");
         Updates.Clear();
 
         try
@@ -174,17 +187,18 @@ public sealed partial class ProgramsViewModel : ObservableObject
             HasScanned = true;
 
             StatusMessage = Updates.Count == 0
-                ? NoUpdatesMessage
-                : $"{Updates.Count} update(s) available.";
+                ? L.T("ProgramsEmptyTitle")
+                : string.Format(L.T("StatusUpdatesAvailable"), Updates.Count);
         }
         catch (OperationCanceledException)
         {
-            StatusMessage = "Scan cancelled.";
+            StatusMessage = L.T("StatusScanCancelled");
             _logger.Info("Programs scan was cancelled by the user.");
         }
         catch (Exception ex)
         {
-            StatusMessage = "Scan failed. See the log for details.";
+            HasScanFailed = true;
+            StatusMessage = L.T("StatusScanFailed");
             _logger.Error("Programs scan encountered an unexpected error.", ex);
         }
         finally
@@ -259,8 +273,9 @@ public sealed partial class ProgramsViewModel : ObservableObject
 
                 try
                 {
+                    _lastItemFailureReason = null;
                     SetCurrentInstallPhase("Installing...", null);
-                    var progress = new Progress<int>(OnInstallProgressReported);
+                    var progress = new Progress<InstallProgress>(OnInstallProgressReported);
                     var success = await _installer.InstallUpdateAsync(item, progress, _operationCts.Token);
 
                     item.Status = success ? UpdateStatus.Succeeded : UpdateStatus.Failed;
@@ -272,6 +287,9 @@ public sealed partial class ProgramsViewModel : ObservableObject
                     else
                     {
                         failedCount++;
+                        // Attach the failure reason to the item so the status badge tooltip shows it.
+                        if (_lastItemFailureReason is not null)
+                            item.ErrorMessage = _lastItemFailureReason;
                     }
 
                     UpdateOverallProgress(succeededItems.Count + failedCount, selectedItems.Count);
@@ -416,20 +434,38 @@ public sealed partial class ProgramsViewModel : ObservableObject
         await Task.Yield();
     }
 
-    private void OnInstallProgressReported(int percent)
+    private void OnInstallProgressReported(InstallProgress update)
     {
-        if (percent is > 0 and < 100)
+        // Failure reason arrives on the final progress event when the install fails.
+        // Store it so InstallSelectedAsync can attach it to the item and status bar.
+        if (update.FailureReason is not null)
         {
-            CurrentItemProgressPercent = percent;
-            IsCurrentItemProgressIndeterminate = false;
-            CurrentItemProgressText = $"Current item progress: {percent}%";
-            SetCurrentInstallPhase("Installing...", null);
+            _lastItemFailureReason = update.FailureReason;
+            return;
         }
-        else if (percent >= 100)
+
+        // Live download size, straight from winget (e.g. "12.4 MB / 84.0 MB"). Units are
+        // locale-neutral, so this reads correctly in any language.
+        var hasDownloadText = !string.IsNullOrEmpty(update.DownloadText);
+        if (hasDownloadText)
+        {
+            CurrentItemProgressText = update.DownloadText!;
+        }
+
+        if (update.Percent is > 0 and < 100)
+        {
+            CurrentItemProgressPercent = update.Percent;
+            IsCurrentItemProgressIndeterminate = false;
+            SetCurrentInstallPhase(hasDownloadText ? "Downloading..." : "Installing...", null);
+        }
+        else if (update.Percent >= 100)
         {
             CurrentItemProgressPercent = 0;
             IsCurrentItemProgressIndeterminate = true;
-            CurrentItemProgressText = "Current item progress: Finalizing...";
+            if (!hasDownloadText)
+            {
+                CurrentItemProgressText = "Finalizing...";
+            }
             SetCurrentInstallPhase("Finalizing...", null);
         }
     }

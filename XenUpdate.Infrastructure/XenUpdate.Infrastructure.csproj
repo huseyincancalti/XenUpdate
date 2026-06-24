@@ -16,6 +16,15 @@
     <PackageReference Include="System.Management" Version="8.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Guides\guides.en.json" WithCulture="false" />
+    <EmbeddedResource Include="Guides\guides.tr.json" WithCulture="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="XenUpdate.Tests" />
+  </ItemGroup>
+
   <!--
     To enable Windows Update (WUApiLib) COM interop, add the COM reference in Visual Studio:
     Project → Add COM Reference → Windows Update Agent API

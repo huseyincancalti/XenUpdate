@@ -3,11 +3,17 @@ using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using XenUpdate.App.Collections;
+using XenUpdate.App.Services;
 using XenUpdate.Core.Enums;
 using XenUpdate.Core.Interfaces;
 using XenUpdate.Core.Models;
 
 namespace XenUpdate.App.ViewModels;
+
+file static class L
+{
+    public static string T(string key) => LocalizationManager.Instance[key];
+}
 
 /// <summary>
 /// ViewModel for the Drivers page.
@@ -15,9 +21,8 @@ namespace XenUpdate.App.ViewModels;
 /// </summary>
 public sealed partial class DriversViewModel : ObservableObject
 {
-    private const string NoDriverUpdatesMessage = "No driver updates found. Your devices look current for now.";
-
     private readonly IDriverUpdateService _service;
+    private readonly ISystemRestoreService _restoreService;
     private readonly ILoggerService _logger;
 
     private CancellationTokenSource? _operationCts;
@@ -47,7 +52,7 @@ public sealed partial class DriversViewModel : ObservableObject
 
     /// <summary>Short status message shown below the page content.</summary>
     [ObservableProperty]
-    private string _statusMessage = "Press 'Scan for Driver Updates' to start.";
+    private string _statusMessage = L.T("StatusDriversInitial");
 
     /// <summary>True after the user has completed at least one driver scan attempt.</summary>
     [ObservableProperty]
@@ -86,9 +91,10 @@ public sealed partial class DriversViewModel : ObservableObject
     /// <summary>
     /// Initializes the DriversViewModel with its required services.
     /// </summary>
-    public DriversViewModel(IDriverUpdateService service, ILoggerService logger)
+    public DriversViewModel(IDriverUpdateService service, ISystemRestoreService restoreService, ILoggerService logger)
     {
         _service = service;
+        _restoreService = restoreService;
         _logger = logger;
 
         Updates.CollectionChanged += OnUpdatesCollectionChanged;
@@ -106,6 +112,7 @@ public sealed partial class DriversViewModel : ObservableObject
         }
 
         ResetCancellation();
+        _operationCts!.CancelAfter(TimeSpan.FromMinutes(5));
         ClearInstallFeedback();
 
         IsBusy = true;
@@ -113,7 +120,7 @@ public sealed partial class DriversViewModel : ObservableObject
         HasScanned = false;
         HasUpdates = false;
         Updates.Clear();
-        StatusMessage = "Scanning for driver updates... This may take up to two minutes.";
+        StatusMessage = L.T("StatusScanningSlow");
 
         try
         {
@@ -129,16 +136,16 @@ public sealed partial class DriversViewModel : ObservableObject
             HasScanned = true;
 
             StatusMessage = HasUpdates
-                ? $"{Updates.Count} driver update(s) available."
-                : NoDriverUpdatesMessage;
+                ? string.Format(L.T("StatusUpdatesAvailable"), Updates.Count)
+                : L.T("DriversEmptyTitle");
         }
         catch (OperationCanceledException)
         {
-            StatusMessage = "Scan cancelled.";
+            StatusMessage = L.T("StatusScanCancelled");
         }
         catch (Exception ex)
         {
-            StatusMessage = "Driver update scan failed. See the log for details.";
+            StatusMessage = L.T("StatusScanFailed");
             _logger.Error("Driver update scan failed.", ex);
         }
         finally
@@ -179,6 +186,14 @@ public sealed partial class DriversViewModel : ObservableObject
         IsInstallBatchRunning = true;
         _logger.Info("Driver install batch started.");
         _logger.Info($"{selectedUpdates.Count} driver update(s) selected for installation.");
+
+        // Safety: take a system restore point before touching drivers so a bad driver can be
+        // rolled back. Continue even if it fails (e.g. System Restore disabled), but say which.
+        StatusMessage = "Creating a system restore point before installing drivers...";
+        var restoreCreated = await _restoreService.CreateRestorePointAsync("XenUpdate driver update");
+        _logger.Info(restoreCreated
+            ? "System restore point created before driver install."
+            : "Could not create a system restore point; continuing with driver install.");
 
         var succeededItems = new List<DriverUpdateItem>();
         var failedCount = 0;

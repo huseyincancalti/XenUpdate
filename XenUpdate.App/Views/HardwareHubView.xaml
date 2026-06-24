@@ -3,207 +3,194 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:vm="clr-namespace:XenUpdate.App.ViewModels"
+             xmlns:loc="clr-namespace:XenUpdate.App.Services"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:HardwareHubViewModel, IsDesignTimeCreatable=False}"
              Loaded="HardwareHubView_OnLoaded">
-    <!--
-        DataContext is set automatically by MainWindow's DataTemplate binding.
-        DataContext type: HardwareHubViewModel
-    -->
-    <Grid Margin="24">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24">
+        <StackPanel>
 
-        <!-- Page Title -->
-        <TextBlock Grid.Row="0"
-                   Text="Hardware Hub"
-                   Style="{StaticResource PageTitleStyle}" />
+            <TextBlock Text="{Binding [GuidesTitle], Source={x:Static loc:LocalizationManager.Instance}}" Style="{StaticResource PageTitleStyle}" />
 
-        <!-- Loading indicator -->
-        <ProgressBar Grid.Row="1"
-                     IsIndeterminate="True"
-                     Height="4"
-                     Margin="0,0,0,12"
-                     Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
+            <ProgressBar IsIndeterminate="True" Height="4" Margin="0,0,0,12"
+                         Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-        <!-- ── Hardware Cards ─────────────────────────────────────────── -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,20">
-
-            <!-- GPU Card -->
-            <Border Style="{StaticResource ZenGlassPanelStyle}"
-                    Width="280"
-                    Padding="20"
-                    Margin="0,0,16,0"
-                    CornerRadius="10">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <materialDesign:PackIcon Kind="Gpu"
-                                                 Width="22" Height="22"
-                                                 Foreground="{DynamicResource ZenPrimaryBrush}"
-                                                 VerticalAlignment="Center"
-                                                 Margin="0,0,8,0" />
-                        <TextBlock Text="GPU"
-                                   FontSize="13"
-                                   FontWeight="SemiBold"
-                                   Opacity="0.7"
-                                   VerticalAlignment="Center" />
+            <!-- Detected hardware -->
+            <TextBlock Text="{Binding [GuidesDetectedHardware], Source={x:Static loc:LocalizationManager.Instance}}"
+                       FontWeight="SemiBold" Opacity="0.7" Margin="0,0,0,8" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,22">
+                <Border Style="{StaticResource ZenGlassPanelStyle}" Width="300" Padding="20" Margin="0,0,16,0">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <materialDesign:PackIcon Kind="Gpu" Width="22" Height="22" Foreground="{DynamicResource ZenPrimaryBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <TextBlock Text="GPU" FontSize="13" FontWeight="SemiBold" Opacity="0.7" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding Hardware.GpuName, FallbackValue='…'}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,6" />
+                        <Border Background="{DynamicResource ZenNavItemSelectedBackgroundBrush}" CornerRadius="6" Padding="8,3" HorizontalAlignment="Left">
+                            <TextBlock Text="{Binding Hardware.GpuVendor, FallbackValue='—'}" FontSize="11" FontWeight="SemiBold" Foreground="White" />
+                        </Border>
                     </StackPanel>
+                </Border>
+                <Border Style="{StaticResource ZenGlassPanelStyle}" Width="300" Padding="20">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <materialDesign:PackIcon Kind="Cpu64Bit" Width="22" Height="22" Foreground="{DynamicResource ZenPrimaryBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <TextBlock Text="CPU" FontSize="13" FontWeight="SemiBold" Opacity="0.7" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding Hardware.CpuName, FallbackValue='…'}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
 
-                    <TextBlock Text="{Binding Hardware.GpuName, FallbackValue='Detecting…'}"
-                               FontSize="15"
-                               FontWeight="SemiBold"
-                               TextWrapping="Wrap"
-                               Margin="0,0,0,6" />
+            <!-- Recommended guides -->
+            <TextBlock Text="{Binding [GuidesRecommended], Source={x:Static loc:LocalizationManager.Instance}}"
+                       FontWeight="SemiBold" Opacity="0.7" Margin="0,0,0,8" />
 
-                    <Border Background="{DynamicResource ZenNavItemSelectedBackgroundBrush}"
-                            CornerRadius="6"
-                            Padding="8,3"
-                            HorizontalAlignment="Left">
-                        <TextBlock Text="{Binding Hardware.GpuVendor, FallbackValue='Unknown'}"
-                                   FontSize="11"
-                                   FontWeight="SemiBold"
-                                   Foreground="White" />
-                    </Border>
+            <Border Background="#2E7D32" CornerRadius="8" Padding="12,9" Margin="0,0,0,12" HorizontalAlignment="Left"
+                    Visibility="{Binding HasCurrentDriverNote, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="CheckCircle" Width="18" Height="18" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <TextBlock Text="{Binding CurrentDriverNote}" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </StackPanel>
             </Border>
 
-            <!-- CPU Card -->
-            <Border Style="{StaticResource ZenGlassPanelStyle}"
-                    Width="280"
-                    Padding="20"
-                    CornerRadius="10">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <materialDesign:PackIcon Kind="Cpu64Bit"
-                                                 Width="22" Height="22"
-                                                 Foreground="{DynamicResource ZenPrimaryBrush}"
-                                                 VerticalAlignment="Center"
-                                                 Margin="0,0,8,0" />
-                        <TextBlock Text="CPU"
-                                   FontSize="13"
-                                   FontWeight="SemiBold"
-                                   Opacity="0.7"
-                                   VerticalAlignment="Center" />
-                    </StackPanel>
+            <ItemsControl ItemsSource="{Binding Guides}"
+                          Visibility="{Binding HasGuides, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource ZenGlassPanelStyle}" Padding="22" Margin="0,0,0,16">
+                            <StackPanel>
 
-                    <TextBlock Text="{Binding Hardware.CpuName, FallbackValue='Detecting…'}"
-                               FontSize="15"
-                               FontWeight="SemiBold"
-                               TextWrapping="Wrap"
-                               Margin="0,0,0,6" />
+                                <!-- header: title + step counter -->
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Title}" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="{Binding StepCounter}" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ZenPrimaryBrush}" VerticalAlignment="Center" Margin="12,0,0,0"
+                                               Visibility="{Binding ShowNavigation, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                </Grid>
+
+                                <Border Background="{DynamicResource ZenPrimaryBrush}" CornerRadius="6" Padding="10,4" HorizontalAlignment="Left" Margin="0,0,0,10"
+                                        Visibility="{Binding HasUpdateBadge, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="Update" Width="15" Height="15" Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                        <TextBlock Text="{Binding UpdateBadgeText}" Foreground="White" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Border>
+
+                                <TextBlock Text="{Binding Why}" Opacity="0.75" TextWrapping="Wrap" Margin="0,0,0,16" />
+
+                                <!-- progress dots -->
+                                <ItemsControl ItemsSource="{Binding Steps}" Margin="0,0,0,16">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border x:Name="dot" Width="30" Height="30" CornerRadius="15" BorderThickness="2" Margin="0,0,10,0"
+                                                    BorderBrush="{DynamicResource ZenGlassBorderBrush}" Background="Transparent" ToolTip="{Binding Text}">
+                                                <Grid>
+                                                    <TextBlock x:Name="num" Text="{Binding Number}" FontSize="13" FontWeight="SemiBold" Opacity="0.55"
+                                                               Foreground="{DynamicResource ZenTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    <materialDesign:PackIcon x:Name="chk" Kind="Check" Width="18" Height="18" Foreground="White"
+                                                                             HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
+                                                </Grid>
+                                            </Border>
+                                            <DataTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                    <Setter TargetName="dot" Property="BorderBrush" Value="{DynamicResource ZenPrimaryBrush}" />
+                                                    <Setter TargetName="num" Property="Opacity" Value="1" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsDone}" Value="True">
+                                                    <Setter TargetName="dot" Property="Background" Value="#2E7D32" />
+                                                    <Setter TargetName="dot" Property="BorderBrush" Value="#2E7D32" />
+                                                    <Setter TargetName="num" Property="Visibility" Value="Collapsed" />
+                                                    <Setter TargetName="chk" Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </DataTemplate.Triggers>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <!-- current step (wizard body) -->
+                                <Border Background="{DynamicResource ZenNavItemSelectedBackgroundBrush}" CornerRadius="10" Padding="18" Margin="0,0,0,16"
+                                        Visibility="{Binding ShowNavigation, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <TextBlock Text="{Binding CurrentStep.Text}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" Foreground="White" />
+                                </Border>
+
+                                <!-- actions -->
+                                <StackPanel Orientation="Horizontal"
+                                            Visibility="{Binding ShowNavigation, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Button Command="{Binding LaunchCommand}"
+                                            Style="{StaticResource MaterialDesignRaisedButton}"
+                                            Margin="0,0,8,0"
+                                            Visibility="{Binding ShowLaunchButton, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon Kind="OpenInNew" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                            <TextBlock Text="{Binding PrimaryActionText}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Command="{Binding PreviousStepCommand}"
+                                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                                            Margin="0,0,8,0"
+                                            Visibility="{Binding CanGoPrevious, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon Kind="ArrowLeft" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                            <TextBlock Text="{Binding [PreviousStep], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Command="{Binding NextStepCommand}"
+                                            Style="{StaticResource MaterialDesignRaisedButton}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding NextButtonText}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                            <materialDesign:PackIcon Kind="ArrowRight" Width="16" Height="16" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+
+                                <!-- completion celebration -->
+                                <Border Background="#2E7D32" CornerRadius="10" Padding="18"
+                                        Visibility="{Binding IsCompleted, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <materialDesign:PackIcon Kind="CheckCircle" Width="26" Height="26" Foreground="White" VerticalAlignment="Center" Margin="0,0,12,0" />
+                                        <TextBlock Grid.Column="1" Text="{Binding [GuideCompleted], Source={x:Static loc:LocalizationManager.Instance}}"
+                                                   Foreground="White" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                        <Button Grid.Column="2" Command="{Binding RestartCommand}"
+                                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                Foreground="White" BorderBrush="White"
+                                                Content="{Binding [RestartGuide], Source={x:Static loc:LocalizationManager.Instance}}" />
+                                    </Grid>
+                                </Border>
+
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- empty state -->
+            <Border Style="{StaticResource ZenGlassPanelStyle}" Padding="24"
+                    Visibility="{Binding ShowEmptyState, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock Text="{Binding [GuidesEmptyTitle], Source={x:Static loc:LocalizationManager.Instance}}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,6" TextWrapping="Wrap" />
+                    <TextBlock Opacity="0.75" TextWrapping="Wrap" Text="{Binding [GuidesEmptyBody], Source={x:Static loc:LocalizationManager.Instance}}" />
                 </StackPanel>
             </Border>
+
+            <TextBlock Text="{Binding StatusMessage}" Opacity="0.6" FontSize="12" Margin="0,12,0,0" />
 
         </StackPanel>
-
-        <!-- ── Update Lists (TabControl) ─────────────────────────────── -->
-        <TabControl Grid.Row="3"
-                    Background="Transparent"
-                    BorderThickness="0"
-                    Padding="0">
-
-            <!-- Apps Tab -->
-            <TabItem Header="Apps">
-                <Border Style="{StaticResource ZenDataGridChromeStyle}" Margin="0,8,0,0">
-                    <DataGrid ItemsSource="{Binding AppUpdates}"
-                              AutoGenerateColumns="False"
-                              CanUserAddRows="False"
-                              CanUserDeleteRows="False"
-                              IsReadOnly="True"
-                              EnableRowVirtualization="True"
-                              VirtualizingPanel.IsVirtualizing="True"
-                              VirtualizingPanel.VirtualizationMode="Recycling"
-                              VirtualizingPanel.ScrollUnit="Pixel"
-                              Background="{DynamicResource ZenDataGridSurfaceBrush}"
-                              Foreground="{DynamicResource ZenTextBrush}"
-                              ColumnHeaderStyle="{StaticResource ZenDataGridColumnHeaderStyle}"
-                              RowStyle="{StaticResource ZenDataGridRowStyle}"
-                              CellStyle="{StaticResource ZenDataGridCellStyle}"
-                              materialDesign:DataGridAssist.CellPadding="8 6"
-                              materialDesign:DataGridAssist.ColumnHeaderPadding="8 6">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Name"          Binding="{Binding Name}"           Width="*"   IsReadOnly="True" />
-                            <DataGridTextColumn Header="Current Ver."  Binding="{Binding CurrentVersion}"  Width="120" IsReadOnly="True" />
-                            <DataGridTextColumn Header="New Ver."      Binding="{Binding NewVersion}"      Width="120" IsReadOnly="True" />
-                            <DataGridTextColumn Header="Size"          Binding="{Binding DisplaySize}"     Width="90"  IsReadOnly="True" />
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </Border>
-            </TabItem>
-
-            <!-- System Tab -->
-            <TabItem Header="System">
-                <Border Style="{StaticResource ZenDataGridChromeStyle}" Margin="0,8,0,0">
-                    <DataGrid ItemsSource="{Binding SystemUpdates}"
-                              AutoGenerateColumns="False"
-                              CanUserAddRows="False"
-                              CanUserDeleteRows="False"
-                              IsReadOnly="True"
-                              EnableRowVirtualization="True"
-                              VirtualizingPanel.IsVirtualizing="True"
-                              VirtualizingPanel.VirtualizationMode="Recycling"
-                              VirtualizingPanel.ScrollUnit="Pixel"
-                              Background="{DynamicResource ZenDataGridSurfaceBrush}"
-                              Foreground="{DynamicResource ZenTextBrush}"
-                              ColumnHeaderStyle="{StaticResource ZenDataGridColumnHeaderStyle}"
-                              RowStyle="{StaticResource ZenDataGridRowStyle}"
-                              CellStyle="{StaticResource ZenDataGridCellStyle}"
-                              materialDesign:DataGridAssist.CellPadding="8 6"
-                              materialDesign:DataGridAssist.ColumnHeaderPadding="8 6">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Name"          Binding="{Binding Name}"           Width="*"   IsReadOnly="True" />
-                            <DataGridTextColumn Header="Current Ver."  Binding="{Binding CurrentVersion}"  Width="120" IsReadOnly="True" />
-                            <DataGridTextColumn Header="New Ver."      Binding="{Binding NewVersion}"      Width="120" IsReadOnly="True" />
-                            <DataGridTextColumn Header="Size"          Binding="{Binding DisplaySize}"     Width="90"  IsReadOnly="True" />
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </Border>
-            </TabItem>
-
-            <!-- Drivers Tab -->
-            <TabItem Header="Drivers">
-                <Border Style="{StaticResource ZenDataGridChromeStyle}" Margin="0,8,0,0">
-                    <DataGrid ItemsSource="{Binding DriverUpdates}"
-                              AutoGenerateColumns="False"
-                              CanUserAddRows="False"
-                              CanUserDeleteRows="False"
-                              IsReadOnly="True"
-                              EnableRowVirtualization="True"
-                              VirtualizingPanel.IsVirtualizing="True"
-                              VirtualizingPanel.VirtualizationMode="Recycling"
-                              VirtualizingPanel.ScrollUnit="Pixel"
-                              Background="{DynamicResource ZenDataGridSurfaceBrush}"
-                              Foreground="{DynamicResource ZenTextBrush}"
-                              ColumnHeaderStyle="{StaticResource ZenDataGridColumnHeaderStyle}"
-                              RowStyle="{StaticResource ZenDataGridRowStyle}"
-                              CellStyle="{StaticResource ZenDataGridCellStyle}"
-                              materialDesign:DataGridAssist.CellPadding="8 6"
-                              materialDesign:DataGridAssist.ColumnHeaderPadding="8 6">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Name"          Binding="{Binding Name}"           Width="*"   IsReadOnly="True" />
-                            <DataGridTextColumn Header="Current Ver."  Binding="{Binding CurrentVersion}"  Width="120" IsReadOnly="True" />
-                            <DataGridTextColumn Header="New Ver."      Binding="{Binding NewVersion}"      Width="120" IsReadOnly="True" />
-                            <DataGridTextColumn Header="Size"          Binding="{Binding DisplaySize}"     Width="90"  IsReadOnly="True" />
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </Border>
-            </TabItem>
-
-        </TabControl>
-
-        <!-- Status bar -->
-        <TextBlock Grid.Row="4"
-                   Text="{Binding StatusMessage}"
-                   Opacity="0.65"
-                   FontSize="12"
-                   Margin="0,8,0,0" />
-
-    </Grid>
+    </ScrollViewer>
 </UserControl>

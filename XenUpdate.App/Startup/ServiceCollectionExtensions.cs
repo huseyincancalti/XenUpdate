@@ -1,9 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using XenUpdate.App.Services;
 using XenUpdate.Core.Interfaces;
+using XenUpdate.Infrastructure.Guides;
 using XenUpdate.Infrastructure.Hardware;
 using XenUpdate.Infrastructure.Logging;
-using XenUpdate.Infrastructure.Providers;
+using XenUpdate.Infrastructure.Mocks;
 using XenUpdate.Infrastructure.Storage;
 using XenUpdate.Infrastructure.Services;
 using XenUpdate.Infrastructure.System;
@@ -14,45 +15,52 @@ using XenUpdate.App.ViewModels;
 namespace XenUpdate.App.Startup;
 
 /// <summary>
-/// Extension methods for <see cref="IServiceCollection"/> that register all
-/// XenUpdate services, repositories, and view models.
-/// Called once during application startup in <see cref="App"/>.
+/// Registers all XenUpdate services, repositories, and view models with the DI container.
+/// Called once during application startup.
 /// </summary>
 public static class ServiceCollectionExtensions
 {
-    /// <summary>
-    /// Registers all application services with the DI container.
-    /// </summary>
-    /// <param name="services">The service collection to register into.</param>
-    public static IServiceCollection AddXenUpdateServices(this IServiceCollection services)
+    /// <param name="useMocks">
+    /// When true (app launched with <c>--mock</c>), update/hardware/restore providers are
+    /// replaced with fakes so the UI can be run without admin rights, winget, or WUA.
+    /// </param>
+    public static IServiceCollection AddXenUpdateServices(this IServiceCollection services, bool useMocks = false)
     {
-        // --- Singletons ---
-        // These are created once and shared for the entire lifetime of the application.
+        // --- Shared singletons (real in every mode) ---
         services.AddSingleton<ILoggerService, FileLoggerService>();
         services.AddSingleton<IBlacklistRepository, BlacklistRepository>();
         services.AddSingleton<ISettingsRepository, SettingsRepository>();
         services.AddSingleton<IThemeService, ThemeService>();
-        services.AddSingleton<IHardwareScannerService, HardwareScannerService>();
-        services.AddSingleton<ISystemRestoreService, WindowsSystemRestoreService>();
-        services.AddSingleton<IAppUpdateService, GitHubAppUpdateService>();
+        services.AddSingleton<IGuideCatalog, EmbeddedGuideCatalog>();
+        services.AddSingleton<IGuideCompletionStore, JsonGuideCompletionStore>();
+        services.AddSingleton<IInstalledAppDetector, InstalledAppDetector>();
 
-        // --- Transient (Infrastructure) ---
-        // These are stateless helpers — a new instance is fine for each use.
-        services.AddTransient<ProcessRunner>();
-        services.AddTransient<WingetOutputParser>();
-        services.AddTransient<IWingetScanner, WingetScanner>();
-        services.AddTransient<IWingetInstaller, WingetInstaller>();
-        services.AddTransient<IWindowsUpdateService, WindowsUpdateService>();
-        services.AddTransient<IDriverUpdateService, DriverUpdateService>();
+        if (useMocks)
+        {
+            services.AddSingleton<IHardwareScannerService, MockHardwareScannerService>();
+            services.AddSingleton<ISystemRestoreService, MockSystemRestoreService>();
+            services.AddSingleton<IAppUpdateService, MockAppUpdateService>();
+            services.AddSingleton<INvidiaDriverService, MockNvidiaDriverService>();
+            services.AddTransient<IWingetScanner, MockWingetScanner>();
+            services.AddTransient<IWingetInstaller, MockWingetInstaller>();
+            services.AddTransient<IWindowsUpdateService, MockWindowsUpdateService>();
+            services.AddTransient<IDriverUpdateService, MockDriverUpdateService>();
+        }
+        else
+        {
+            services.AddSingleton<IHardwareScannerService, HardwareScannerService>();
+            services.AddSingleton<ISystemRestoreService, WindowsSystemRestoreService>();
+            services.AddSingleton<IAppUpdateService, GitHubAppUpdateService>();
+            services.AddSingleton<INvidiaDriverService, NvidiaDriverService>();
+            services.AddTransient<ProcessRunner>();
+            services.AddTransient<WingetOutputParser>();
+            services.AddTransient<IWingetScanner, WingetScanner>();
+            services.AddTransient<IWingetInstaller, WingetInstaller>();
+            services.AddTransient<IWindowsUpdateService, WindowsUpdateService>();
+            services.AddTransient<IDriverUpdateService, DriverUpdateService>();
+        }
 
-        // IUpdateProvider implementations (used by HardwareHubViewModel)
-        services.AddTransient<IUpdateProvider, WingetProvider>();
-        services.AddTransient<IUpdateProvider, WindowsUpdateProvider>();
-
-        // --- ViewModels (Singleton) ---
-        // Singleton preserves state (loaded data, scroll position, etc.)
-        // when the user navigates away from a page and comes back.
-        services.AddSingleton<MainViewModel>();
+        // --- ViewModels (Singleton: preserve page state across navigation) ---
         services.AddSingleton<ShellViewModel>();
         services.AddSingleton<ProgramsViewModel>();
         services.AddSingleton<WindowsUpdatesViewModel>();

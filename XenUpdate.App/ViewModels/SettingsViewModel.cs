@@ -56,6 +56,37 @@ public sealed partial class SettingsViewModel : ObservableObject
     /// <summary>The list of blacklist entries shown in the Settings UI.</summary>
     public ObservableCollection<BlacklistEntry> BlacklistEntries { get; } = new();
 
+    /// <summary>A selectable UI language: its code plus a display name.</summary>
+    public sealed record LanguageOption(string Code, string Display);
+
+    /// <summary>
+    /// The languages the user can choose from in the dropdown. Discovered at runtime from the
+    /// JSON files in <c>Assets/Locales</c>, so dropping in a new translated file adds a language
+    /// with no code change.
+    /// </summary>
+    public IReadOnlyList<LanguageOption> AvailableLanguages { get; } =
+        LocalizationManager.Instance.GetAvailableLanguages()
+            .Select(l => new LanguageOption(l.Code, l.Name))
+            .ToList();
+
+    /// <summary>The active UI language code, bound to the language dropdown.</summary>
+    [ObservableProperty]
+    private string _selectedLanguageCode = "en";
+
+    partial void OnSelectedLanguageCodeChanged(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return;
+
+        LocalizationManager.Instance.ChangeLanguage(value);
+
+        if (!string.Equals(Settings.Language, value, StringComparison.OrdinalIgnoreCase))
+        {
+            Settings.Language = value;
+            _ = SaveAsync();
+        }
+    }
+
     /// <summary>
     /// Initializes the SettingsViewModel with its required repositories.
     /// </summary>
@@ -97,6 +128,12 @@ public sealed partial class SettingsViewModel : ObservableObject
 
             // Ensure toggle icon reflects the loaded theme (covers cold-start with Light saved).
             OnPropertyChanged(nameof(IsLightTheme));
+
+            // Reflect the active language in the dropdown (persists the OS-detected default).
+            SelectedLanguageCode = !string.IsNullOrWhiteSpace(Settings.Language)
+                ? Settings.Language
+                : (System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName
+                    .Equals("tr", StringComparison.OrdinalIgnoreCase) ? "tr" : "en");
 
             await ReloadBlacklistEntriesAsync();
             StatusMessage = "Settings loaded.";

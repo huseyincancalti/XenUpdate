@@ -38,4 +38,11 @@ public abstract partial class UpdateItem : ObservableObject
     /// <summary>Whether the user has selected this item for batch updating.</summary>
     [ObservableProperty]
     private bool _isSelected;
+
+    /// <summary>
+    /// Human-readable reason when this item's install failed.
+    /// Null (default) on items that have not failed; shown as a tooltip on the "Failed" badge.
+    /// </summary>
+    [ObservableProperty]
+    private string? _errorMessage;
 }

@@ -1,7 +1,8 @@
 <UserControl x:Class="XenUpdate.App.Views.DriversView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:loc="clr-namespace:XenUpdate.App.Services">
     <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -11,20 +12,20 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="Drivers" Style="{StaticResource PageTitleStyle}" />
+        <TextBlock Grid.Row="0" Text="{Binding [DriversTitle], Source={x:Static loc:LocalizationManager.Instance}}" Style="{StaticResource PageTitleStyle}" />
 
         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12">
-            <Button Content="Scan for Driver Updates"
+            <Button Content="{Binding [ScanForDriverUpdates], Source={x:Static loc:LocalizationManager.Instance}}"
                     Command="{Binding ScanCommand}"
                     Style="{StaticResource MaterialDesignRaisedButton}"
                     Margin="0,0,8,0" />
 
-            <Button Content="Install Selected"
+            <Button Content="{Binding [InstallSelected], Source={x:Static loc:LocalizationManager.Instance}}"
                     Command="{Binding InstallSelectedCommand}"
                     Style="{StaticResource MaterialDesignOutlinedButton}"
                     Margin="0,0,8,0" />
 
-            <Button Content="Cancel"
+            <Button Content="{Binding [Cancel], Source={x:Static loc:LocalizationManager.Instance}}"
                     Command="{Binding CancelScanCommand}"
                     Style="{StaticResource MaterialDesignOutlinedButton}"
                     Margin="0,0,8,0"
@@ -94,16 +95,16 @@
                 <DataGrid.ContextMenu>
                     <ContextMenu Opened="DriversContextMenu_OnOpened">
                         <MenuItem x:Name="CopyDriverTitleMenuItem"
-                                  Header="Copy Driver Title"
+                                  Header="{Binding [CtxCopyDriverTitle], Source={x:Static loc:LocalizationManager.Instance}}"
                                   Click="CopyDriverTitleMenuItem_OnClick" />
                         <MenuItem x:Name="CopyDriverManufacturerMenuItem"
-                                  Header="Copy Manufacturer"
+                                  Header="{Binding [CtxCopyManufacturer], Source={x:Static loc:LocalizationManager.Instance}}"
                                   Click="CopyDriverManufacturerMenuItem_OnClick" />
                         <MenuItem x:Name="CopyDriverTitleAndManufacturerMenuItem"
-                                  Header="Copy Driver Title + Manufacturer"
+                                  Header="{Binding [CtxCopyDriverTitleAndManufacturer], Source={x:Static loc:LocalizationManager.Instance}}"
                                   Click="CopyDriverTitleAndManufacturerMenuItem_OnClick" />
                         <MenuItem x:Name="CopySelectedDriverTitlesMenuItem"
-                                  Header="Copy Selected Titles"
+                                  Header="{Binding [CtxCopySelectedTitles], Source={x:Static loc:LocalizationManager.Instance}}"
                                   Click="CopySelectedDriverTitlesMenuItem_OnClick" />
                     </ContextMenu>
                 </DataGrid.ContextMenu>
@@ -113,7 +114,7 @@
                                             Width="40"
                                             IsReadOnly="False" />
 
-                    <DataGridTemplateColumn Header="Driver / Device"
+                    <DataGridTemplateColumn Header="{Binding [ColDriverDevice], Source={x:Static loc:LocalizationManager.Instance}}"
                                             Width="*"
                                             IsReadOnly="True"
                                             SortMemberPath="DisplayName">
@@ -128,7 +129,7 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
 
-                    <DataGridTemplateColumn Header="Manufacturer"
+                    <DataGridTemplateColumn Header="{Binding [ColManufacturer], Source={x:Static loc:LocalizationManager.Instance}}"
                                             Width="190"
                                             IsReadOnly="True"
                                             SortMemberPath="Manufacturer">
@@ -143,7 +144,7 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
 
-                    <DataGridTemplateColumn Header="Device Class"
+                    <DataGridTemplateColumn Header="{Binding [ColDeviceClass], Source={x:Static loc:LocalizationManager.Instance}}"
                                             Width="150"
                                             IsReadOnly="True"
                                             SortMemberPath="DeviceClass">
@@ -158,7 +159,7 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
 
-                    <DataGridTemplateColumn Header="Status"
+                    <DataGridTemplateColumn Header="{Binding [ColStatus], Source={x:Static loc:LocalizationManager.Instance}}"
                                             Width="110"
                                             IsReadOnly="True"
                                             SortMemberPath="Status"
@@ -171,11 +172,12 @@
                     Padding="24"
                     Visibility="{Binding IsEmptyStateVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="No driver updates found. Your devices look current for now."
+                    <TextBlock Text="{Binding [DriversEmptyTitle], Source={x:Static loc:LocalizationManager.Instance}}"
                                FontSize="18"
                                FontWeight="SemiBold"
-                               Margin="0,0,0,8" />
-                    <TextBlock Text="Windows Update did not report any pending driver updates on this scan."
+                               Margin="0,0,0,8"
+                               TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding [DriversEmptyBody], Source={x:Static loc:LocalizationManager.Instance}}"
                                Opacity="0.7"
                                TextWrapping="Wrap" />
                 </StackPanel>
