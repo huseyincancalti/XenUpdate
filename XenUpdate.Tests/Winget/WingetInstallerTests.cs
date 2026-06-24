@@ -16,7 +16,7 @@ public sealed class WingetInstallerTests
         var arguments = WingetInstaller.BuildUpgradeArguments("Microsoft.VisualStudioCode");
 
         Assert.Equal(
-            "upgrade --id \"Microsoft.VisualStudioCode\" --exact --silent --accept-package-agreements --accept-source-agreements --disable-interactivity",
+            "upgrade --id \"Microsoft.VisualStudioCode\" --exact --silent --accept-package-agreements --accept-source-agreements",
             arguments);
     }
 
@@ -37,7 +37,7 @@ public sealed class WingetInstallerTests
         Assert.True(success);
         Assert.Equal("winget", runner.LastExecutable);
         Assert.Equal(
-            "upgrade --id \"Microsoft.VisualStudioCode\" --exact --silent --accept-package-agreements --accept-source-agreements --disable-interactivity",
+            "upgrade --id \"Microsoft.VisualStudioCode\" --exact --silent --accept-package-agreements --accept-source-agreements",
             runner.LastArguments);
     }
 

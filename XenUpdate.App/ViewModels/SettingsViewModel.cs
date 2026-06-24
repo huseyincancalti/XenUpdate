@@ -59,12 +59,15 @@ public sealed partial class SettingsViewModel : ObservableObject
     /// <summary>A selectable UI language: its code plus a display name.</summary>
     public sealed record LanguageOption(string Code, string Display);
 
-    /// <summary>The languages the user can choose from in the dropdown.</summary>
-    public IReadOnlyList<LanguageOption> AvailableLanguages { get; } = new[]
-    {
-        new LanguageOption("en", "English"),
-        new LanguageOption("tr", "Türkçe")
-    };
+    /// <summary>
+    /// The languages the user can choose from in the dropdown. Discovered at runtime from the
+    /// JSON files in <c>Assets/Locales</c>, so dropping in a new translated file adds a language
+    /// with no code change.
+    /// </summary>
+    public IReadOnlyList<LanguageOption> AvailableLanguages { get; } =
+        LocalizationManager.Instance.GetAvailableLanguages()
+            .Select(l => new LanguageOption(l.Code, l.Name))
+            .ToList();
 
     /// <summary>The active UI language code, bound to the language dropdown.</summary>
     [ObservableProperty]

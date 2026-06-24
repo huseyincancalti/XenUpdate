@@ -31,7 +31,11 @@ public sealed class WingetInstaller : IWingetInstaller
     public static string BuildUpgradeArguments(string packageId)
     {
         var escapedPackageId = packageId.Replace("\"", string.Empty);
-        return $"upgrade --id \"{escapedPackageId}\" --exact --silent --accept-package-agreements --accept-source-agreements --disable-interactivity";
+        // Note: we deliberately do NOT pass --disable-interactivity. That flag also suppresses
+        // winget's download progress (the "12.4 MB / 84.0 MB" lines we parse for the live size).
+        // --silent keeps the *installer* quiet and the --accept-* flags pre-answer the only
+        // prompts an --exact --id upgrade can raise, so dropping it does not risk a hang.
+        return $"upgrade --id \"{escapedPackageId}\" --exact --silent --accept-package-agreements --accept-source-agreements";
     }
 
     // winget package ids are vendor.product style — letters, digits, '.', '-', '_', '+'.
