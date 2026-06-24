@@ -195,23 +195,6 @@
                     <TextBlock Text="{Binding [NewVersionAvailable], Source={x:Static loc:LocalizationManager.Instance}}" />
                 </Button>
 
-                <Button Command="{Binding Settings.ToggleThemeCommand}"
-                        Style="{StaticResource WindowControlButtonStyle}"
-                        ToolTip="{Binding [ThemeTooltip], Source={x:Static loc:LocalizationManager.Instance}}">
-                    <materialDesign:PackIcon Width="16" Height="16">
-                        <materialDesign:PackIcon.Style>
-                            <Style TargetType="materialDesign:PackIcon">
-                                <Setter Property="Kind" Value="WeatherSunny" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Settings.IsLightTheme}" Value="True">
-                                        <Setter Property="Kind" Value="WeatherNight" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </materialDesign:PackIcon.Style>
-                    </materialDesign:PackIcon>
-                </Button>
-
                 <Button Style="{StaticResource WindowControlButtonStyle}" Click="MinimizeButton_Click" ToolTip="{Binding [MinimizeTooltip], Source={x:Static loc:LocalizationManager.Instance}}">
                     <materialDesign:PackIcon Kind="WindowMinimize" Width="14" Height="14" />
                 </Button>
@@ -309,10 +292,42 @@
                                 Style="{StaticResource MaterialDesignRaisedButton}"
                                 Height="44"
                                 ToolTip="{Binding [ScanAllTooltip], Source={x:Static loc:LocalizationManager.Instance}}">
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <materialDesign:PackIcon Kind="Refresh" Width="18" Height="18" Margin="0,0,8,0" VerticalAlignment="Center" />
-                                <TextBlock Text="{Binding [ScanAll], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" />
-                            </StackPanel>
+                            <Grid>
+                                <!-- Idle: refresh icon + "Scan All" -->
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsScanningAll}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+                                    <materialDesign:PackIcon Kind="Refresh" Width="18" Height="18" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding [ScanAll], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <!-- Busy: animated spinner + "Scanning…" -->
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsScanningAll}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+                                    <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}"
+                                                 IsIndeterminate="True"
+                                                 Width="18" Height="18" Margin="0,0,8,0"
+                                                 Foreground="White"
+                                                 VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding [ScanAllBusy], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Grid>
                         </Button>
                     </Border>
                 </Grid>

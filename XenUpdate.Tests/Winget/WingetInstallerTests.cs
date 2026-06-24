@@ -32,7 +32,7 @@ public sealed class WingetInstallerTests
             WingetPackageId = "Microsoft.VisualStudioCode"
         };
 
-        var success = await installer.InstallUpdateAsync(item, new Progress<int>(), CancellationToken.None);
+        var success = await installer.InstallUpdateAsync(item, new Progress<InstallProgress>(), CancellationToken.None);
 
         Assert.True(success);
         Assert.Equal("winget", runner.LastExecutable);
@@ -53,7 +53,7 @@ public sealed class WingetInstallerTests
             WingetPackageId = "Google.Chrome"
         };
 
-        var success = await installer.InstallUpdateAsync(item, new Progress<int>(), CancellationToken.None);
+        var success = await installer.InstallUpdateAsync(item, new Progress<InstallProgress>(), CancellationToken.None);
 
         Assert.False(success);
     }
@@ -70,7 +70,7 @@ public sealed class WingetInstallerTests
             WingetPackageId = "Microsoft.PowerToys"
         };
 
-        var success = await installer.InstallUpdateAsync(item, new Progress<int>(), CancellationToken.None);
+        var success = await installer.InstallUpdateAsync(item, new Progress<InstallProgress>(), CancellationToken.None);
 
         Assert.False(success);
     }
@@ -88,7 +88,7 @@ public sealed class WingetInstallerTests
         };
 
         await Assert.ThrowsAsync<OperationCanceledException>(() =>
-            installer.InstallUpdateAsync(item, new Progress<int>(), CreateCancelledToken()));
+            installer.InstallUpdateAsync(item, new Progress<InstallProgress>(), CreateCancelledToken()));
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public sealed class WingetInstallerTests
             WingetPackageId = "Foo --uninstall Bar"
         };
 
-        var success = await installer.InstallUpdateAsync(item, new Progress<int>(), CancellationToken.None);
+        var success = await installer.InstallUpdateAsync(item, new Progress<InstallProgress>(), CancellationToken.None);
 
         Assert.False(success);
         Assert.Equal(string.Empty, runner.LastExecutable);
@@ -137,7 +137,8 @@ public sealed class WingetInstallerTests
         public override Task<ProcessExecutionResult> RunAsync(
             string executable,
             string arguments,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            IProgress<string>? outputProgress = null)
         {
             LastExecutable = executable;
             LastArguments = arguments;

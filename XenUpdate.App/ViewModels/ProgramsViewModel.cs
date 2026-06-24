@@ -264,7 +264,7 @@ public sealed partial class ProgramsViewModel : ObservableObject
                 try
                 {
                     SetCurrentInstallPhase("Installing...", null);
-                    var progress = new Progress<int>(OnInstallProgressReported);
+                    var progress = new Progress<InstallProgress>(OnInstallProgressReported);
                     var success = await _installer.InstallUpdateAsync(item, progress, _operationCts.Token);
 
                     item.Status = success ? UpdateStatus.Succeeded : UpdateStatus.Failed;
@@ -420,20 +420,30 @@ public sealed partial class ProgramsViewModel : ObservableObject
         await Task.Yield();
     }
 
-    private void OnInstallProgressReported(int percent)
+    private void OnInstallProgressReported(InstallProgress update)
     {
-        if (percent is > 0 and < 100)
+        // Live download size, straight from winget (e.g. "12.4 MB / 84.0 MB"). Units are
+        // locale-neutral, so this reads correctly in any language.
+        var hasDownloadText = !string.IsNullOrEmpty(update.DownloadText);
+        if (hasDownloadText)
         {
-            CurrentItemProgressPercent = percent;
-            IsCurrentItemProgressIndeterminate = false;
-            CurrentItemProgressText = $"Current item progress: {percent}%";
-            SetCurrentInstallPhase("Installing...", null);
+            CurrentItemProgressText = update.DownloadText!;
         }
-        else if (percent >= 100)
+
+        if (update.Percent is > 0 and < 100)
+        {
+            CurrentItemProgressPercent = update.Percent;
+            IsCurrentItemProgressIndeterminate = false;
+            SetCurrentInstallPhase(hasDownloadText ? "Downloading..." : "Installing...", null);
+        }
+        else if (update.Percent >= 100)
         {
             CurrentItemProgressPercent = 0;
             IsCurrentItemProgressIndeterminate = true;
-            CurrentItemProgressText = "Current item progress: Finalizing...";
+            if (!hasDownloadText)
+            {
+                CurrentItemProgressText = "Finalizing...";
+            }
             SetCurrentInstallPhase("Finalizing...", null);
         }
     }

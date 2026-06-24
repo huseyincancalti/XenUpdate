@@ -143,6 +143,7 @@
                       RowStyle="{StaticResource ZenDataGridRowStyle}"
                       CellStyle="{StaticResource ZenDataGridCellStyle}"
                       PreviewMouseRightButtonDown="ProgramsDataGrid_OnPreviewMouseRightButtonDown"
+                      PreviewMouseLeftButtonUp="ProgramsDataGrid_OnPreviewMouseLeftButtonUp"
                       materialDesign:DataGridAssist.CellPadding="8 6"
                       materialDesign:DataGridAssist.ColumnHeaderPadding="8 6">
                 <DataGrid.ContextMenu>
@@ -170,9 +171,24 @@
                 </DataGrid.ContextMenu>
                 <DataGrid.Columns>
 
-                    <DataGridCheckBoxColumn Header=""
-                                            Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"
-                                            Width="40" />
+                    <!--
+                        Selection checkbox. Centered and purely a visual indicator
+                        (IsHitTestVisible=False): the whole row is the click target via the
+                        DataGrid's PreviewMouseLeftButtonUp handler, so clicking anywhere on a
+                        row toggles its checkbox. This gives a clearly centered box and a large,
+                        obvious hit area instead of a cramped ~16 px glyph.
+                    -->
+                    <DataGridTemplateColumn Header="" Width="44" CanUserResize="False" CanUserSort="False" IsReadOnly="True">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <CheckBox IsChecked="{Binding IsSelected, Mode=OneWay}"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          IsHitTestVisible="False"
+                                          Focusable="False" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
 
                 <!--
                     Template column gives us text trimming and a full-name tooltip.

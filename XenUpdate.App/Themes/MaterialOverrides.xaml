@@ -1,6 +1,7 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
+                    xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+                    xmlns:behaviors="clr-namespace:XenUpdate.App.Behaviors">
 
     <!--
         MaterialOverrides.xaml
@@ -202,13 +203,13 @@
                 BorderThickness="{TemplateBinding BorderThickness}"
                 CornerRadius="8"
                 SnapsToDevicePixels="true">
-            <!-- Chevron sits in the right 30 px; no extra border needed -->
+            <!-- Chevron, pinned to the right and vertically centered, inside the rounded chrome. -->
             <materialDesign:PackIcon x:Name="Chevron"
                                      Kind="ChevronDown"
                                      Foreground="{TemplateBinding Foreground}"
                                      HorizontalAlignment="Right"
                                      VerticalAlignment="Center"
-                                     Width="18" Height="18"
+                                     Width="20" Height="20"
                                      Margin="0,0,10,0"
                                      Opacity="0.75" />
         </Border>
@@ -256,7 +257,7 @@
                     <Grid x:Name="templateRoot" SnapsToDevicePixels="True">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="0" /><!-- collapsed; chevron is inside toggle button -->
+                            <ColumnDefinition Width="0" /><!-- collapsed; chevron is inside the toggle button -->
                         </Grid.ColumnDefinitions>
 
                         <!-- Drop-down popup -->
@@ -462,7 +463,12 @@
         <Setter Property="BorderThickness"  Value="1" />
         <Setter Property="CornerRadius"     Value="12" />
         <Setter Property="Padding"          Value="0" />
-        <Setter Property="ClipToBounds"     Value="True" />
+        <!--
+            Border paints rounded corners but does not clip its child to them, so the square
+            DataGrid surface/header would bleed past the corners. RoundedClip applies a live
+            rounded clip (radius matches CornerRadius) that keeps the corners crisp.
+        -->
+        <Setter Property="behaviors:RoundedClip.Radius" Value="12" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
         <Setter Property="Background">
             <Setter.Value>

@@ -5,6 +5,7 @@
   "NavGuides": "Guides",
   "NavSettings": "Settings",
   "ScanAll": "Scan All",
+  "ScanAllBusy": "Scanning…",
   "ScanAllTooltip": "Scan apps, Windows updates and drivers together",
   "NewVersionAvailable": "New Version Available!",
   "NewVersionTooltip": "A new version of XenUpdate is available — click to download",

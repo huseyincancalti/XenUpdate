@@ -42,7 +42,7 @@ public sealed class WingetInstaller : IWingetInstaller
     /// <inheritdoc />
     public async Task<bool> InstallUpdateAsync(
         AppUpdateItem item,
-        IProgress<int> progress,
+        IProgress<InstallProgress> progress,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(item.WingetPackageId))
@@ -64,10 +64,16 @@ public sealed class WingetInstaller : IWingetInstaller
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCts.CancelAfter(InstallTimeout);
 
+        // winget redraws its download/install progress with carriage returns. Reading stdout
+        // line-by-line surfaces each redraw, so we can report the live "downloaded / total"
+        // size and percentage. If winget emits no such lines (some silent installers), the
+        // progress simply stays indeterminate until the final 100% — no regression.
+        var lineProgress = new Progress<string>(line => ReportLine(line, progress));
+
         ProcessExecutionResult result;
         try
         {
-            result = await _processRunner.RunAsync("winget", arguments, timeoutCts.Token);
+            result = await _processRunner.RunAsync("winget", arguments, timeoutCts.Token, lineProgress);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
@@ -88,14 +94,26 @@ public sealed class WingetInstaller : IWingetInstaller
         return LogAndReturnInstallResult(item, result, progress);
     }
 
+    // Parses one stdout line and forwards a progress update when it carries a size or percent.
+    private static void ReportLine(string line, IProgress<InstallProgress> progress)
+    {
+        var downloadText = WingetProgressParser.TryParseDownload(line, out var size) ? size : null;
+        var percent = WingetProgressParser.TryParsePercent(line, out var value) ? value : -1;
+
+        if (downloadText is not null || percent >= 0)
+        {
+            progress.Report(new InstallProgress(percent, downloadText));
+        }
+    }
+
     private bool LogAndReturnInstallResult(
         AppUpdateItem item,
         ProcessExecutionResult result,
-        IProgress<int> progress)
+        IProgress<InstallProgress> progress)
     {
         if (result.Succeeded)
         {
-            progress.Report(100);
+            progress.Report(new InstallProgress(100));
             _logger.Info($"Install completed successfully for {item.DisplayName} ({item.WingetPackageId}). Exit code: {result.ExitCode}.");
             return true;
         }

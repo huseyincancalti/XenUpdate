@@ -53,6 +53,10 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty]
     private bool _hasAppUpdate;
 
+    /// <summary>True while a "Scan All" run is in progress; drives the sidebar button's spinner/label.</summary>
+    [ObservableProperty]
+    private bool _isScanningAll;
+
     /// <summary>Set by the window: brings the window to the foreground (tray "Open").</summary>
     public Action? RequestShowWindow { get; set; }
 
@@ -101,13 +105,35 @@ public sealed partial class ShellViewModel : ObservableObject
         };
     }
 
-    /// <summary>Kicks off a scan on every source page in parallel — a convenience over per-page scans.</summary>
-    [RelayCommand]
-    private void ScanAll()
+    /// <summary>
+    /// Kicks off a scan on every source page together and reports a single busy state
+    /// (<see cref="IsScanningAll"/>) so the sidebar button shows a spinner until every
+    /// scan finishes. Concurrent invocations are allowed at the command level but guarded
+    /// here, so re-clicking while a run is active is a harmless no-op.
+    /// </summary>
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private async Task ScanAllAsync()
     {
-        if (_programsVm.ScanCommand.CanExecute(null)) _programsVm.ScanCommand.Execute(null);
-        if (_windowsUpdatesVm.ScanCommand.CanExecute(null)) _windowsUpdatesVm.ScanCommand.Execute(null);
-        if (_driversVm.ScanCommand.CanExecute(null)) _driversVm.ScanCommand.Execute(null);
+        if (IsScanningAll)
+        {
+            return;
+        }
+
+        IsScanningAll = true;
+        try
+        {
+            await Task.WhenAll(
+                ExecuteIfPossible(_programsVm.ScanCommand),
+                ExecuteIfPossible(_windowsUpdatesVm.ScanCommand),
+                ExecuteIfPossible(_driversVm.ScanCommand));
+        }
+        finally
+        {
+            IsScanningAll = false;
+        }
+
+        static Task ExecuteIfPossible(IAsyncRelayCommand command) =>
+            command.CanExecute(null) ? command.ExecuteAsync(null) : Task.CompletedTask;
     }
 
     [RelayCommand]

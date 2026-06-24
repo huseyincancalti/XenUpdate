@@ -178,34 +178,42 @@
                                 Style="{StaticResource MaterialDesignRaisedButton}" />
                     </Grid>
 
-                    <DataGrid x:Name="BlacklistDataGrid"
-                              ItemsSource="{Binding BlacklistEntries}"
-                              SelectedItem="{Binding SelectedBlacklistEntry}"
-                              SelectionMode="Extended"
-                              AutoGenerateColumns="False"
-                              CanUserAddRows="False"
-                              CanUserDeleteRows="False"
-                              IsReadOnly="True"
-                              MinHeight="140"
-                              materialDesign:DataGridAssist.CellPadding="8 6"
-                              materialDesign:DataGridAssist.ColumnHeaderPadding="8 6">
-                        <DataGrid.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem Header="{Binding [CtxCopyPackageId], Source={x:Static loc:LocalizationManager.Instance}}"
-                                          Click="CopyPackageIdMenuItem_OnClick" />
-                                <MenuItem Header="{Binding [CtxCopySelectedIds], Source={x:Static loc:LocalizationManager.Instance}}"
-                                          Click="CopySelectedPackageIdsMenuItem_OnClick" />
-                            </ContextMenu>
-                        </DataGrid.ContextMenu>
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="{Binding [ColPackageId], Source={x:Static loc:LocalizationManager.Instance}}"
-                                                Binding="{Binding PackageId}"
-                                                Width="2*" />
-                            <DataGridTextColumn Header="{Binding [ColReason], Source={x:Static loc:LocalizationManager.Instance}}"
-                                                Binding="{Binding Reason}"
-                                                Width="2*" />
-                        </DataGrid.Columns>
-                    </DataGrid>
+                    <!-- Same premium glass chrome + Zen DataGrid styling as the Programs/Updates tables. -->
+                    <Border Style="{StaticResource ZenDataGridChromeStyle}">
+                        <DataGrid x:Name="BlacklistDataGrid"
+                                  ItemsSource="{Binding BlacklistEntries}"
+                                  SelectedItem="{Binding SelectedBlacklistEntry}"
+                                  SelectionMode="Extended"
+                                  AutoGenerateColumns="False"
+                                  CanUserAddRows="False"
+                                  CanUserDeleteRows="False"
+                                  IsReadOnly="True"
+                                  MinHeight="140"
+                                  Background="{DynamicResource ZenDataGridSurfaceBrush}"
+                                  Foreground="{DynamicResource ZenTextBrush}"
+                                  ColumnHeaderStyle="{StaticResource ZenDataGridColumnHeaderStyle}"
+                                  RowStyle="{StaticResource ZenDataGridRowStyle}"
+                                  CellStyle="{StaticResource ZenDataGridCellStyle}"
+                                  materialDesign:DataGridAssist.CellPadding="8 6"
+                                  materialDesign:DataGridAssist.ColumnHeaderPadding="8 6">
+                            <DataGrid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="{Binding [CtxCopyPackageId], Source={x:Static loc:LocalizationManager.Instance}}"
+                                              Click="CopyPackageIdMenuItem_OnClick" />
+                                    <MenuItem Header="{Binding [CtxCopySelectedIds], Source={x:Static loc:LocalizationManager.Instance}}"
+                                              Click="CopySelectedPackageIdsMenuItem_OnClick" />
+                                </ContextMenu>
+                            </DataGrid.ContextMenu>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="{Binding [ColPackageId], Source={x:Static loc:LocalizationManager.Instance}}"
+                                                    Binding="{Binding PackageId}"
+                                                    Width="2*" />
+                                <DataGridTextColumn Header="{Binding [ColReason], Source={x:Static loc:LocalizationManager.Instance}}"
+                                                    Binding="{Binding Reason}"
+                                                    Width="2*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
 
                     <Button Content="{Binding [RemoveSelected], Source={x:Static loc:LocalizationManager.Instance}}"
                             Click="RemoveSelectedButton_OnClick"

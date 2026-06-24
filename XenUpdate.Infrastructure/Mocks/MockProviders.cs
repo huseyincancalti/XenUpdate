@@ -28,12 +28,14 @@ public sealed class MockWingetScanner : IWingetScanner
 
 public sealed class MockWingetInstaller : IWingetInstaller
 {
-    public async Task<bool> InstallUpdateAsync(AppUpdateItem item, IProgress<int> progress, CancellationToken cancellationToken)
+    public async Task<bool> InstallUpdateAsync(AppUpdateItem item, IProgress<InstallProgress> progress, CancellationToken cancellationToken)
     {
+        const double totalMb = 84.0;
         for (var percent = 0; percent <= 100; percent += 20)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            progress.Report(percent);
+            var downloadedMb = totalMb * percent / 100.0;
+            progress.Report(new InstallProgress(percent, $"{downloadedMb:0.0} MB / {totalMb:0.0} MB"));
             await Task.Delay(160, cancellationToken);
         }
         return true;

@@ -5,6 +5,7 @@
   "NavGuides": "Rehberler",
   "NavSettings": "Ayarlar",
   "ScanAll": "Tümünü Tara",
+  "ScanAllBusy": "Taranıyor…",
   "ScanAllTooltip": "Uygulamaları, Windows güncellemelerini ve sürücüleri birlikte tara",
   "NewVersionAvailable": "Yeni Sürüm Mevcut!",
   "NewVersionTooltip": "XenUpdate'in yeni bir sürümü var — indirmek için tıkla",
