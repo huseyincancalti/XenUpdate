@@ -63,6 +63,8 @@
             <DataTrigger Binding="{Binding Status}" Value="Failed">
                 <Setter TargetName="BadgeBorder" Property="Background" Value="{DynamicResource ZenBadgeFailedBackgroundBrush}" />
                 <Setter TargetName="BadgeText"   Property="Foreground" Value="{DynamicResource ZenBadgeFailedForegroundBrush}" />
+                <!-- Show the failure reason as a tooltip so the user doesn't have to check the log -->
+                <Setter TargetName="BadgeBorder" Property="ToolTip"    Value="{Binding ErrorMessage}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding Status}" Value="Blacklisted">
                 <Setter TargetName="BadgeBorder" Property="Background" Value="{DynamicResource ZenBadgeBlacklistedBackgroundBrush}" />

@@ -48,6 +48,10 @@ public sealed partial class ProgramsViewModel : ObservableObject
 
     private CancellationTokenSource? _blacklistRestoreDebounceCts;
 
+    // Captured from the failure-reason progress event during a single item install.
+    // Reset to null before each item; read once after InstallUpdateAsync returns false.
+    private string? _lastItemFailureReason;
+
     /// <summary>True while any operation (scan or install) is running. Drives command enable/disable.</summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ScanCommand))]
@@ -102,6 +106,10 @@ public sealed partial class ProgramsViewModel : ObservableObject
     [ObservableProperty]
     private string _currentInstallDetailText = string.Empty;
 
+    /// <summary>True when the last scan attempt threw an exception (network outage, permission error, etc.).</summary>
+    [ObservableProperty]
+    private bool _hasScanFailed;
+
     /// <summary>True when the Programs empty-state panel should be shown instead of the grid.</summary>
     public bool IsEmptyStateVisible => HasScanned && !HasUpdates && !IsBusy;
 
@@ -154,6 +162,7 @@ public sealed partial class ProgramsViewModel : ObservableObject
         IsScanning = true;
         HasScanned = false;
         HasUpdates = false;
+        HasScanFailed = false;
         StatusMessage = L.T("StatusScanning");
         Updates.Clear();
 
@@ -188,6 +197,7 @@ public sealed partial class ProgramsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            HasScanFailed = true;
             StatusMessage = L.T("StatusScanFailed");
             _logger.Error("Programs scan encountered an unexpected error.", ex);
         }
@@ -263,6 +273,7 @@ public sealed partial class ProgramsViewModel : ObservableObject
 
                 try
                 {
+                    _lastItemFailureReason = null;
                     SetCurrentInstallPhase("Installing...", null);
                     var progress = new Progress<InstallProgress>(OnInstallProgressReported);
                     var success = await _installer.InstallUpdateAsync(item, progress, _operationCts.Token);
@@ -276,6 +287,9 @@ public sealed partial class ProgramsViewModel : ObservableObject
                     else
                     {
                         failedCount++;
+                        // Attach the failure reason to the item so the status badge tooltip shows it.
+                        if (_lastItemFailureReason is not null)
+                            item.ErrorMessage = _lastItemFailureReason;
                     }
 
                     UpdateOverallProgress(succeededItems.Count + failedCount, selectedItems.Count);
@@ -422,6 +436,14 @@ public sealed partial class ProgramsViewModel : ObservableObject
 
     private void OnInstallProgressReported(InstallProgress update)
     {
+        // Failure reason arrives on the final progress event when the install fails.
+        // Store it so InstallSelectedAsync can attach it to the item and status bar.
+        if (update.FailureReason is not null)
+        {
+            _lastItemFailureReason = update.FailureReason;
+            return;
+        }
+
         // Live download size, straight from winget (e.g. "12.4 MB / 84.0 MB"). Units are
         // locale-neutral, so this reads correctly in any language.
         var hasDownloadText = !string.IsNullOrEmpty(update.DownloadText);

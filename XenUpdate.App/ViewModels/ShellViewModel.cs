@@ -1,8 +1,10 @@
 using System.Reflection;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using XenUpdate.App.Messages;
+using XenUpdate.App.Services;
 using XenUpdate.Core.Interfaces;
 
 namespace XenUpdate.App.ViewModels;
@@ -36,6 +38,8 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private string _appUpdateUrl = string.Empty;
 
+    private readonly NetworkMonitorService _networkMonitor = new();
+
     public LogConsoleViewModel LogConsole { get; }
 
     /// <summary>The Settings page VM. Also the single source of theme state for the title-bar toggle.</summary>
@@ -56,6 +60,10 @@ public sealed partial class ShellViewModel : ObservableObject
     /// <summary>True while a "Scan All" run is in progress; drives the sidebar button's spinner/label.</summary>
     [ObservableProperty]
     private bool _isScanningAll;
+
+    /// <summary>True when the machine has network connectivity; false dims the UI and shows the title-bar badge.</summary>
+    [ObservableProperty]
+    private bool _isOnline = true;
 
     /// <summary>Set by the window: brings the window to the foreground (tray "Open").</summary>
     public Action? RequestShowWindow { get; set; }
@@ -88,6 +96,10 @@ public sealed partial class ShellViewModel : ObservableObject
         _logger = logger;
 
         NavigateTo(AppPage.Programs);
+
+        IsOnline = _networkMonitor.IsOnline;
+        _networkMonitor.OnlineStatusChanged += online =>
+            Application.Current.Dispatcher.InvokeAsync(() => IsOnline = online);
     }
 
     [RelayCommand]

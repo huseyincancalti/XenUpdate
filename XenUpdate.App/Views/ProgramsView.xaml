@@ -274,6 +274,26 @@
                                TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
+
+            <!-- Scan error panel: shown when a scan throws (network down, permissions, etc.) -->
+            <Border Style="{StaticResource ZenGlassPanelStyle}"
+                    Padding="24"
+                    Visibility="{Binding HasScanFailed, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <materialDesign:PackIcon Kind="AlertCircleOutline"
+                                                 Width="24" Height="24"
+                                                 Foreground="{DynamicResource ZenBadgeFailedForegroundBrush}"
+                                                 Margin="0,0,10,0" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding [ScanErrorTitle], Source={x:Static loc:LocalizationManager.Instance}}"
+                                   FontSize="18" FontWeight="SemiBold"
+                                   VerticalAlignment="Center"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding [ScanErrorBody], Source={x:Static loc:LocalizationManager.Instance}}"
+                               Opacity="0.7" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
         </Grid>
 
         <TextBlock Grid.Row="4"

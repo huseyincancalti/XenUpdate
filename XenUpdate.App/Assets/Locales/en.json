@@ -8,6 +8,7 @@
   "ScanAll": "Scan All",
   "ScanAllBusy": "Scanning…",
   "ScanAllTooltip": "Scan apps, Windows updates and drivers together",
+  "NoInternet": "No Internet",
   "NewVersionAvailable": "New Version Available!",
   "NewVersionTooltip": "A new version of XenUpdate is available — click to download",
   "ThemeTooltip": "Switch theme",
@@ -109,5 +110,7 @@
   "StatusScanningSlow": "Scanning... This may take up to two minutes.",
   "StatusScanCancelled": "Scan cancelled.",
   "StatusScanFailed": "Scan failed. See the log for details.",
-  "StatusUpdatesAvailable": "{0} update(s) available."
+  "StatusUpdatesAvailable": "{0} update(s) available.",
+  "ScanErrorTitle": "Scan failed",
+  "ScanErrorBody": "Could not reach the update server. Check your internet connection and try again."
 }

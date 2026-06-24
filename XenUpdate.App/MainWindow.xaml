@@ -162,9 +162,34 @@
                 <TextBlock Text="XenUpdate" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" />
             </StackPanel>
 
-            <Border Grid.Column="1"
-                    Background="Transparent"
-                    MouseLeftButtonDown="TitleBar_MouseLeftButtonDown" />
+            <Grid Grid.Column="1">
+                <Border Background="Transparent"
+                        MouseLeftButtonDown="TitleBar_MouseLeftButtonDown" />
+                <!-- Offline indicator — visible only when IsOnline=False; non-interactive -->
+                <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                        CornerRadius="4" Padding="8,3"
+                        IsHitTestVisible="False">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsOnline}" Value="False">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                    <Setter Property="Background" Value="#CC4A2200" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="WifiOff" Width="13" Height="13"
+                                                 Margin="0,0,5,0" VerticalAlignment="Center"
+                                                 Foreground="#FFE89200" />
+                        <TextBlock Text="{Binding [NoInternet], Source={x:Static loc:LocalizationManager.Instance}}"
+                                   FontSize="11" FontWeight="SemiBold"
+                                   Foreground="#FFE89200" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+            </Grid>
 
             <StackPanel Grid.Column="2"
                         Orientation="Horizontal"
@@ -335,6 +360,23 @@
 
             <ContentControl Grid.Column="1" Content="{Binding CurrentPage}" />
         </Grid>
+
+        <!-- Offline dim overlay — gently darkens the body to signal that the network is down -->
+        <Rectangle Grid.Row="1"
+                   Panel.ZIndex="500"
+                   Fill="#44000000"
+                   IsHitTestVisible="False">
+            <Rectangle.Style>
+                <Style TargetType="Rectangle">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsOnline}" Value="False">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Rectangle.Style>
+        </Rectangle>
 
         <materialDesign:Snackbar x:Name="MainSnackbar"
                                  Grid.RowSpan="2"

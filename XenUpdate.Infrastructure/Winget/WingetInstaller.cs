@@ -130,8 +130,28 @@ public sealed class WingetInstaller : IWingetInstaller
             _logger.Warning($"Winget stderr summary for {item.WingetPackageId}: {stderrSummary}");
         }
 
+        var failureReason = MapWingetExitCode(result.ExitCode);
+        progress.Report(new InstallProgress(0, FailureReason: failureReason));
+
         return false;
     }
+
+    // Maps known winget and Windows INTERNET_* HRESULTs to human-readable strings.
+    // Covers the most common real-world failures: network issues, policy blocks, hash errors.
+    private static string MapWingetExitCode(int exitCode) => exitCode switch
+    {
+        -2147012889 => "No internet — server could not be reached",
+        -2147012867 => "Connection timed out",
+        -2147012895 => "Connection refused by server",
+        -2147012894 => "Connection dropped",
+        -2147012696 => "Secure connection failed (TLS/SSL error)",
+        -1978335220 => "No applicable installer for this system",
+        -1978335191 => "Package is already up to date",
+        -1978335215 => "Install blocked by policy or security software",
+        -1978335212 => "Installer hash mismatch — download may be corrupt",
+        -1978335210 => "Installer returned an error",
+        _ => $"Install failed (exit code {exitCode})"
+    };
 
     private static string BuildOutputSummary(string output)
     {

@@ -117,7 +117,21 @@ public sealed partial class HardwareHubViewModel : ObservableObject
             DriverUpdateStatus? status = null;
             if (string.Equals(guide.RequiredGpuVendor, "NVIDIA", StringComparison.OrdinalIgnoreCase))
             {
-                status = _nvidiaStatusCache ??= await _nvidiaService.CheckAsync();
+                // Only cache successful checks. A network failure returns Checked=false and must
+                // not be cached; otherwise a transient outage permanently hides the "driver current"
+                // note until the app restarts.
+                if (_nvidiaStatusCache is null)
+                {
+                    var fresh = await _nvidiaService.CheckAsync();
+                    if (fresh.Checked)
+                        _nvidiaStatusCache = fresh;
+                    status = fresh;
+                }
+                else
+                {
+                    status = _nvidiaStatusCache;
+                }
+
                 // If we reliably know the driver is current, don't show a guide — show a
                 // reassuring "you're up to date" note instead so the page never looks broken.
                 if (status.Checked && !status.UpdateAvailable)

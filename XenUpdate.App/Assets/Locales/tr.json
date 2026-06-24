@@ -8,6 +8,7 @@
   "ScanAll": "Tümünü Tara",
   "ScanAllBusy": "Taranıyor…",
   "ScanAllTooltip": "Uygulamaları, Windows güncellemelerini ve sürücüleri birlikte tara",
+  "NoInternet": "İnternet Yok",
   "NewVersionAvailable": "Yeni Sürüm Mevcut!",
   "NewVersionTooltip": "XenUpdate'in yeni bir sürümü var — indirmek için tıkla",
   "ThemeTooltip": "Temayı değiştir",
@@ -109,5 +110,7 @@
   "StatusScanningSlow": "Taranıyor... Bu iki dakika kadar sürebilir.",
   "StatusScanCancelled": "Tarama iptal edildi.",
   "StatusScanFailed": "Tarama başarısız. Ayrıntılar için günlüğe bak.",
-  "StatusUpdatesAvailable": "{0} güncelleme mevcut."
+  "StatusUpdatesAvailable": "{0} güncelleme mevcut.",
+  "ScanErrorTitle": "Tarama başarısız",
+  "ScanErrorBody": "Güncelleme sunucusuna ulaşılamadı. İnternet bağlantını kontrol et ve tekrar dene."
 }
