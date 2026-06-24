@@ -4,8 +4,8 @@
 
 # ⚡ XenUpdate
 
-**The Ultimate Background Updater for Windows.**
-*A premium, modern Windows desktop application that effortlessly manages software, Windows, and driver updates from a single, stunning interface.*
+**The guided way to keep Windows up to date.**
+*Most updaters just list what's outdated. XenUpdate also **guides you through the updates tools can't automate** — GPU drivers, BIOS, firmware — by detecting your hardware, checking whether a newer version really exists, and walking you through it step by step. Apps, Windows Updates, and drivers too, all from one clean interface.*
 
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-blueviolet.svg)](https://dotnet.microsoft.com/)
 [![WPF](https://img.shields.io/badge/UI-WPF%20Glassmorphism-blue.svg)]()
@@ -91,6 +91,12 @@ If you want to contribute or build the project yourself:
 - XenUpdate interacts directly with Windows system-level tools. Some update operations (especially drivers and core OS updates) require administrator privileges.
 - The application does not forcefully restart your computer, but some updates may require a manual reboot to take full effect.
 - Always review what you are installing.
+
+---
+
+## 📄 License
+
+XenUpdate is released under the [MIT License](LICENSE) — free to use, modify, and distribute.
 
 ---
 
