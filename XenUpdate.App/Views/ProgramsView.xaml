@@ -148,10 +148,8 @@
                       Background="{DynamicResource ZenDataGridSurfaceBrush}"
                       Foreground="{DynamicResource ZenTextBrush}"
                       ColumnHeaderStyle="{StaticResource ZenDataGridColumnHeaderStyle}"
-                      RowStyle="{StaticResource ZenDataGridRowWithFailureDetailsStyle}"
+                      RowStyle="{StaticResource ZenDataGridRowStyle}"
                       CellStyle="{StaticResource ZenDataGridCellStyle}"
-                      RowDetailsVisibilityMode="Collapsed"
-                      RowDetailsTemplate="{StaticResource FailureReasonRowDetailsTemplate}"
                       PreviewMouseRightButtonDown="ProgramsDataGrid_OnPreviewMouseRightButtonDown"
                       PreviewMouseLeftButtonUp="ProgramsDataGrid_OnPreviewMouseLeftButtonUp"
                       materialDesign:DataGridAssist.CellPadding="8 6"
@@ -192,7 +190,8 @@
                     -->
                     <DataGridTemplateColumn Width="44" CanUserResize="False" CanUserSort="False" IsReadOnly="True">
                         <DataGridTemplateColumn.Header>
-                            <CheckBox IsChecked="{Binding DataContext.AreAllSelected, RelativeSource={RelativeSource AncestorType=DataGrid}, Mode=TwoWay}"
+                            <CheckBox Style="{StaticResource ZenSelectAllCheckBoxStyle}"
+                                      IsChecked="{Binding DataContext.AreAllSelected, RelativeSource={RelativeSource AncestorType=DataGrid}, Mode=TwoWay}"
                                       IsThreeState="False"
                                       HorizontalAlignment="Center"
                                       VerticalAlignment="Center"
@@ -220,11 +219,23 @@
                                             SortMemberPath="DisplayName">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding DisplayName}"
-                                           TextTrimming="CharacterEllipsis"
-                                           VerticalAlignment="Center"
-                                           Padding="2,0"
-                                           ToolTip="{Binding DisplayName}" />
+                                <StackPanel Margin="0,3">
+                                    <TextBlock Text="{Binding DisplayName}"
+                                               TextTrimming="CharacterEllipsis"
+                                               VerticalAlignment="Center"
+                                               Padding="2,0"
+                                               ToolTip="{Binding DisplayName}" />
+                                    <!-- Only present when the install failed; ordinary cell content, no RowDetails coercion issues -->
+                                    <ContentPresenter x:Name="FailurePresenter"
+                                                      Content="{Binding}"
+                                                      ContentTemplate="{StaticResource FailureReasonInlineTemplate}"
+                                                      Visibility="Collapsed" />
+                                </StackPanel>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding Status}" Value="Failed">
+                                        <Setter TargetName="FailurePresenter" Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>

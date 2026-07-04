@@ -133,10 +133,18 @@
                         ToolTipText="XenUpdate - Background Updater"
                         DoubleClickCommand="{Binding ShowWindowCommand}">
             <tb:TaskbarIcon.ContextMenu>
+                <!--
+                    A ContextMenu is a separate popup, detached from the visual tree of the
+                    control it's attached to — it does NOT reliably inherit DataContext from
+                    TaskbarIcon the way a normal child element would. Binding Command here
+                    could silently resolve to nothing, so both actions are wired via Click
+                    handlers in code-behind instead, which unambiguously read MainWindow's
+                    own DataContext.
+                -->
                 <ContextMenu>
-                    <MenuItem Header="Open XenUpdate" Command="{Binding ShowWindowCommand}" />
+                    <MenuItem Header="Open XenUpdate" Click="OpenMenuItem_OnClick" />
                     <Separator />
-                    <MenuItem Header="Exit" Command="{Binding ExitApplicationCommand}" Foreground="Red" />
+                    <MenuItem Header="Exit" Click="ExitMenuItem_OnClick" Foreground="Red" />
                 </ContextMenu>
             </tb:TaskbarIcon.ContextMenu>
         </tb:TaskbarIcon>

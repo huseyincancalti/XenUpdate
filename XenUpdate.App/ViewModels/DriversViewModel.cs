@@ -210,7 +210,7 @@ public sealed partial class DriversViewModel : ObservableObject
         var selectedUpdates = Updates.Where(update => update.IsSelected).ToList();
         if (selectedUpdates.Count == 0)
         {
-            StatusMessage = "Select at least one driver update to install.";
+            StatusMessage = L.T("SelectAtLeastOneDriver");
             _logger.Info("Driver install requested with no selected driver updates.");
             return;
         }
@@ -224,7 +224,7 @@ public sealed partial class DriversViewModel : ObservableObject
 
         // Safety: take a system restore point before touching drivers so a bad driver can be
         // rolled back. Continue even if it fails (e.g. System Restore disabled), but say which.
-        StatusMessage = "Creating a system restore point before installing drivers...";
+        StatusMessage = L.T("CreatingRestorePoint");
         var restoreCreated = await _restoreService.CreateRestorePointAsync("XenUpdate driver update");
         _logger.Info(restoreCreated
             ? "System restore point created before driver install."
@@ -275,26 +275,26 @@ public sealed partial class DriversViewModel : ObservableObject
             }
 
             StatusMessage = rebootRequired
-                ? $"Driver installation completed. {succeededItems.Count} succeeded, {failedCount} failed. A restart may be required."
-                : $"Driver installation completed. {succeededItems.Count} succeeded, {failedCount} failed.";
+                ? string.Format(L.T("DriverInstallCompletedRestart"), succeededItems.Count, failedCount)
+                : string.Format(L.T("DriverInstallCompleted"), succeededItems.Count, failedCount);
 
             CurrentInstallDetailText = rebootRequired
-                ? "Installation completed. A restart may be required."
-                : "Installation completed successfully.";
+                ? L.T("InstallationCompletedRestartMayBeRequired")
+                : L.T("InstallationCompletedSuccessfully");
 
             _logger.Info($"Driver install batch completed. Total: {selectedUpdates.Count}, Succeeded: {succeededItems.Count}, Failed: {failedCount}, RebootRequired: {rebootRequired}.");
             batchCompletedCleanly = true;
         }
         catch (OperationCanceledException)
         {
-            CurrentInstallDetailText = "Installation cancelled.";
-            StatusMessage = $"Driver installation cancelled. {succeededItems.Count} succeeded, {failedCount} failed.";
+            CurrentInstallDetailText = L.T("InstallationCancelled");
+            StatusMessage = string.Format(L.T("DriverInstallCancelled"), succeededItems.Count, failedCount);
             _logger.Info($"Driver install batch was cancelled. Completed before cancel: {succeededItems.Count + failedCount} of {selectedUpdates.Count}.");
         }
         catch (Exception ex)
         {
-            CurrentInstallDetailText = "Installation failed.";
-            StatusMessage = "Driver installation failed. See the log for details.";
+            CurrentInstallDetailText = L.T("InstallationFailedGeneric");
+            StatusMessage = L.T("DriverInstallFailedGeneric");
             _logger.Error("Driver install batch failed.", ex);
         }
         finally
@@ -323,11 +323,11 @@ public sealed partial class DriversViewModel : ObservableObject
             return;
         }
 
-        StatusMessage = "Cancelling...";
+        StatusMessage = L.T("Cancelling");
 
         if (IsInstallBatchRunning)
         {
-            CurrentInstallDetailText = "Cancelling current driver operation...";
+            CurrentInstallDetailText = L.T("CancellingDriverOp");
         }
 
         _operationCts.Cancel();
@@ -356,10 +356,10 @@ public sealed partial class DriversViewModel : ObservableObject
     private async Task ShowInstallingStateAsync(DriverUpdateItem update, int currentIndex, int totalCount)
     {
         update.Status = UpdateStatus.Installing;
-        CurrentBatchProgressText = $"Installing {currentIndex + 1} of {totalCount}...";
+        CurrentBatchProgressText = string.Format(L.T("InstallingXOfY"), currentIndex + 1, totalCount);
         CurrentDriverTitle = update.DisplayName;
         CurrentDriverContextText = BuildDriverContextText(update);
-        CurrentInstallDetailText = "Preparing download...";
+        CurrentInstallDetailText = L.T("PreparingDownload");
         StatusMessage = CurrentBatchProgressText;
 
         await Task.Yield();
@@ -369,15 +369,15 @@ public sealed partial class DriversViewModel : ObservableObject
     {
         if (percent <= 25)
         {
-            CurrentInstallDetailText = "Preparing download...";
+            CurrentInstallDetailText = L.T("PreparingDownload");
         }
         else if (percent < 75)
         {
-            CurrentInstallDetailText = "Downloading and installing...";
+            CurrentInstallDetailText = L.T("DownloadingAndInstalling");
         }
         else
         {
-            CurrentInstallDetailText = "Finalizing installation...";
+            CurrentInstallDetailText = L.T("FinalizingInstallation");
         }
     }
 
@@ -489,13 +489,13 @@ public sealed partial class DriversViewModel : ObservableObject
         if (Updates.Count == 0)
         {
             return rebootRequired
-                ? "Installation complete. No remaining driver updates. A restart may be required."
-                : "Installation complete. No remaining driver updates.";
+                ? L.T("DriverCompleteNoneRestart")
+                : L.T("DriverCompleteNone");
         }
 
         return rebootRequired
-            ? $"Installation complete. {Updates.Count} driver update(s) still available. A restart may be required."
-            : $"Installation complete. {Updates.Count} driver update(s) still available.";
+            ? string.Format(L.T("DriverCompleteRemainingRestart"), Updates.Count)
+            : string.Format(L.T("DriverCompleteRemaining"), Updates.Count);
     }
 
     private void NotifyVisibilityPropertiesChanged()

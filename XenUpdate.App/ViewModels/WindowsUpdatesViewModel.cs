@@ -212,7 +212,7 @@ public sealed partial class WindowsUpdatesViewModel : ObservableObject
         var selectedUpdates = Updates.Where(update => update.IsSelected).ToList();
         if (selectedUpdates.Count == 0)
         {
-            StatusMessage = "Select at least one Windows update to install.";
+            StatusMessage = L.T("SelectAtLeastOneWinUpdate");
             _logger.Info("Windows Update install requested with no selected updates.");
             return;
         }
@@ -276,26 +276,26 @@ public sealed partial class WindowsUpdatesViewModel : ObservableObject
             }
 
             CurrentInstallDetailText = rebootRequired
-                ? "Installation completed. A restart may be required."
-                : "Installation completed successfully.";
+                ? L.T("InstallationCompletedRestartMayBeRequired")
+                : L.T("InstallationCompletedSuccessfully");
 
             StatusMessage = rebootRequired
-                ? $"Windows Update installation completed. {succeededItems.Count} succeeded, {failedCount} failed. A restart may be required."
-                : $"Windows Update installation completed. {succeededItems.Count} succeeded, {failedCount} failed.";
+                ? string.Format(L.T("WinUpdateInstallCompletedRestart"), succeededItems.Count, failedCount)
+                : string.Format(L.T("WinUpdateInstallCompleted"), succeededItems.Count, failedCount);
 
             _logger.Info($"Windows Update install batch completed. Total: {selectedUpdates.Count}, Succeeded: {succeededItems.Count}, Failed: {failedCount}, RebootRequired: {rebootRequired}.");
             batchCompletedCleanly = true;
         }
         catch (OperationCanceledException)
         {
-            CurrentInstallDetailText = "Installation cancelled.";
-            StatusMessage = $"Windows Update installation cancelled. {succeededItems.Count} succeeded, {failedCount} failed.";
+            CurrentInstallDetailText = L.T("InstallationCancelled");
+            StatusMessage = string.Format(L.T("WinUpdateInstallCancelled"), succeededItems.Count, failedCount);
             _logger.Info($"Windows Update install batch was cancelled. Completed before cancel: {succeededItems.Count + failedCount} of {selectedUpdates.Count}.");
         }
         catch (Exception ex)
         {
-            CurrentInstallDetailText = "Installation failed.";
-            StatusMessage = "Installation failed. See the log for details.";
+            CurrentInstallDetailText = L.T("InstallationFailedGeneric");
+            StatusMessage = L.T("WinUpdateInstallFailedGeneric");
             _logger.Error("Windows Update install batch failed.", ex);
         }
         finally
@@ -324,11 +324,11 @@ public sealed partial class WindowsUpdatesViewModel : ObservableObject
             return;
         }
 
-        StatusMessage = "Cancelling...";
+        StatusMessage = L.T("Cancelling");
 
         if (IsInstallBatchRunning)
         {
-            CurrentInstallDetailText = "Cancelling current Windows Update operation...";
+            CurrentInstallDetailText = L.T("CancellingWinUpdateOp");
         }
 
         _operationCts.Cancel();
@@ -357,10 +357,10 @@ public sealed partial class WindowsUpdatesViewModel : ObservableObject
     private async Task ShowInstallingStateAsync(WindowsUpdateItem update, int currentIndex, int totalCount)
     {
         update.Status = UpdateStatus.Installing;
-        CurrentBatchProgressText = $"Installing {currentIndex + 1} of {totalCount}...";
+        CurrentBatchProgressText = string.Format(L.T("InstallingXOfY"), currentIndex + 1, totalCount);
         CurrentUpdateTitle = update.DisplayName;
         CurrentKbArticle = update.KbArticleId;
-        CurrentInstallDetailText = "Preparing download...";
+        CurrentInstallDetailText = L.T("PreparingDownload");
         StatusMessage = CurrentBatchProgressText;
 
         await Task.Yield();
@@ -370,15 +370,15 @@ public sealed partial class WindowsUpdatesViewModel : ObservableObject
     {
         if (percent <= 25)
         {
-            CurrentInstallDetailText = "Preparing download...";
+            CurrentInstallDetailText = L.T("PreparingDownload");
         }
         else if (percent < 75)
         {
-            CurrentInstallDetailText = "Downloading and installing...";
+            CurrentInstallDetailText = L.T("DownloadingAndInstalling");
         }
         else
         {
-            CurrentInstallDetailText = "Finalizing installation...";
+            CurrentInstallDetailText = L.T("FinalizingInstallation");
         }
     }
 
@@ -490,13 +490,13 @@ public sealed partial class WindowsUpdatesViewModel : ObservableObject
         if (Updates.Count == 0)
         {
             return rebootRequired
-                ? "Installation complete. No remaining Windows updates. A restart may be required."
-                : "Installation complete. No remaining Windows updates.";
+                ? L.T("WinUpdateCompleteNoneRestart")
+                : L.T("WinUpdateCompleteNone");
         }
 
         return rebootRequired
-            ? $"Installation complete. {Updates.Count} Windows update(s) still available. A restart may be required."
-            : $"Installation complete. {Updates.Count} Windows update(s) still available.";
+            ? string.Format(L.T("WinUpdateCompleteRemainingRestart"), Updates.Count)
+            : string.Format(L.T("WinUpdateCompleteRemaining"), Updates.Count);
     }
 
     private void NotifyVisibilityPropertiesChanged()
