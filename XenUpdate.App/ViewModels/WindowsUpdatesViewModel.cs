@@ -91,6 +91,41 @@ public sealed partial class WindowsUpdatesViewModel : ObservableObject
     /// </summary>
     public bool HasCurrentKbArticle => !string.IsNullOrWhiteSpace(CurrentKbArticle);
 
+    /// <summary>
+    /// Tri-state "select all" backing the grid's header checkbox: true when every row
+    /// is selected, false when none are, null (indeterminate) for a partial selection.
+    /// Setting it selects or clears every visible row in one click.
+    /// </summary>
+    public bool? AreAllSelected
+    {
+        get
+        {
+            if (Updates.Count == 0)
+            {
+                return false;
+            }
+
+            var selectedCount = Updates.Count(item => item.IsSelected);
+            return selectedCount == 0 ? false
+                 : selectedCount == Updates.Count ? true
+                 : null;
+        }
+        set
+        {
+            if (value is not bool target)
+            {
+                return;
+            }
+
+            foreach (var item in Updates)
+            {
+                item.IsSelected = target;
+            }
+
+            OnPropertyChanged(nameof(AreAllSelected));
+        }
+    }
+
     /// <summary>Initializes the ViewModel with its required services.</summary>
     public WindowsUpdatesViewModel(IWindowsUpdateService service, ILoggerService logger)
     {
@@ -212,6 +247,10 @@ public sealed partial class WindowsUpdatesViewModel : ObservableObject
                         new Progress<int>(OnInstallProgressReported),
                         _operationCts.Token);
 
+                    // Reason set before Status so the failure-details row renders with
+                    // its text in place. WUA does not surface a per-update reason, so a
+                    // generic pointer to the log is the honest message.
+                    update.ErrorMessage = result.Succeeded ? null : L.T("InstallFailedGeneric");
                     update.Status = result.Succeeded ? UpdateStatus.Succeeded : UpdateStatus.Failed;
                     rebootRequired |= result.RebootRequired;
 
@@ -375,6 +414,7 @@ public sealed partial class WindowsUpdatesViewModel : ObservableObject
         }
 
         InstallSelectedCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(AreAllSelected));
     }
 
     /// <summary>Unsubscribes from every tracked update item and clears the tracking list.</summary>
@@ -403,6 +443,7 @@ public sealed partial class WindowsUpdatesViewModel : ObservableObject
         if (e.PropertyName == nameof(WindowsUpdateItem.IsSelected))
         {
             InstallSelectedCommand.NotifyCanExecuteChanged();
+            OnPropertyChanged(nameof(AreAllSelected));
         }
     }
 

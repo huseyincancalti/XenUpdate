@@ -8,6 +8,14 @@
         DataContext type: WindowsUpdatesViewModel
     -->
     <Grid Margin="24">
+        <Grid.RenderTransform>
+            <TranslateTransform />
+        </Grid.RenderTransform>
+        <Grid.Triggers>
+            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                <BeginStoryboard Storyboard="{StaticResource PageEnterStoryboard}" />
+            </EventTrigger>
+        </Grid.Triggers>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -95,8 +103,10 @@
                       Background="{DynamicResource ZenDataGridSurfaceBrush}"
                       Foreground="{DynamicResource ZenTextBrush}"
                       ColumnHeaderStyle="{StaticResource ZenDataGridColumnHeaderStyle}"
-                      RowStyle="{StaticResource ZenDataGridRowStyle}"
+                      RowStyle="{StaticResource ZenDataGridRowWithFailureDetailsStyle}"
                       CellStyle="{StaticResource ZenDataGridCellStyle}"
+                      RowDetailsVisibilityMode="Collapsed"
+                      RowDetailsTemplate="{StaticResource FailureReasonRowDetailsTemplate}"
                       PreviewMouseRightButtonDown="WindowsUpdatesDataGrid_OnPreviewMouseRightButtonDown"
                       materialDesign:DataGridAssist.CellPadding="8 6"
                       materialDesign:DataGridAssist.ColumnHeaderPadding="8 6">
@@ -118,10 +128,19 @@
                 </DataGrid.ContextMenu>
                 <DataGrid.Columns>
 
-                    <DataGridCheckBoxColumn Header=""
-                                            Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"
+                    <DataGridCheckBoxColumn Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"
                                             Width="40"
-                                            IsReadOnly="False" />
+                                            CanUserSort="False"
+                                            IsReadOnly="False">
+                        <DataGridCheckBoxColumn.Header>
+                            <!-- Select-all: tri-state display driven by AreAllSelected on the page VM -->
+                            <CheckBox IsChecked="{Binding DataContext.AreAllSelected, RelativeSource={RelativeSource AncestorType=DataGrid}, Mode=TwoWay}"
+                                      IsThreeState="False"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      ToolTip="{Binding [SelectAllTooltip], Source={x:Static loc:LocalizationManager.Instance}}" />
+                        </DataGridCheckBoxColumn.Header>
+                    </DataGridCheckBoxColumn>
 
                     <DataGridTemplateColumn Header="{Binding [ColUpdate], Source={x:Static loc:LocalizationManager.Instance}}"
                                             Width="*"

@@ -82,6 +82,7 @@ public sealed class WingetInstaller : IWingetInstaller
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.Warning($"Install timed out for {item.DisplayName} ({item.WingetPackageId}) after {InstallTimeout.TotalMinutes:0} minutes.");
+            progress.Report(new InstallProgress(0, FailureReason: $"Timed out after {InstallTimeout.TotalMinutes:0} minutes"));
             return false;
         }
         catch (OperationCanceledException)
@@ -92,6 +93,7 @@ public sealed class WingetInstaller : IWingetInstaller
         catch (Exception ex)
         {
             _logger.Error($"Failed to start winget for {item.DisplayName} ({item.WingetPackageId}).", ex);
+            progress.Report(new InstallProgress(0, FailureReason: "Could not start winget — is the App Installer package present?"));
             return false;
         }
 

@@ -8,6 +8,14 @@
         DataContext type: ProgramsViewModel
     -->
     <Grid Margin="24">
+        <Grid.RenderTransform>
+            <TranslateTransform />
+        </Grid.RenderTransform>
+        <Grid.Triggers>
+            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                <BeginStoryboard Storyboard="{StaticResource PageEnterStoryboard}" />
+            </EventTrigger>
+        </Grid.Triggers>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -140,8 +148,10 @@
                       Background="{DynamicResource ZenDataGridSurfaceBrush}"
                       Foreground="{DynamicResource ZenTextBrush}"
                       ColumnHeaderStyle="{StaticResource ZenDataGridColumnHeaderStyle}"
-                      RowStyle="{StaticResource ZenDataGridRowStyle}"
+                      RowStyle="{StaticResource ZenDataGridRowWithFailureDetailsStyle}"
                       CellStyle="{StaticResource ZenDataGridCellStyle}"
+                      RowDetailsVisibilityMode="Collapsed"
+                      RowDetailsTemplate="{StaticResource FailureReasonRowDetailsTemplate}"
                       PreviewMouseRightButtonDown="ProgramsDataGrid_OnPreviewMouseRightButtonDown"
                       PreviewMouseLeftButtonUp="ProgramsDataGrid_OnPreviewMouseLeftButtonUp"
                       materialDesign:DataGridAssist.CellPadding="8 6"
@@ -177,8 +187,17 @@
                         DataGrid's PreviewMouseLeftButtonUp handler, so clicking anywhere on a
                         row toggles its checkbox. This gives a clearly centered box and a large,
                         obvious hit area instead of a cramped ~16 px glyph.
+                        The header checkbox is the interactive "select all": tri-state display
+                        (checked / unchecked / indeterminate) driven by AreAllSelected.
                     -->
-                    <DataGridTemplateColumn Header="" Width="44" CanUserResize="False" CanUserSort="False" IsReadOnly="True">
+                    <DataGridTemplateColumn Width="44" CanUserResize="False" CanUserSort="False" IsReadOnly="True">
+                        <DataGridTemplateColumn.Header>
+                            <CheckBox IsChecked="{Binding DataContext.AreAllSelected, RelativeSource={RelativeSource AncestorType=DataGrid}, Mode=TwoWay}"
+                                      IsThreeState="False"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      ToolTip="{Binding [SelectAllTooltip], Source={x:Static loc:LocalizationManager.Instance}}" />
+                        </DataGridTemplateColumn.Header>
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <CheckBox IsChecked="{Binding IsSelected, Mode=OneWay}"

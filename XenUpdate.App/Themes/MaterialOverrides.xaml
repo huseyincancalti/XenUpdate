@@ -382,6 +382,29 @@
     </Style>
 
     <!--
+        ===== Page-enter transition =====
+        Soft fade + 12px upward slide, fired from each page's root element Loaded
+        event. Navigation recreates the view (ContentControl + DataTemplate), so the
+        animation plays on every page switch. The element must carry a
+        TranslateTransform as its RenderTransform for the Y animation to bind.
+        280ms ease-out: perceptible but never in the way.
+    -->
+    <Storyboard x:Key="PageEnterStoryboard">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                         From="0" To="1" Duration="0:0:0.28">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut" />
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                         From="12" To="0" Duration="0:0:0.28">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut" />
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+    </Storyboard>
+
+    <!--
         ===== DataGrid premium styles =====
         Consumed via StaticResource in ProgramsView, WindowsUpdatesView, DriversView.
         All colours come from DynamicResource so both Dark and Light themes work.
@@ -410,6 +433,45 @@
             <Trigger Property="IsSelected" Value="True">
                 <Setter Property="Background" Value="{DynamicResource ZenDataGridRowSelectedBrush}" />
             </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!--
+        Failure-reason row details, shared by all three update grids.
+        The details row appears only under rows whose Status is Failed (see the row
+        style below), so the user sees WHY an install failed without hovering a
+        tooltip or opening the log. DataContext is the update item itself.
+    -->
+    <DataTemplate x:Key="FailureReasonRowDetailsTemplate">
+        <Border Background="{DynamicResource ZenBadgeFailedBackgroundBrush}"
+                Padding="44,6,14,8">
+            <StackPanel Orientation="Horizontal">
+                <materialDesign:PackIcon Kind="AlertCircleOutline"
+                                         Width="14" Height="14"
+                                         Foreground="{DynamicResource ZenBadgeFailedForegroundBrush}"
+                                         VerticalAlignment="Top"
+                                         Margin="0,1,7,0" />
+                <TextBlock Text="{Binding ErrorMessage}"
+                           Foreground="{DynamicResource ZenBadgeFailedForegroundBrush}"
+                           FontSize="12"
+                           TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+    </DataTemplate>
+
+    <!--
+        Row style that reveals the failure-reason details strip under Failed rows.
+        Used together with FailureReasonRowDetailsTemplate and
+        RowDetailsVisibilityMode="Collapsed" on the grid (so selection alone never
+        expands details — only a Failed status does).
+    -->
+    <Style x:Key="ZenDataGridRowWithFailureDetailsStyle" TargetType="DataGridRow"
+           BasedOn="{StaticResource ZenDataGridRowStyle}">
+        <Setter Property="DetailsVisibility" Value="Collapsed" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Status}" Value="Failed">
+                <Setter Property="DetailsVisibility" Value="Visible" />
+            </DataTrigger>
         </Style.Triggers>
     </Style>
 

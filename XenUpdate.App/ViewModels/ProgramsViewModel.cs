@@ -114,6 +114,41 @@ public sealed partial class ProgramsViewModel : ObservableObject
     public bool IsEmptyStateVisible => HasScanned && !HasUpdates && !IsBusy;
 
     /// <summary>
+    /// Tri-state "select all" backing the grid's header checkbox: true when every row
+    /// is selected, false when none are, null (indeterminate) for a partial selection.
+    /// Setting it selects or clears every visible row in one click.
+    /// </summary>
+    public bool? AreAllSelected
+    {
+        get
+        {
+            if (Updates.Count == 0)
+            {
+                return false;
+            }
+
+            var selectedCount = Updates.Count(item => item.IsSelected);
+            return selectedCount == 0 ? false
+                 : selectedCount == Updates.Count ? true
+                 : null;
+        }
+        set
+        {
+            if (value is not bool target)
+            {
+                return;
+            }
+
+            foreach (var item in Updates)
+            {
+                item.IsSelected = target;
+            }
+
+            OnPropertyChanged(nameof(AreAllSelected));
+        }
+    }
+
+    /// <summary>
     /// The list of available application updates displayed in the DataGrid.
     /// Always populated on the UI thread. Supports bulk replacement so scan results
     /// can be swapped in with a single Reset notification rather than N Add events.
@@ -278,6 +313,12 @@ public sealed partial class ProgramsViewModel : ObservableObject
                     var progress = new Progress<InstallProgress>(OnInstallProgressReported);
                     var success = await _installer.InstallUpdateAsync(item, progress, _operationCts.Token);
 
+                    // Set the reason before flipping Status so the failure-details row
+                    // renders with its text already in place. Fall back to a generic
+                    // message: the details strip must never appear empty.
+                    item.ErrorMessage = success
+                        ? null
+                        : _lastItemFailureReason ?? L.T("InstallFailedGeneric");
                     item.Status = success ? UpdateStatus.Succeeded : UpdateStatus.Failed;
 
                     if (success)
@@ -287,9 +328,6 @@ public sealed partial class ProgramsViewModel : ObservableObject
                     else
                     {
                         failedCount++;
-                        // Attach the failure reason to the item so the status badge tooltip shows it.
-                        if (_lastItemFailureReason is not null)
-                            item.ErrorMessage = _lastItemFailureReason;
                     }
 
                     UpdateOverallProgress(succeededItems.Count + failedCount, selectedItems.Count);
@@ -501,6 +539,7 @@ public sealed partial class ProgramsViewModel : ObservableObject
         }
 
         InstallSelectedCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(AreAllSelected));
     }
 
     /// <summary>Removes <see cref="OnUpdateItemPropertyChanged"/> from every tracked item and clears the tracking list.</summary>
@@ -528,6 +567,7 @@ public sealed partial class ProgramsViewModel : ObservableObject
         if (e.PropertyName == nameof(AppUpdateItem.IsSelected))
         {
             InstallSelectedCommand.NotifyCanExecuteChanged();
+            OnPropertyChanged(nameof(AreAllSelected));
         }
     }
 

@@ -10,6 +10,14 @@
              d:DataContext="{d:DesignInstance vm:HardwareHubViewModel, IsDesignTimeCreatable=False}"
              Loaded="HardwareHubView_OnLoaded">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24">
+        <ScrollViewer.RenderTransform>
+            <TranslateTransform />
+        </ScrollViewer.RenderTransform>
+        <ScrollViewer.Triggers>
+            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                <BeginStoryboard Storyboard="{StaticResource PageEnterStoryboard}" />
+            </EventTrigger>
+        </ScrollViewer.Triggers>
         <StackPanel>
 
             <TextBlock Text="{Binding [GuidesTitle], Source={x:Static loc:LocalizationManager.Instance}}" Style="{StaticResource PageTitleStyle}" />

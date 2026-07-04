@@ -89,6 +89,41 @@ public sealed partial class DriversViewModel : ObservableObject
     public bool HasCurrentDriverContextText => !string.IsNullOrWhiteSpace(CurrentDriverContextText);
 
     /// <summary>
+    /// Tri-state "select all" backing the grid's header checkbox: true when every row
+    /// is selected, false when none are, null (indeterminate) for a partial selection.
+    /// Setting it selects or clears every visible row in one click.
+    /// </summary>
+    public bool? AreAllSelected
+    {
+        get
+        {
+            if (Updates.Count == 0)
+            {
+                return false;
+            }
+
+            var selectedCount = Updates.Count(item => item.IsSelected);
+            return selectedCount == 0 ? false
+                 : selectedCount == Updates.Count ? true
+                 : null;
+        }
+        set
+        {
+            if (value is not bool target)
+            {
+                return;
+            }
+
+            foreach (var item in Updates)
+            {
+                item.IsSelected = target;
+            }
+
+            OnPropertyChanged(nameof(AreAllSelected));
+        }
+    }
+
+    /// <summary>
     /// Initializes the DriversViewModel with its required services.
     /// </summary>
     public DriversViewModel(IDriverUpdateService service, ISystemRestoreService restoreService, ILoggerService logger)
@@ -216,6 +251,10 @@ public sealed partial class DriversViewModel : ObservableObject
                         new Progress<int>(OnInstallProgressReported),
                         _operationCts.Token);
 
+                    // Reason set before Status so the failure-details row renders with
+                    // its text in place. WUA does not surface a per-driver reason, so a
+                    // generic pointer to the log is the honest message.
+                    update.ErrorMessage = result.Succeeded ? null : L.T("InstallFailedGeneric");
                     update.Status = result.Succeeded ? UpdateStatus.Succeeded : UpdateStatus.Failed;
                     rebootRequired |= result.RebootRequired;
 
@@ -374,6 +413,7 @@ public sealed partial class DriversViewModel : ObservableObject
         }
 
         InstallSelectedCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(AreAllSelected));
     }
 
     /// <summary>Unsubscribes from every tracked driver item and clears the tracking list.</summary>
@@ -402,6 +442,7 @@ public sealed partial class DriversViewModel : ObservableObject
         if (e.PropertyName == nameof(DriverUpdateItem.IsSelected))
         {
             InstallSelectedCommand.NotifyCanExecuteChanged();
+            OnPropertyChanged(nameof(AreAllSelected));
         }
     }
 

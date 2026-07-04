@@ -112,5 +112,7 @@
   "StatusScanFailed": "Scan failed. See the log for details.",
   "StatusUpdatesAvailable": "{0} update(s) available.",
   "ScanErrorTitle": "Scan failed",
-  "ScanErrorBody": "Could not reach the update server. Check your internet connection and try again."
+  "ScanErrorBody": "Could not reach the update server. Check your internet connection and try again.",
+  "SelectAllTooltip": "Select or clear all rows",
+  "InstallFailedGeneric": "Install failed. See the log for details."
 }

@@ -112,5 +112,7 @@
   "StatusScanFailed": "Tarama başarısız. Ayrıntılar için günlüğe bak.",
   "StatusUpdatesAvailable": "{0} güncelleme mevcut.",
   "ScanErrorTitle": "Tarama başarısız",
-  "ScanErrorBody": "Güncelleme sunucusuna ulaşılamadı. İnternet bağlantını kontrol et ve tekrar dene."
+  "ScanErrorBody": "Güncelleme sunucusuna ulaşılamadı. İnternet bağlantını kontrol et ve tekrar dene.",
+  "SelectAllTooltip": "Tümünü seç / bırak",
+  "InstallFailedGeneric": "Kurulum başarısız. Ayrıntılar için günlüğe bak."
 }
