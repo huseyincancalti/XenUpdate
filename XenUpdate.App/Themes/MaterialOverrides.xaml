@@ -1,7 +1,8 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
-                    xmlns:behaviors="clr-namespace:XenUpdate.App.Behaviors">
+                    xmlns:behaviors="clr-namespace:XenUpdate.App.Behaviors"
+                    xmlns:loc="clr-namespace:XenUpdate.App.Services">
 
     <!--
         MaterialOverrides.xaml
@@ -41,8 +42,14 @@
                 HorizontalAlignment="Left"
                 VerticalAlignment="Center"
                 Background="{DynamicResource ZenBadgePendingBackgroundBrush}">
+            <!--
+                Text is set per-state below via the same LocalizationManager indexer pattern
+                used everywhere else in the app, so it live-refreshes on language switch just
+                like every other label — a plain {Binding Status} would always show the raw
+                English enum name (e.g. "Failed") regardless of the selected UI language.
+            -->
             <TextBlock x:Name="BadgeText"
-                       Text="{Binding Status}"
+                       Text="{Binding [StatusPending], Source={x:Static loc:LocalizationManager.Instance}}"
                        FontSize="11"
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource ZenBadgePendingForegroundBrush}" />
@@ -51,23 +58,32 @@
             <DataTrigger Binding="{Binding Status}" Value="Downloading">
                 <Setter TargetName="BadgeBorder" Property="Background" Value="{DynamicResource ZenBadgeDownloadingBackgroundBrush}" />
                 <Setter TargetName="BadgeText"   Property="Foreground" Value="{DynamicResource ZenBadgeDownloadingForegroundBrush}" />
+                <Setter TargetName="BadgeText"   Property="Text" Value="{Binding [StatusDownloading], Source={x:Static loc:LocalizationManager.Instance}}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding Status}" Value="Installing">
                 <Setter TargetName="BadgeBorder" Property="Background" Value="{DynamicResource ZenBadgeInstallingBackgroundBrush}" />
                 <Setter TargetName="BadgeText"   Property="Foreground" Value="{DynamicResource ZenBadgeInstallingForegroundBrush}" />
+                <Setter TargetName="BadgeText"   Property="Text" Value="{Binding [StatusInstalling], Source={x:Static loc:LocalizationManager.Instance}}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding Status}" Value="Succeeded">
                 <Setter TargetName="BadgeBorder" Property="Background" Value="{DynamicResource ZenBadgeSucceededBackgroundBrush}" />
                 <Setter TargetName="BadgeText"   Property="Foreground" Value="{DynamicResource ZenBadgeSucceededForegroundBrush}" />
+                <Setter TargetName="BadgeText"   Property="Text" Value="{Binding [StatusSucceeded], Source={x:Static loc:LocalizationManager.Instance}}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding Status}" Value="Failed">
                 <Setter TargetName="BadgeBorder" Property="Background" Value="{DynamicResource ZenBadgeFailedBackgroundBrush}" />
                 <Setter TargetName="BadgeText"   Property="Foreground" Value="{DynamicResource ZenBadgeFailedForegroundBrush}" />
-                <!-- Show the failure reason as a tooltip so the user doesn't have to check the log -->
-                <Setter TargetName="BadgeBorder" Property="ToolTip"    Value="{Binding ErrorMessage}" />
+                <Setter TargetName="BadgeText"   Property="Text" Value="{Binding [StatusFailed], Source={x:Static loc:LocalizationManager.Instance}}" />
+                <!--
+                    No ToolTip here: it used to duplicate the reason as a plain white
+                    system-default flyout that clashed with the dark theme. The always-visible
+                    inline failure block under the row's name column is the single, themed
+                    place the reason is shown now.
+                -->
             </DataTrigger>
             <DataTrigger Binding="{Binding Status}" Value="Blacklisted">
                 <Setter TargetName="BadgeBorder" Property="Background" Value="{DynamicResource ZenBadgeBlacklistedBackgroundBrush}" />
+                <Setter TargetName="BadgeText"   Property="Text" Value="{Binding [StatusBlacklisted], Source={x:Static loc:LocalizationManager.Instance}}" />
                 <Setter TargetName="BadgeText"   Property="Foreground" Value="{DynamicResource ZenBadgeBlacklistedForegroundBrush}" />
             </DataTrigger>
         </DataTemplate.Triggers>
@@ -382,6 +398,29 @@
     </Style>
 
     <!--
+        ===== Page-enter transition =====
+        Soft fade + 12px upward slide, fired from each page's root element Loaded
+        event. Navigation recreates the view (ContentControl + DataTemplate), so the
+        animation plays on every page switch. The element must carry a
+        TranslateTransform as its RenderTransform for the Y animation to bind.
+        280ms ease-out: perceptible but never in the way.
+    -->
+    <Storyboard x:Key="PageEnterStoryboard">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                         From="0" To="1" Duration="0:0:0.28">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut" />
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                         From="12" To="0" Duration="0:0:0.28">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut" />
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+    </Storyboard>
+
+    <!--
         ===== DataGrid premium styles =====
         Consumed via StaticResource in ProgramsView, WindowsUpdatesView, DriversView.
         All colours come from DynamicResource so both Dark and Light themes work.
@@ -412,6 +451,118 @@
             </Trigger>
         </Style.Triggers>
     </Style>
+
+    <!--
+        ZenSelectAllCheckBoxStyle
+        The tri-state "select all" checkbox in each grid's header column. The default WPF
+        indeterminate glyph is too subtle to read at this size — users could not tell a
+        partial selection apart from "all selected". This template renders three unmistakably
+        different states instead of relying on the built-in glyph:
+          - Checked (all selected):   solid primary-colour fill, white checkmark
+          - Indeterminate (partial):  muted outline fill, a dash — visually distinct from Checked
+          - Unchecked (none):         plain empty outline box
+        IsThreeState is left False on the CheckBox itself so a user click always toggles
+        between all/none; only the data (a partial selection) can produce Indeterminate.
+    -->
+    <Style x:Key="ZenSelectAllCheckBoxStyle" TargetType="CheckBox">
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <Border x:Name="Box"
+                            Width="18" Height="18"
+                            CornerRadius="4"
+                            BorderThickness="1.5"
+                            BorderBrush="{DynamicResource ZenGlassBorderBrush}"
+                            Background="Transparent">
+                        <materialDesign:PackIcon x:Name="Glyph"
+                                                 Kind="Check"
+                                                 Width="13" Height="13"
+                                                 Foreground="White"
+                                                 HorizontalAlignment="Center"
+                                                 VerticalAlignment="Center"
+                                                 Opacity="0" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Box" Property="Background" Value="{DynamicResource ZenPrimaryBrush}" />
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource ZenPrimaryBrush}" />
+                            <Setter TargetName="Glyph" Property="Opacity" Value="1" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="{x:Null}">
+                            <!-- Indeterminate: muted outline + dash, deliberately NOT the same solid
+                                 fill as Checked, so a partial selection reads as clearly different. -->
+                            <Setter TargetName="Box" Property="Background" Value="Transparent" />
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource ZenPrimaryBrush}" />
+                            <Setter TargetName="Glyph" Property="Kind" Value="Minus" />
+                            <Setter TargetName="Glyph" Property="Foreground" Value="{DynamicResource ZenPrimaryBrush}" />
+                            <Setter TargetName="Glyph" Property="Opacity" Value="1" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource ZenPrimaryBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        Failure-reason inline block, shared by all three update grids' first (name) column.
+        Embedded directly in the cell's own DataTemplate — NOT DataGrid's RowDetails feature.
+        RowDetailsVisibilityMode="Collapsed" turned out to unconditionally coerce every row's
+        DetailsVisibility to Collapsed regardless of any RowStyle DataTrigger, so a Style-based
+        "show details only when Failed" never actually worked. Plain cell content has no such
+        coercion, so a DataTrigger on the *cell's* DataTemplate reliably shows/hides this.
+        Referenced via ContentPresenter (Content="{Binding}") so DataContext stays the item.
+    -->
+    <DataTemplate x:Key="FailureReasonInlineTemplate">
+        <!--
+            A muted dark fill + solid red left accent reads much better than red-on-red text:
+            the reason itself uses the normal (bright, readable) text colour, and only the
+            icon/accent bar carry the error tint. The hint line sits visually secondary
+            (muted grey, smaller) so the eye goes reason first, action second.
+        -->
+        <Border Background="{DynamicResource ZenDataGridChromeBackgroundBrush}"
+                BorderBrush="{DynamicResource ZenBadgeFailedForegroundBrush}"
+                BorderThickness="2,0,0,0"
+                Padding="8,6,6,7"
+                Margin="0,4,4,2">
+            <!--
+                Grid, not a horizontal StackPanel: a horizontal StackPanel measures its
+                children with infinite available width, so a wrapping TextBlock inside it
+                never actually wraps — it renders one long line and gets clipped by the cell.
+                A Grid's star column IS constrained to the real available width, so the text
+                column here wraps and grows the row's height instead of overflowing sideways.
+            -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <materialDesign:PackIcon Grid.Column="0"
+                                         Kind="AlertCircleOutline"
+                                         Width="14" Height="14"
+                                         Foreground="{DynamicResource ZenBadgeFailedForegroundBrush}"
+                                         VerticalAlignment="Top"
+                                         Margin="0,2,7,0" />
+                <StackPanel Grid.Column="1">
+                    <TextBlock Text="{Binding ErrorMessage}"
+                               Foreground="{DynamicResource ZenTextBrush}"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap" />
+                    <!-- The reason alone doesn't tell anyone what to do next; this line does. -->
+                    <TextBlock Text="{Binding [RetryHint], Source={x:Static loc:LocalizationManager.Instance}}"
+                               Foreground="{DynamicResource ZenMutedTextBrush}"
+                               FontSize="10.5"
+                               Margin="0,3,0,0"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </DataTemplate>
 
     <!-- Cell: transparent so the row background shows through cleanly -->
     <Style x:Key="ZenDataGridCellStyle" TargetType="DataGridCell"

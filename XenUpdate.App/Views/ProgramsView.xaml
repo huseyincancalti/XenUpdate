@@ -8,6 +8,14 @@
         DataContext type: ProgramsViewModel
     -->
     <Grid Margin="24">
+        <Grid.RenderTransform>
+            <TranslateTransform />
+        </Grid.RenderTransform>
+        <Grid.Triggers>
+            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                <BeginStoryboard Storyboard="{StaticResource PageEnterStoryboard}" />
+            </EventTrigger>
+        </Grid.Triggers>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -177,8 +185,18 @@
                         DataGrid's PreviewMouseLeftButtonUp handler, so clicking anywhere on a
                         row toggles its checkbox. This gives a clearly centered box and a large,
                         obvious hit area instead of a cramped ~16 px glyph.
+                        The header checkbox is the interactive "select all": tri-state display
+                        (checked / unchecked / indeterminate) driven by AreAllSelected.
                     -->
-                    <DataGridTemplateColumn Header="" Width="44" CanUserResize="False" CanUserSort="False" IsReadOnly="True">
+                    <DataGridTemplateColumn Width="44" CanUserResize="False" CanUserSort="False" IsReadOnly="True">
+                        <DataGridTemplateColumn.Header>
+                            <CheckBox Style="{StaticResource ZenSelectAllCheckBoxStyle}"
+                                      IsChecked="{Binding DataContext.AreAllSelected, RelativeSource={RelativeSource AncestorType=DataGrid}, Mode=TwoWay}"
+                                      IsThreeState="False"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      ToolTip="{Binding [SelectAllTooltip], Source={x:Static loc:LocalizationManager.Instance}}" />
+                        </DataGridTemplateColumn.Header>
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <CheckBox IsChecked="{Binding IsSelected, Mode=OneWay}"
@@ -201,11 +219,23 @@
                                             SortMemberPath="DisplayName">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding DisplayName}"
-                                           TextTrimming="CharacterEllipsis"
-                                           VerticalAlignment="Center"
-                                           Padding="2,0"
-                                           ToolTip="{Binding DisplayName}" />
+                                <StackPanel Margin="0,3">
+                                    <TextBlock Text="{Binding DisplayName}"
+                                               TextTrimming="CharacterEllipsis"
+                                               VerticalAlignment="Center"
+                                               Padding="2,0"
+                                               ToolTip="{Binding DisplayName}" />
+                                    <!-- Only present when the install failed; ordinary cell content, no RowDetails coercion issues -->
+                                    <ContentPresenter x:Name="FailurePresenter"
+                                                      Content="{Binding}"
+                                                      ContentTemplate="{StaticResource FailureReasonInlineTemplate}"
+                                                      Visibility="Collapsed" />
+                                </StackPanel>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding Status}" Value="Failed">
+                                        <Setter TargetName="FailurePresenter" Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>

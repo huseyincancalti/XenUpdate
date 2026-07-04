@@ -4,6 +4,14 @@
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:loc="clr-namespace:XenUpdate.App.Services">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <ScrollViewer.RenderTransform>
+            <TranslateTransform />
+        </ScrollViewer.RenderTransform>
+        <ScrollViewer.Triggers>
+            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                <BeginStoryboard Storyboard="{StaticResource PageEnterStoryboard}" />
+            </EventTrigger>
+        </ScrollViewer.Triggers>
         <StackPanel Margin="24" MaxWidth="700" HorizontalAlignment="Left">
 
             <TextBlock Text="{Binding [SettingsTitle], Source={x:Static loc:LocalizationManager.Instance}}"

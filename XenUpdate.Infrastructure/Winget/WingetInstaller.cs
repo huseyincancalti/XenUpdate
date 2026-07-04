@@ -82,6 +82,7 @@ public sealed class WingetInstaller : IWingetInstaller
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.Warning($"Install timed out for {item.DisplayName} ({item.WingetPackageId}) after {InstallTimeout.TotalMinutes:0} minutes.");
+            progress.Report(new InstallProgress(0, FailureReason: "ProcessTimedOut", FailureDetail: $"{InstallTimeout.TotalMinutes:0}"));
             return false;
         }
         catch (OperationCanceledException)
@@ -92,6 +93,7 @@ public sealed class WingetInstaller : IWingetInstaller
         catch (Exception ex)
         {
             _logger.Error($"Failed to start winget for {item.DisplayName} ({item.WingetPackageId}).", ex);
+            progress.Report(new InstallProgress(0, FailureReason: "ProcessStartFailed"));
             return false;
         }
 
@@ -130,27 +132,37 @@ public sealed class WingetInstaller : IWingetInstaller
             _logger.Warning($"Winget stderr summary for {item.WingetPackageId}: {stderrSummary}");
         }
 
-        var failureReason = MapWingetExitCode(result.ExitCode);
-        progress.Report(new InstallProgress(0, FailureReason: failureReason));
+        var (key, detail) = MapWingetExitCode(result.ExitCode);
+        progress.Report(new InstallProgress(0, FailureReason: key, FailureDetail: detail));
 
         return false;
     }
 
-    // Maps known winget and Windows INTERNET_* HRESULTs to human-readable strings.
-    // Covers the most common real-world failures: network issues, policy blocks, hash errors.
-    private static string MapWingetExitCode(int exitCode) => exitCode switch
+    // Maps known winget and Windows INTERNET_* HRESULTs to a stable (key, detail) pair.
+    // Infrastructure has no UI/localization dependency, so it cannot return a display
+    // sentence — the App layer looks up "WingetFail_{key}" in the active language and,
+    // when the localized string has a {0} placeholder, formats in `detail`.
+    // Covers the most common real-world failures: network issues, hash errors, elevation.
+    private static (string Key, string? Detail) MapWingetExitCode(int exitCode) => exitCode switch
     {
-        -2147012889 => "No internet — server could not be reached",
-        -2147012867 => "Connection timed out",
-        -2147012895 => "Connection refused by server",
-        -2147012894 => "Connection dropped",
-        -2147012696 => "Secure connection failed (TLS/SSL error)",
-        -1978335220 => "No applicable installer for this system",
-        -1978335191 => "Package is already up to date",
-        -1978335215 => "Install blocked by policy or security software",
-        -1978335212 => "Installer hash mismatch — download may be corrupt",
-        -1978335210 => "Installer returned an error",
-        _ => $"Install failed (exit code {exitCode})"
+        -2147012889 => ("NoInternet", null),
+        -2147012867 => ("Timeout", null),
+        -2147012895 => ("ConnectionRefused", null),
+        -2147012894 => ("ConnectionDropped", null),
+        -2147012696 => ("TlsError", null),
+        -1978335220 => ("NoApplicableInstaller", null),
+        -1978335191 => ("AlreadyUpToDate", null),
+        // Confirmed by reproducing directly with `winget upgrade` — the real console message
+        // is "Installer hash does not match." (a corrupted/changed download), not a policy or
+        // antivirus block as an earlier, unverified guess here previously claimed.
+        -1978335215 => ("HashMismatch", null),
+        -1978335210 => ("InstallerError", null),
+        // Confirmed by reproducing directly: winget prints "The installer will request to run
+        // as administrator. Expect a prompt." — that inner elevation request silently failed.
+        -1978335226 => ("NeedsAdmin", null),
+        // Unmapped code: pass both decimal and hex forms, since that's what people search for
+        // when reporting or looking up a winget error.
+        _ => ("Unknown", $"{exitCode}, 0x{(uint)exitCode:X8}")
     };
 
     private static string BuildOutputSummary(string output)

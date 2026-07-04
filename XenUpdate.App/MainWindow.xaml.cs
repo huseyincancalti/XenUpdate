@@ -97,5 +97,26 @@ public partial class MainWindow : Window
     private void ToggleMaximize() =>
         WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
 
-    private void CloseButton_Click(object sender, RoutedEventArgs e) => Hide();
+    // Route through Close() (not Hide()) so OnClosing's MinimizeToTray check always applies.
+    // Calling Hide() directly used to bypass that check, silently orphaning the process in
+    // the tray even when the user had "Minimize to tray on close" turned off.
+    private void CloseButton_Click(object sender, RoutedEventArgs e) => Close();
+
+    // Tray context menu items call through here (rather than binding Command in XAML) because
+    // ContextMenu is a detached popup that does not reliably inherit TaskbarIcon's DataContext.
+    private void OpenMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is ShellViewModel vm && vm.ShowWindowCommand.CanExecute(null))
+        {
+            vm.ShowWindowCommand.Execute(null);
+        }
+    }
+
+    private void ExitMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is ShellViewModel vm && vm.ExitApplicationCommand.CanExecute(null))
+        {
+            vm.ExitApplicationCommand.Execute(null);
+        }
+    }
 }

@@ -4,6 +4,14 @@
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:loc="clr-namespace:XenUpdate.App.Services">
     <Grid Margin="24">
+        <Grid.RenderTransform>
+            <TranslateTransform />
+        </Grid.RenderTransform>
+        <Grid.Triggers>
+            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                <BeginStoryboard Storyboard="{StaticResource PageEnterStoryboard}" />
+            </EventTrigger>
+        </Grid.Triggers>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -109,10 +117,20 @@
                     </ContextMenu>
                 </DataGrid.ContextMenu>
                 <DataGrid.Columns>
-                    <DataGridCheckBoxColumn Header=""
-                                            Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"
+                    <DataGridCheckBoxColumn Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"
                                             Width="40"
-                                            IsReadOnly="False" />
+                                            CanUserSort="False"
+                                            IsReadOnly="False">
+                        <DataGridCheckBoxColumn.Header>
+                            <!-- Select-all: tri-state display driven by AreAllSelected on the page VM -->
+                            <CheckBox Style="{StaticResource ZenSelectAllCheckBoxStyle}"
+                                      IsChecked="{Binding DataContext.AreAllSelected, RelativeSource={RelativeSource AncestorType=DataGrid}, Mode=TwoWay}"
+                                      IsThreeState="False"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      ToolTip="{Binding [SelectAllTooltip], Source={x:Static loc:LocalizationManager.Instance}}" />
+                        </DataGridCheckBoxColumn.Header>
+                    </DataGridCheckBoxColumn>
 
                     <DataGridTemplateColumn Header="{Binding [ColDriverDevice], Source={x:Static loc:LocalizationManager.Instance}}"
                                             Width="*"
@@ -120,11 +138,22 @@
                                             SortMemberPath="DisplayName">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding DisplayName}"
-                                           TextTrimming="CharacterEllipsis"
-                                           VerticalAlignment="Center"
-                                           Padding="2,0"
-                                           ToolTip="{Binding DisplayName}" />
+                                <StackPanel Margin="0,3">
+                                    <TextBlock Text="{Binding DisplayName}"
+                                               TextTrimming="CharacterEllipsis"
+                                               VerticalAlignment="Center"
+                                               Padding="2,0"
+                                               ToolTip="{Binding DisplayName}" />
+                                    <ContentPresenter x:Name="FailurePresenter"
+                                                      Content="{Binding}"
+                                                      ContentTemplate="{StaticResource FailureReasonInlineTemplate}"
+                                                      Visibility="Collapsed" />
+                                </StackPanel>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding Status}" Value="Failed">
+                                        <Setter TargetName="FailurePresenter" Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>

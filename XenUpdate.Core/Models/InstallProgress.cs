@@ -13,10 +13,19 @@ namespace XenUpdate.Core.Models;
 /// from winget, so this is locale-neutral.
 /// </param>
 /// <param name="FailureReason">
-/// Non-null only on the final progress event when the install fails. Contains a
-/// human-readable explanation (e.g. "No internet — server could not be reached").
+/// Non-null only on the final progress event when the install fails. A stable key
+/// (e.g. <c>"NoInternet"</c>, <c>"NeedsAdmin"</c>) rather than a human sentence, so the
+/// UI layer — the only layer that knows the active language — can localize it via
+/// <c>LocalizationManager["WingetFail_" + FailureReason]</c>. Infrastructure has no
+/// UI dependency and must not decide user-facing wording.
+/// </param>
+/// <param name="FailureDetail">
+/// Extra data to interpolate into the localized failure message, when the message has a
+/// placeholder (e.g. the raw exit code for an unmapped failure, or a timeout duration).
+/// Null when the failure key's localized string takes no arguments.
 /// </param>
 public readonly record struct InstallProgress(
     int Percent,
     string? DownloadText = null,
-    string? FailureReason = null);
+    string? FailureReason = null,
+    string? FailureDetail = null);

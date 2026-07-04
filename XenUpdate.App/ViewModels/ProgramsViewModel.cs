@@ -50,7 +50,10 @@ public sealed partial class ProgramsViewModel : ObservableObject
 
     // Captured from the failure-reason progress event during a single item install.
     // Reset to null before each item; read once after InstallUpdateAsync returns false.
-    private string? _lastItemFailureReason;
+    // FailureReason is a stable key (e.g. "NoInternet"), not display text — Infrastructure
+    // has no localization dependency, so this layer resolves it to the active language.
+    private string? _lastItemFailureReasonKey;
+    private string? _lastItemFailureDetail;
 
     /// <summary>True while any operation (scan or install) is running. Drives command enable/disable.</summary>
     [ObservableProperty]
@@ -112,6 +115,41 @@ public sealed partial class ProgramsViewModel : ObservableObject
 
     /// <summary>True when the Programs empty-state panel should be shown instead of the grid.</summary>
     public bool IsEmptyStateVisible => HasScanned && !HasUpdates && !IsBusy;
+
+    /// <summary>
+    /// Tri-state "select all" backing the grid's header checkbox: true when every row
+    /// is selected, false when none are, null (indeterminate) for a partial selection.
+    /// Setting it selects or clears every visible row in one click.
+    /// </summary>
+    public bool? AreAllSelected
+    {
+        get
+        {
+            if (Updates.Count == 0)
+            {
+                return false;
+            }
+
+            var selectedCount = Updates.Count(item => item.IsSelected);
+            return selectedCount == 0 ? false
+                 : selectedCount == Updates.Count ? true
+                 : null;
+        }
+        set
+        {
+            if (value is not bool target)
+            {
+                return;
+            }
+
+            foreach (var item in Updates)
+            {
+                item.IsSelected = target;
+            }
+
+            OnPropertyChanged(nameof(AreAllSelected));
+        }
+    }
 
     /// <summary>
     /// The list of available application updates displayed in the DataGrid.
@@ -218,11 +256,11 @@ public sealed partial class ProgramsViewModel : ObservableObject
             return;
         }
 
-        StatusMessage = "Cancelling...";
+        StatusMessage = L.T("Cancelling");
 
         if (IsUpdateBatchRunning)
         {
-            CurrentInstallDetailText = "Cancelling current Winget operation...";
+            CurrentInstallDetailText = L.T("CancellingWingetOp");
         }
 
         _operationCts.Cancel();
@@ -245,7 +283,7 @@ public sealed partial class ProgramsViewModel : ObservableObject
         var selectedItems = Updates.Where(item => item.IsSelected).ToList();
         if (selectedItems.Count == 0)
         {
-            StatusMessage = "Select at least one application to update.";
+            StatusMessage = L.T("SelectAtLeastOneApp");
             _logger.Info("Programs update requested with no selected applications.");
             return;
         }
@@ -273,11 +311,18 @@ public sealed partial class ProgramsViewModel : ObservableObject
 
                 try
                 {
-                    _lastItemFailureReason = null;
-                    SetCurrentInstallPhase("Installing...", null);
+                    _lastItemFailureReasonKey = null;
+                    _lastItemFailureDetail = null;
+                    SetCurrentInstallPhase(L.T("PhaseInstalling"), null);
                     var progress = new Progress<InstallProgress>(OnInstallProgressReported);
                     var success = await _installer.InstallUpdateAsync(item, progress, _operationCts.Token);
 
+                    // Set the reason before flipping Status so the failure-details row
+                    // renders with its text already in place. Fall back to a generic
+                    // message: the details strip must never appear empty.
+                    item.ErrorMessage = success
+                        ? null
+                        : ResolveFailureMessage(_lastItemFailureReasonKey, _lastItemFailureDetail);
                     item.Status = success ? UpdateStatus.Succeeded : UpdateStatus.Failed;
 
                     if (success)
@@ -287,9 +332,6 @@ public sealed partial class ProgramsViewModel : ObservableObject
                     else
                     {
                         failedCount++;
-                        // Attach the failure reason to the item so the status badge tooltip shows it.
-                        if (_lastItemFailureReason is not null)
-                            item.ErrorMessage = _lastItemFailureReason;
                     }
 
                     UpdateOverallProgress(succeededItems.Count + failedCount, selectedItems.Count);
@@ -301,18 +343,18 @@ public sealed partial class ProgramsViewModel : ObservableObject
                 }
             }
 
-            StatusMessage = $"Application updates completed. {succeededItems.Count} succeeded, {failedCount} failed.";
+            StatusMessage = string.Format(L.T("AppUpdatesCompleted"), succeededItems.Count, failedCount);
             _logger.Info($"Winget update batch completed. Total: {selectedItems.Count}, Succeeded: {succeededItems.Count}, Failed: {failedCount}.");
             batchCompletedCleanly = true;
         }
         catch (OperationCanceledException)
         {
-            StatusMessage = $"Application updates cancelled. {succeededItems.Count} succeeded, {failedCount} failed.";
+            StatusMessage = string.Format(L.T("AppUpdatesCancelled"), succeededItems.Count, failedCount);
             _logger.Info($"Winget update batch was cancelled. Completed before cancel: {succeededItems.Count + failedCount} of {selectedItems.Count}.");
         }
         catch (Exception ex)
         {
-            StatusMessage = "Update batch failed. See the log for details.";
+            StatusMessage = L.T("UpdateBatchFailed");
             _logger.Error("Winget update batch encountered an unexpected error.", ex);
         }
         finally
@@ -355,8 +397,8 @@ public sealed partial class ProgramsViewModel : ObservableObject
         InstallSelectedCommand.NotifyCanExecuteChanged();
 
         StatusMessage = Updates.Count == 0
-            ? "Update complete. No application updates remaining."
-            : $"Update complete. {Updates.Count} application update(s) still available.";
+            ? L.T("AppUpdateCompleteNone")
+            : string.Format(L.T("AppUpdateCompleteRemaining"), Updates.Count);
 
         _logger.Info($"Programs removed {succeededItems.Count} succeeded row(s) from the visible list.");
     }
@@ -380,7 +422,7 @@ public sealed partial class ProgramsViewModel : ObservableObject
 
         if (candidates.Count == 0)
         {
-            StatusMessage = "No package IDs available to blacklist.";
+            StatusMessage = L.T("NoPackageIdsToBlacklist");
             return 0;
         }
 
@@ -408,14 +450,14 @@ public sealed partial class ProgramsViewModel : ObservableObject
         if (addedIds.Count == 0)
         {
             StatusMessage = candidateIds.Count == 1
-                ? "Already blacklisted. Hidden from the list."
-                : $"Hidden {candidateIds.Count} already-blacklisted item(s).";
+                ? L.T("AlreadyBlacklistedHidden")
+                : string.Format(L.T("HiddenAlreadyBlacklisted"), candidateIds.Count);
             return 0;
         }
 
         StatusMessage = addedIds.Count == 1
-            ? $"Added '{addedIds[0]}' to blacklist."
-            : $"Added {addedIds.Count} package ID(s) to blacklist.";
+            ? string.Format(L.T("AddedSingleToBlacklist"), addedIds[0])
+            : string.Format(L.T("AddedMultipleToBlacklist"), addedIds.Count);
 
         _logger.Info($"Programs page added {addedIds.Count} package ID(s) to blacklist.");
         return addedIds.Count;
@@ -424,12 +466,12 @@ public sealed partial class ProgramsViewModel : ObservableObject
     private async Task ShowInstallingStateAsync(AppUpdateItem item, int currentIndex, int totalCount)
     {
         item.Status = UpdateStatus.Installing;
-        CurrentBatchProgressText = $"Updating {currentIndex + 1} of {totalCount}";
+        CurrentBatchProgressText = string.Format(L.T("UpdatingXOfY"), currentIndex + 1, totalCount);
         CurrentAppName = item.DisplayName;
         CurrentItemProgressPercent = 0;
         IsCurrentItemProgressIndeterminate = true;
-        CurrentItemProgressText = "Current item progress: In progress...";
-        SetCurrentInstallPhase("Preparing...", "Updating selected applications...");
+        CurrentItemProgressText = L.T("CurrentItemInProgress");
+        SetCurrentInstallPhase(L.T("PhasePreparing"), L.T("UpdatingSelectedApps"));
 
         await Task.Yield();
     }
@@ -440,7 +482,8 @@ public sealed partial class ProgramsViewModel : ObservableObject
         // Store it so InstallSelectedAsync can attach it to the item and status bar.
         if (update.FailureReason is not null)
         {
-            _lastItemFailureReason = update.FailureReason;
+            _lastItemFailureReasonKey = update.FailureReason;
+            _lastItemFailureDetail = update.FailureDetail;
             return;
         }
 
@@ -456,7 +499,7 @@ public sealed partial class ProgramsViewModel : ObservableObject
         {
             CurrentItemProgressPercent = update.Percent;
             IsCurrentItemProgressIndeterminate = false;
-            SetCurrentInstallPhase(hasDownloadText ? "Downloading..." : "Installing...", null);
+            SetCurrentInstallPhase(hasDownloadText ? L.T("PhaseDownloading") : L.T("PhaseInstalling"), null);
         }
         else if (update.Percent >= 100)
         {
@@ -464,9 +507,9 @@ public sealed partial class ProgramsViewModel : ObservableObject
             IsCurrentItemProgressIndeterminate = true;
             if (!hasDownloadText)
             {
-                CurrentItemProgressText = "Finalizing...";
+                CurrentItemProgressText = L.T("PhaseFinalizing");
             }
-            SetCurrentInstallPhase("Finalizing...", null);
+            SetCurrentInstallPhase(L.T("PhaseFinalizing"), null);
         }
     }
 
@@ -501,6 +544,7 @@ public sealed partial class ProgramsViewModel : ObservableObject
         }
 
         InstallSelectedCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(AreAllSelected));
     }
 
     /// <summary>Removes <see cref="OnUpdateItemPropertyChanged"/> from every tracked item and clears the tracking list.</summary>
@@ -528,6 +572,7 @@ public sealed partial class ProgramsViewModel : ObservableObject
         if (e.PropertyName == nameof(AppUpdateItem.IsSelected))
         {
             InstallSelectedCommand.NotifyCanExecuteChanged();
+            OnPropertyChanged(nameof(AreAllSelected));
         }
     }
 
@@ -620,7 +665,7 @@ public sealed partial class ProgramsViewModel : ObservableObject
         NotifyVisibilityPropertiesChanged();
         InstallSelectedCommand.NotifyCanExecuteChanged();
 
-        StatusMessage = $"Restored {toRestore.Count} item(s) from blacklist.";
+        StatusMessage = string.Format(L.T("RestoredFromBlacklist"), toRestore.Count);
 
         _logger.Info($"Programs restored {toRestore.Count} item(s) from scan cache after blacklist change.");
     }
@@ -686,7 +731,7 @@ public sealed partial class ProgramsViewModel : ObservableObject
         OverallProgressPercent = 0;
         CurrentItemProgressPercent = 0;
         IsCurrentItemProgressIndeterminate = true;
-        CurrentItemProgressText = "Current item progress: In progress...";
+        CurrentItemProgressText = L.T("CurrentItemInProgress");
     }
 
     private void UpdateOverallProgress(int completedItemCount, int totalItemCount)
@@ -698,6 +743,22 @@ public sealed partial class ProgramsViewModel : ObservableObject
         }
 
         OverallProgressPercent = completedItemCount * 100 / totalItemCount;
+    }
+
+    /// <summary>
+    /// Resolves a winget failure key (e.g. <c>"NoInternet"</c>, <c>"NeedsAdmin"</c>) reported by
+    /// <see cref="IWingetInstaller"/> to display text in the currently active language. Winget
+    /// itself never returns a key, so a null/unrecognized one falls back to the generic message.
+    /// </summary>
+    private static string ResolveFailureMessage(string? reasonKey, string? detail)
+    {
+        if (string.IsNullOrEmpty(reasonKey))
+        {
+            return L.T("InstallFailedGeneric");
+        }
+
+        var template = L.T($"WingetFail_{reasonKey}");
+        return detail is not null ? string.Format(template, detail) : template;
     }
 
     private void SetCurrentInstallPhase(string phaseText, string? statusMessage)

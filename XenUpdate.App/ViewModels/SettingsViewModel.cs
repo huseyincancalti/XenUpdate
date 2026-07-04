@@ -11,6 +11,11 @@ using XenUpdate.Core.Models;
 
 namespace XenUpdate.App.ViewModels;
 
+file static class L
+{
+    public static string T(string key) => LocalizationManager.Instance[key];
+}
+
 /// <summary>
 /// ViewModel for the Settings page.
 /// Manages user preferences and the blacklist.
@@ -136,12 +141,12 @@ public sealed partial class SettingsViewModel : ObservableObject
                     .Equals("tr", StringComparison.OrdinalIgnoreCase) ? "tr" : "en");
 
             await ReloadBlacklistEntriesAsync();
-            StatusMessage = "Settings loaded.";
+            StatusMessage = L.T("SettingsLoaded");
             _logger.Info("Settings loaded.");
         }
         catch (Exception ex)
         {
-            StatusMessage = "Could not load settings. See log for details.";
+            StatusMessage = L.T("SettingsLoadFailed");
             _logger.Error("Settings page failed to load data.", ex);
         }
     }
@@ -155,12 +160,12 @@ public sealed partial class SettingsViewModel : ObservableObject
         try
         {
             await _settingsRepo.SaveAsync(Settings);
-            StatusMessage = "Settings saved.";
+            StatusMessage = L.T("SettingsSaved");
             _logger.Info("Settings saved by user.");
         }
         catch (Exception ex)
         {
-            StatusMessage = "Could not save settings. See log for details.";
+            StatusMessage = L.T("SettingsSaveFailed");
             _logger.Error("Settings save failed.", ex);
         }
     }
@@ -174,13 +179,13 @@ public sealed partial class SettingsViewModel : ObservableObject
         var packageId = NewBlacklistPackageId.Trim();
         if (string.IsNullOrWhiteSpace(packageId))
         {
-            StatusMessage = "Package ID is required.";
+            StatusMessage = L.T("PackageIdRequired");
             return;
         }
 
         if (BlacklistEntries.Any(entry => string.Equals(entry.PackageId, packageId, StringComparison.OrdinalIgnoreCase)))
         {
-            StatusMessage = "That package ID is already blacklisted.";
+            StatusMessage = L.T("PackageIdAlreadyBlacklisted");
             return;
         }
 
@@ -191,11 +196,11 @@ public sealed partial class SettingsViewModel : ObservableObject
 
             NewBlacklistPackageId = string.Empty;
             NewBlacklistReason = string.Empty;
-            StatusMessage = $"Added '{packageId}' to blacklist.";
+            StatusMessage = string.Format(L.T("AddedSingleToBlacklist"), packageId);
         }
         catch (Exception ex)
         {
-            StatusMessage = "Could not add blacklist entry. See log for details.";
+            StatusMessage = L.T("BlacklistAddFailed");
             _logger.Error("Blacklist add failed.", ex);
         }
     }
@@ -218,11 +223,11 @@ public sealed partial class SettingsViewModel : ObservableObject
             await _blacklistRepo.RemoveAsync(packageId);
             await ReloadBlacklistEntriesAsync();
             SelectedBlacklistEntry = null;
-            StatusMessage = $"Removed '{packageId}' from blacklist.";
+            StatusMessage = string.Format(L.T("RemovedSingleFromBlacklist"), packageId);
         }
         catch (Exception ex)
         {
-            StatusMessage = "Could not remove blacklist entry. See log for details.";
+            StatusMessage = L.T("BlacklistRemoveFailed");
             _logger.Error("Blacklist remove failed.", ex);
         }
     }
@@ -252,14 +257,14 @@ public sealed partial class SettingsViewModel : ObservableObject
             await ReloadBlacklistEntriesAsync();
 
             StatusMessage = toRemove.Count == 1
-                ? $"Removed '{toRemove[0].PackageId}' from blacklist."
-                : $"Removed {toRemove.Count} blacklist entries.";
+                ? string.Format(L.T("RemovedSingleFromBlacklist"), toRemove[0].PackageId)
+                : string.Format(L.T("RemovedMultipleFromBlacklist"), toRemove.Count);
 
             _logger.Info($"Blacklist: removed {toRemove.Count} entry(ies).");
         }
         catch (Exception ex)
         {
-            StatusMessage = "Could not remove blacklist entries. See log for details.";
+            StatusMessage = L.T("BlacklistBulkRemoveFailed");
             _logger.Error("Blacklist bulk remove failed.", ex);
         }
     }
