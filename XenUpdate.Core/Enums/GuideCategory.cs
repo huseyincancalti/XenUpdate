@@ -15,6 +15,12 @@ public enum GuideCategory
     /// <summary>Chipset or platform driver package.</summary>
     Chipset,
 
+    /// <summary>
+    /// Software whose own updates aren't managed by winget or Windows Update — e.g. an IDE's
+    /// workload/component updates that only run through the vendor's own installer.
+    /// </summary>
+    Software,
+
     /// <summary>Anything that does not fit the categories above.</summary>
     Other
 }

@@ -5,6 +5,7 @@ using XenUpdate.Infrastructure.Guides;
 using XenUpdate.Infrastructure.Hardware;
 using XenUpdate.Infrastructure.Logging;
 using XenUpdate.Infrastructure.Mocks;
+using XenUpdate.Infrastructure.Pip;
 using XenUpdate.Infrastructure.Storage;
 using XenUpdate.Infrastructure.Services;
 using XenUpdate.Infrastructure.System;
@@ -45,6 +46,8 @@ public static class ServiceCollectionExtensions
             services.AddTransient<IWingetInstaller, MockWingetInstaller>();
             services.AddTransient<IWindowsUpdateService, MockWindowsUpdateService>();
             services.AddTransient<IDriverUpdateService, MockDriverUpdateService>();
+            services.AddTransient<IPipScanner, MockPipScanner>();
+            services.AddTransient<IPipInstaller, MockPipInstaller>();
         }
         else
         {
@@ -58,13 +61,18 @@ public static class ServiceCollectionExtensions
             services.AddTransient<IWingetInstaller, WingetInstaller>();
             services.AddTransient<IWindowsUpdateService, WindowsUpdateService>();
             services.AddTransient<IDriverUpdateService, DriverUpdateService>();
+            services.AddTransient<PipListOutputParser>();
+            services.AddTransient<IPipScanner, PipScanner>();
+            services.AddTransient<IPipInstaller, PipInstaller>();
         }
 
         // --- ViewModels (Singleton: preserve page state across navigation) ---
         services.AddSingleton<ShellViewModel>();
+        services.AddSingleton<OverviewViewModel>();
         services.AddSingleton<ProgramsViewModel>();
         services.AddSingleton<WindowsUpdatesViewModel>();
         services.AddSingleton<DriversViewModel>();
+        services.AddSingleton<PipPackagesViewModel>();
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<HardwareHubViewModel>();
         services.AddSingleton<LogConsoleViewModel>();

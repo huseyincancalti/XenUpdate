@@ -33,9 +33,15 @@
         <GradientStop Color="#E0E7FF" Offset="1" />
     </LinearGradientBrush>
 
-    <!-- Glass-lite: frosted white over the cool wash -->
-    <SolidColorBrush x:Key="ZenGlassPanelBrush"                    Color="#D9FFFFFF" />
-    <SolidColorBrush x:Key="ZenGlassBorderBrush"                   Color="#99CBD5E1" />
+    <!--
+        Glass-lite: frosted white over the cool wash. Slightly less opaque than before (so
+        the ambient gradient shows through a touch) and the border is darker/more saturated —
+        against the equally-pale ambient background, a near-white-on-white panel plus a faint
+        border used to have almost no visible edge; combined with ZenGlassPanelStyle's new
+        drop shadow, this reads as a distinct floating surface instead of empty space.
+    -->
+    <SolidColorBrush x:Key="ZenGlassPanelBrush"                    Color="#CCFFFFFF" />
+    <SolidColorBrush x:Key="ZenGlassBorderBrush"                   Color="#C299AAC2" />
     <!-- DataGrid chrome: opaque-enough white so row text stays crisp -->
     <SolidColorBrush x:Key="ZenDataGridChromeBackgroundBrush"      Color="#CCFFFFFF" />
     <SolidColorBrush x:Key="ZenDataGridChromeBorderBrush"          Color="#88A5B4C8" />

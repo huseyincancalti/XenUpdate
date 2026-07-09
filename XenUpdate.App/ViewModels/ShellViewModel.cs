@@ -12,9 +12,11 @@ namespace XenUpdate.App.ViewModels;
 /// <summary>The navigable pages hosted by the shell.</summary>
 public enum AppPage
 {
+    Overview,
     Programs,
     WindowsUpdates,
     Drivers,
+    PipPackages,
     HardwareHub,
     Settings
 }
@@ -27,9 +29,11 @@ public enum AppPage
 /// </summary>
 public sealed partial class ShellViewModel : ObservableObject
 {
+    private readonly OverviewViewModel _overviewVm;
     private readonly ProgramsViewModel _programsVm;
     private readonly WindowsUpdatesViewModel _windowsUpdatesVm;
     private readonly DriversViewModel _driversVm;
+    private readonly PipPackagesViewModel _pipPackagesVm;
     private readonly SettingsViewModel _settingsVm;
     private readonly HardwareHubViewModel _hardwareHubVm;
     private readonly IAppUpdateService _appUpdateService;
@@ -45,13 +49,16 @@ public sealed partial class ShellViewModel : ObservableObject
     /// <summary>The Settings page VM. Also the single source of theme state for the title-bar toggle.</summary>
     public SettingsViewModel Settings => _settingsVm;
 
+    /// <summary>The Guides page VM. Exposed so the sidebar can show its categories as sub-branches.</summary>
+    public HardwareHubViewModel GuidesViewModel => _hardwareHubVm;
+
     /// <summary>The page ViewModel shown in the shell's content area.</summary>
     [ObservableProperty]
     private ObservableObject? _currentPage;
 
     /// <summary>The active navigation selection.</summary>
     [ObservableProperty]
-    private AppPage _selectedPage = AppPage.Programs;
+    private AppPage _selectedPage = AppPage.Overview;
 
     /// <summary>True when a newer XenUpdate release is available; drives the title-bar banner.</summary>
     [ObservableProperty]
@@ -75,9 +82,11 @@ public sealed partial class ShellViewModel : ObservableObject
     public Action? RequestOpenLogViewer { get; set; }
 
     public ShellViewModel(
+        OverviewViewModel overviewVm,
         ProgramsViewModel programsVm,
         WindowsUpdatesViewModel windowsUpdatesVm,
         DriversViewModel driversVm,
+        PipPackagesViewModel pipPackagesVm,
         SettingsViewModel settingsVm,
         HardwareHubViewModel hardwareHubVm,
         LogConsoleViewModel logConsole,
@@ -85,9 +94,11 @@ public sealed partial class ShellViewModel : ObservableObject
         ISettingsRepository settingsRepository,
         ILoggerService logger)
     {
+        _overviewVm = overviewVm;
         _programsVm = programsVm;
         _windowsUpdatesVm = windowsUpdatesVm;
         _driversVm = driversVm;
+        _pipPackagesVm = pipPackagesVm;
         _settingsVm = settingsVm;
         _hardwareHubVm = hardwareHubVm;
         LogConsole = logConsole;
@@ -95,7 +106,7 @@ public sealed partial class ShellViewModel : ObservableObject
         _settingsRepository = settingsRepository;
         _logger = logger;
 
-        NavigateTo(AppPage.Programs);
+        NavigateTo(AppPage.Overview);
 
         IsOnline = _networkMonitor.IsOnline;
         _networkMonitor.OnlineStatusChanged += online =>
@@ -108,12 +119,14 @@ public sealed partial class ShellViewModel : ObservableObject
         SelectedPage = page;
         CurrentPage = page switch
         {
+            AppPage.Overview       => _overviewVm,
             AppPage.Programs       => _programsVm,
             AppPage.WindowsUpdates => _windowsUpdatesVm,
             AppPage.Drivers        => _driversVm,
+            AppPage.PipPackages    => _pipPackagesVm,
             AppPage.HardwareHub    => _hardwareHubVm,
             AppPage.Settings       => _settingsVm,
-            _                      => _programsVm
+            _                      => _overviewVm
         };
     }
 
@@ -137,7 +150,8 @@ public sealed partial class ShellViewModel : ObservableObject
             await Task.WhenAll(
                 ExecuteIfPossible(_programsVm.ScanCommand),
                 ExecuteIfPossible(_windowsUpdatesVm.ScanCommand),
-                ExecuteIfPossible(_driversVm.ScanCommand));
+                ExecuteIfPossible(_driversVm.ScanCommand),
+                ExecuteIfPossible(_pipPackagesVm.ScanCommand));
         }
         finally
         {
@@ -192,7 +206,18 @@ public sealed partial class ShellViewModel : ObservableObject
         {
             _logger.Info($"Startup scan trigger failed (non-fatal): {ex.Message}");
         }
+
+        // Detect hardware and load guides now (not lazily on first visit to the Guides page),
+        // so the sidebar's category sub-branches are populated as soon as the app opens.
+        _ = _hardwareHubVm.InitializeAsync();
     }
+
+    /// <summary>
+    /// Re-verifies dynamic guide state (e.g. an NVIDIA driver version) when the window
+    /// regains focus — the natural moment the user has just come back from installing
+    /// something outside the app.
+    /// </summary>
+    public Task RefreshGuidesAfterActivationAsync() => _hardwareHubVm.RefreshAfterPossibleExternalChangeAsync();
 
     private async Task CheckForAppUpdateAsync()
     {

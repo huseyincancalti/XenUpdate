@@ -2,6 +2,7 @@
   {
     "Id": "gpu-nvidia",
     "Title": "NVIDIA ekran kartı sürücünü güncelle",
+    "ShortLabel": "NVIDIA",
     "Why": "NVIDIA sürücüleri Windows Update üzerinden düzenli ve güncel gelmez. Taze sürücüler oyun çökmelerini düzeltir, performansı artırır ve güvenlik açıklarını kapatır — bu yüzden en iyisi doğrudan NVIDIA'dan almaktır.",
     "Category": "GraphicsDriver",
     "RequiredGpuVendor": "NVIDIA",
@@ -31,6 +32,7 @@
   {
     "Id": "gpu-amd",
     "Title": "AMD Radeon ekran kartı sürücünü güncelle",
+    "ShortLabel": "AMD",
     "Why": "AMD Radeon sürücüleri Windows Update'ten çoğu zaman geç veya eksik gelir. Resmi AMD paketi (Adrenalin) en yeni düzeltmeleri, oyun optimizasyonlarını ve güvenlik yamalarını getirir.",
     "Category": "GraphicsDriver",
     "RequiredGpuVendor": "AMD",
@@ -46,6 +48,7 @@
   {
     "Id": "gpu-intel",
     "Title": "Intel ekran kartı sürücünü güncelle",
+    "ShortLabel": "Intel",
     "Why": "PC üreticinden gelen Intel tümleşik grafik sürücüleri geride kalabilir. Intel'in kendi sürücüsü en yeni kararlılık ve performans düzeltmelerini ekler — ancak bazı dizüstülerde üreticinin sürümü gerekir, o yüzden Intel kurulumu uyarırsa dizüstü üreticinden güncelle.",
     "Category": "GraphicsDriver",
     "RequiredGpuVendor": "Intel",
@@ -56,6 +59,35 @@
       "Windows sürümün için en yeni kurulumu (.exe) indir.",
       "Çalıştır; Intel, sürücüyü PC üreticinin özelleştirdiğini söylerse onun yerine dizüstü üreticinden al.",
       "İstenirse yeniden başlat, sonra bu rehberi tamamlandı işaretle."
+    ]
+  },
+  {
+    "Id": "software-vs-installer",
+    "Title": "Visual Studio bileşenlerini güncelle",
+    "ShortLabel": "Visual Studio",
+    "Why": "Visual Studio'nun kendi workload'ları ve bileşenleri winget veya Windows Update tarafından yönetilmez — güncellemeler yalnızca ayrı Visual Studio Installer üzerinden gelir.",
+    "Category": "Software",
+    "OfficialUrl": "https://visualstudio.microsoft.com/downloads/",
+    "Steps": [
+      "Başlat Menüsü'nden \"Visual Studio Installer\"ı aç.",
+      "Bir güncelleme varsa, Visual Studio sürümünün yanındaki \"Update\" (Güncelle) düğmesine bas.",
+      "Belirli workload'ları eklemek veya güncellemek için \"Modify\" (Değiştir) seçip istediğin bileşenleri işaretle.",
+      "Kurulumun bitmesini bekle, isterse Visual Studio'yu yeniden başlat.",
+      "Geri dön ve bu rehberi tamamlandı işaretle."
+    ],
+    "AppLaunch": {
+      "DisplayName": "Visual Studio Installer",
+      "ExeCandidates": [
+        "%ProgramFiles(x86)%\\Microsoft Visual Studio\\Installer\\vs_installer.exe",
+        "%ProgramFiles%\\Microsoft Visual Studio\\Installer\\vs_installer.exe"
+      ]
+    },
+    "AppSteps": [
+      "Aşağıdaki \"Visual Studio Installer'ı Aç\"a tıkla.",
+      "Bir güncelleme varsa, Visual Studio sürümünün yanındaki \"Update\" (Güncelle) düğmesine bas.",
+      "Belirli workload'ları eklemek veya güncellemek için \"Modify\" (Değiştir) seçip istediğin bileşenleri işaretle.",
+      "Kurulumun bitmesini bekle, isterse Visual Studio'yu yeniden başlat.",
+      "Geri dön ve bu rehberi tamamlandı işaretle."
     ]
   }
 ]

@@ -15,6 +15,8 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
+        Activated += MainWindow_OnActivated;
+
         WeakReferenceMessenger.Default.Register<NotificationMessage>(this, (_, m) =>
             Dispatcher.InvokeAsync(() => MainSnackbar.MessageQueue?.Enqueue(m.Message)));
 
@@ -74,11 +76,33 @@ public partial class MainWindow : Window
         base.OnClosing(e);
     }
 
+    // The user may have just installed a driver update (or similar) in another window and
+    // switched back — a natural point to quietly re-verify dynamic guide state instead of
+    // waiting for the user to leave and re-enter the Guides page.
+    private async void MainWindow_OnActivated(object? sender, EventArgs e)
+    {
+        if (DataContext is ShellViewModel vm)
+        {
+            await vm.RefreshGuidesAfterActivationAsync();
+        }
+    }
+
     private void NavList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (DataContext is ShellViewModel vm && NavList.SelectedItem is ListBoxItem { Tag: AppPage page })
         {
             vm.NavigateToCommand.Execute(page);
+        }
+    }
+
+    // Fires before the click bubbles up and the ListBox selects the parent "Guides" item, so
+    // both the navigation (via NavList_SelectionChanged) and the specific-guide selection below
+    // happen from one click on a sidebar sub-branch.
+    private void GuideSidebarItem_OnClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: GuideSidebarItem item } && DataContext is ShellViewModel vm)
+        {
+            vm.GuidesViewModel.SelectGuideById(item.Id);
         }
     }
 

@@ -74,7 +74,12 @@
         </Style>
 
         <Style x:Key="SidebarItemStyle" TargetType="ListBoxItem">
-            <Setter Property="Height" Value="48" />
+            <!--
+                MinHeight (not a fixed Height): the "Guides" item grows taller to fit its
+                category sub-branches list below the icon+label row. Ordinary items are
+                shorter than 48 anyway, so MinHeight renders them identically to before.
+            -->
+            <Setter Property="MinHeight" Value="48" />
             <Setter Property="Margin" Value="12,4" />
             <Setter Property="Padding" Value="14,0" />
             <Setter Property="Foreground" Value="{DynamicResource ZenTextBrush}" />
@@ -104,6 +109,9 @@
         </Style>
 
         <!-- Page VM → View map for the shell content area -->
+        <DataTemplate DataType="{x:Type vm:OverviewViewModel}">
+            <views:OverviewView />
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:ProgramsViewModel}">
             <views:ProgramsView />
         </DataTemplate>
@@ -112,6 +120,9 @@
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:DriversViewModel}">
             <views:DriversView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:PipPackagesViewModel}">
+            <views:PipPackagesView />
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:HardwareHubViewModel}">
             <views:HardwareHubView />
@@ -288,6 +299,12 @@
                              Background="Transparent"
                              BorderThickness="0"
                              ItemContainerStyle="{StaticResource SidebarItemStyle}">
+                        <ListBoxItem Tag="{x:Static vm:AppPage.Overview}">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="ViewDashboard" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding [NavOverview], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
+                            </StackPanel>
+                        </ListBoxItem>
                         <ListBoxItem Tag="{x:Static vm:AppPage.Programs}">
                             <StackPanel Orientation="Horizontal">
                                 <materialDesign:PackIcon Kind="PackageVariant" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center" />
@@ -306,10 +323,54 @@
                                 <TextBlock Text="{Binding [NavDrivers], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
                             </StackPanel>
                         </ListBoxItem>
-                        <ListBoxItem Tag="{x:Static vm:AppPage.HardwareHub}">
+                        <ListBoxItem Tag="{x:Static vm:AppPage.PipPackages}">
                             <StackPanel Orientation="Horizontal">
-                                <materialDesign:PackIcon Kind="MapMarkerPath" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center" />
-                                <TextBlock Text="{Binding [NavGuides], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
+                                <materialDesign:PackIcon Kind="LanguagePython" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding [NavPipPackages], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
+                            </StackPanel>
+                        </ListBoxItem>
+                        <ListBoxItem Tag="{x:Static vm:AppPage.HardwareHub}">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="MapMarkerPath" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding [NavGuides], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
+                                </StackPanel>
+                                <!--
+                                    Sub-branches: the specific guides that actually apply to this
+                                    machine (e.g. "NVIDIA", "Visual Studio"), populated from
+                                    HardwareHubViewModel.SidebarGuides. A tree-branch connector icon
+                                    gives each row the "child of Guides" look. A click anywhere in
+                                    this ListBoxItem — including these rows — selects it via the
+                                    normal ListBox mechanism and navigates here, so no extra
+                                    click-handling code is needed.
+                                -->
+                                <ItemsControl ItemsSource="{Binding GuidesViewModel.SidebarGuides}"
+                                              Margin="18,4,0,0"
+                                              Visibility="{Binding GuidesViewModel.HasGuides, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <!--
+                                                PreviewMouseLeftButtonUp (not Click, these aren't buttons):
+                                                selects this specific guide's detail before the click
+                                                bubbles up and the ListBox selects the parent "Guides"
+                                                item, so both happen from one click.
+                                            -->
+                                            <StackPanel Orientation="Horizontal" Margin="0,3,0,3" Cursor="Hand"
+                                                        PreviewMouseLeftButtonUp="GuideSidebarItem_OnClick">
+                                                <materialDesign:PackIcon Kind="SubdirectoryArrowRight"
+                                                                         Width="14" Height="14"
+                                                                         Opacity="0.5"
+                                                                         Margin="0,0,6,0"
+                                                                         VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding Label}"
+                                                           FontSize="12"
+                                                           Opacity="0.8"
+                                                           VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </StackPanel>
                         </ListBoxItem>
                         <ListBoxItem Tag="{x:Static vm:AppPage.Settings}">

@@ -125,3 +125,31 @@ public sealed class MockNvidiaDriverService : INvidiaDriverService
             DownloadUrl = "https://www.nvidia.com/download/index.aspx"
         });
 }
+
+public sealed class MockPipScanner : IPipScanner
+{
+    public async Task<IReadOnlyList<PipPackageItem>> GetAvailableUpdatesAsync(CancellationToken cancellationToken)
+    {
+        await Task.Delay(600, cancellationToken);
+        return new List<PipPackageItem>
+        {
+            new() { Id = "requests", DisplayName = "requests", PackageName = "requests", CurrentVersion = "2.31.0", AvailableVersion = "2.32.0" },
+            new() { Id = "numpy", DisplayName = "numpy", PackageName = "numpy", CurrentVersion = "1.26.0", AvailableVersion = "2.0.0" },
+            new() { Id = "flask", DisplayName = "flask", PackageName = "flask", CurrentVersion = "3.0.0", AvailableVersion = "3.1.0" }
+        };
+    }
+}
+
+public sealed class MockPipInstaller : IPipInstaller
+{
+    public async Task<bool> InstallUpdateAsync(PipPackageItem item, IProgress<InstallProgress> progress, CancellationToken cancellationToken)
+    {
+        foreach (var percent in new[] { 25, 50, 75, 100 })
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            progress.Report(new InstallProgress(percent));
+            await Task.Delay(180, cancellationToken);
+        }
+        return true;
+    }
+}

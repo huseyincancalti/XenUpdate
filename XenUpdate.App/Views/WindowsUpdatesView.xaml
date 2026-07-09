@@ -19,47 +19,59 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0"
-                   Text="{Binding [WindowsUpdatesTitle], Source={x:Static loc:LocalizationManager.Instance}}"
-                   Style="{StaticResource PageTitleStyle}" />
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
 
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12">
-
-            <Button Content="{Binding [CheckForUpdates], Source={x:Static loc:LocalizationManager.Instance}}"
-                    Command="{Binding ScanCommand}"
-                    Style="{StaticResource MaterialDesignRaisedButton}"
-                    Margin="0,0,8,0" />
-
-            <Button Content="{Binding [InstallSelected], Source={x:Static loc:LocalizationManager.Instance}}"
-                    Command="{Binding InstallSelectedCommand}"
-                    Style="{StaticResource MaterialDesignOutlinedButton}"
-                    Margin="0,0,8,0" />
-
-            <Button Content="{Binding [Cancel], Source={x:Static loc:LocalizationManager.Instance}}"
-                    Command="{Binding CancelScanCommand}"
-                    Style="{StaticResource MaterialDesignOutlinedButton}"
-                    Margin="0,0,8,0"
-                    Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
+            <TextBlock Grid.Column="0"
+                       Text="{Binding [WindowsUpdatesTitle], Source={x:Static loc:LocalizationManager.Instance}}"
+                       Style="{StaticResource PageTitleStyle}"
+                       VerticalAlignment="Center" />
 
             <!--
-                Scan-only thin progress bar.
-                Bound to IsScanning so it stays hidden while installs run;
-                install progress is shown by the dedicated feedback panel below.
+                Action toolbar sits top-right, away from the grid's select-all checkbox
+                (top-left of the DataGrid header below). It used to sit directly above that
+                checkbox, so a click aimed at "select all" could misfire into "Scan".
             -->
-            <ProgressBar IsIndeterminate="True"
-                         Width="120"
-                         Height="4"
-                         VerticalAlignment="Center"
-                         Visibility="{Binding IsScanning, Converter={StaticResource BooleanToVisibilityConverter}}" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
 
-        </StackPanel>
+                <Button Content="{Binding [CheckForUpdates], Source={x:Static loc:LocalizationManager.Instance}}"
+                        Command="{Binding ScanCommand}"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Margin="0,0,8,0" />
 
-        <Border Grid.Row="2"
+                <Button Content="{Binding [InstallSelected], Source={x:Static loc:LocalizationManager.Instance}}"
+                        Command="{Binding InstallSelectedCommand}"
+                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        Margin="0,0,8,0" />
+
+                <Button Content="{Binding [Cancel], Source={x:Static loc:LocalizationManager.Instance}}"
+                        Command="{Binding CancelScanCommand}"
+                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        Margin="0,0,8,0"
+                        Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                <!--
+                    Scan-only thin progress bar.
+                    Bound to IsScanning so it stays hidden while installs run;
+                    install progress is shown by the dedicated feedback panel below.
+                -->
+                <ProgressBar IsIndeterminate="True"
+                             Width="120"
+                             Height="4"
+                             VerticalAlignment="Center"
+                             Visibility="{Binding IsScanning, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="1"
                 Style="{StaticResource ZenGlassPanelStyle}"
                 Margin="0,0,0,12"
                 Padding="12"
@@ -82,7 +94,7 @@
             </StackPanel>
         </Border>
 
-        <Grid Grid.Row="3">
+        <Grid Grid.Row="2">
             <Border Style="{StaticResource ZenDataGridChromeStyle}"
                     Visibility="{Binding HasUpdates, Converter={StaticResource BooleanToVisibilityConverter}}">
             <DataGrid x:Name="WindowsUpdatesDataGrid"
@@ -223,7 +235,7 @@
             </Border>
         </Grid>
 
-        <TextBlock Grid.Row="4"
+        <TextBlock Grid.Row="3"
                    Text="{Binding StatusMessage}"
                    Opacity="0.65"
                    FontSize="12"

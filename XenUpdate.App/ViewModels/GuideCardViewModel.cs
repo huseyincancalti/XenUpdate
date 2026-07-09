@@ -3,6 +3,7 @@ using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using XenUpdate.App.Services;
+using XenUpdate.Core.Enums;
 using XenUpdate.Core.Interfaces;
 using XenUpdate.Core.Models;
 
@@ -21,8 +22,26 @@ public sealed partial class GuideCardViewModel : ObservableObject
     private readonly string? _appExePath;
     private readonly DriverUpdateStatus? _driverStatus;
 
+    /// <summary>Stable catalog id (e.g. "gpu-nvidia") — used to identify this guide from the sidebar.</summary>
+    public string Id => _guide.Id;
+
     public string Title => _guide.Title;
     public string Why => _guide.Why;
+
+    /// <summary>The catalog category this guide belongs to — drives <see cref="IconKind"/> and machine gating.</summary>
+    public GuideCategory Category => _guide.Category;
+
+    /// <summary>Compact label (e.g. "NVIDIA", "Visual Studio") for the sidebar sub-branch.</summary>
+    public string ShortLabel => _guide.ShortLabel;
+
+    /// <summary>MaterialDesign PackIcon kind name for the landing page's entry card.</summary>
+    public string IconKind => Category switch
+    {
+        GuideCategory.GraphicsDriver => "Gpu",
+        GuideCategory.Software => "Code",
+        _ => "Chip"
+    };
+
     public ObservableCollection<GuideStepVm> Steps { get; } = new();
 
     /// <summary>Label for the launch button (e.g. "Open NVIDIA App" or "Open official page").</summary>
@@ -37,6 +56,18 @@ public sealed partial class GuideCardViewModel : ObservableObject
     /// <summary>e.g. "Update available: v566.14 → v566.36".</summary>
     public string UpdateBadgeText => HasUpdateBadge
         ? string.Format(LocalizationManager.Instance["UpdateBadge"], _driverStatus!.InstalledVersion, _driverStatus.LatestVersion)
+        : string.Empty;
+
+    /// <summary>
+    /// True when a real check (not the user's own step checklist) confirmed this is already
+    /// current. The card stays visible either way — it just switches from the step wizard to
+    /// a reassurance state — so "Guides" never silently loses an entry the user expects to find.
+    /// </summary>
+    public bool IsUpToDate => _driverStatus is { Checked: true, UpdateAvailable: false };
+
+    /// <summary>e.g. "Your NVIDIA driver is up to date (v566.36)".</summary>
+    public string UpToDateMessage => IsUpToDate
+        ? string.Format(LocalizationManager.Instance["DriverCurrent"], _driverStatus!.InstalledVersion)
         : string.Empty;
 
     [ObservableProperty]

@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using XenUpdate.App.Services;
+using XenUpdate.Core.Enums;
 using XenUpdate.Core.Interfaces;
 using XenUpdate.Core.Models;
 
@@ -23,6 +25,11 @@ public sealed partial class HardwareHubViewModel : ObservableObject
 
     private bool _initialized;
     private DriverUpdateStatus? _nvidiaStatusCache;
+    private DateTime _lastDynamicRefresh = DateTime.MinValue;
+
+    // Throttles RefreshAfterPossibleExternalChangeAsync so rapid window-activation events
+    // (alt-tabbing, dismissing a menu) don't hammer the NVIDIA check repeatedly.
+    private static readonly TimeSpan DynamicRefreshThrottle = TimeSpan.FromSeconds(20);
 
     [ObservableProperty]
     private HardwareProfile _hardware = new();
@@ -33,18 +40,41 @@ public sealed partial class HardwareHubViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = string.Empty;
 
-    /// <summary>Set when a GPU driver was checked and found current — a reassuring "you're up to date" note.</summary>
+    // Tracks the logical selection across reloads: LoadGuidesAsync rebuilds every
+    // GuideCardViewModel from scratch, so the *instance* the user was looking at goes stale
+    // the moment a background re-verification runs. Re-resolving by id keeps them on the same
+    // guide (now possibly showing an updated state) instead of being silently bounced to the
+    // landing page mid-read.
+    private string? _selectedGuideId;
+
+    /// <summary>
+    /// The guide currently shown in detail, or null when the landing (explanation + entry
+    /// cards) should show instead.
+    /// </summary>
     [ObservableProperty]
-    private string? _currentDriverNote;
+    [NotifyPropertyChangedFor(nameof(IsShowingGuideDetail))]
+    private GuideCardViewModel? _selectedGuide;
 
-    public bool HasCurrentDriverNote => !string.IsNullOrWhiteSpace(CurrentDriverNote);
-
-    partial void OnCurrentDriverNoteChanged(string? value) => OnPropertyChanged(nameof(HasCurrentDriverNote));
+    /// <summary>True when a specific guide's step wizard is showing instead of the landing.</summary>
+    public bool IsShowingGuideDetail => SelectedGuide is not null;
 
     /// <summary>The interactive guide cards that apply to the detected hardware.</summary>
     public ObservableCollection<GuideCardViewModel> Guides { get; } = new();
 
+    /// <summary>
+    /// The currently-applicable guides' short labels (e.g. "NVIDIA", "Visual Studio"), in
+    /// display order. Bound by the sidebar so "Guides" shows exactly which guides apply as
+    /// sub-branches, before the user ever opens the page.
+    /// </summary>
+    public ObservableCollection<GuideSidebarItem> SidebarGuides { get; } = new();
+
     public bool HasGuides => Guides.Count > 0;
+
+    /// <summary>
+    /// How many applicable guides still need action (excludes ones a real check already
+    /// confirmed are up to date). Bound by the Overview page's quick-stat chip.
+    /// </summary>
+    public int GuidesNeedingAttentionCount => Guides.Count(g => !g.IsUpToDate);
 
     public bool ShowEmptyState => !IsLoading && !HasGuides;
 
@@ -106,20 +136,22 @@ public sealed partial class HardwareHubViewModel : ObservableObject
         var completed = await _completionStore.GetCompletedIdsAsync();
         var completedSet = new HashSet<string>(completed, StringComparer.OrdinalIgnoreCase);
 
-        CurrentDriverNote = null;
         Guides.Clear();
-        foreach (var guide in all.Where(AppliesToCurrentHardware))
+        foreach (var guide in all)
         {
             var appPath = guide.AppLaunch is { ExeCandidates.Count: > 0 }
                 ? _appDetector.FindExecutable(guide.AppLaunch.ExeCandidates)
                 : null;
 
+            if (!AppliesToCurrentMachine(guide, appPath))
+                continue;
+
             DriverUpdateStatus? status = null;
             if (string.Equals(guide.RequiredGpuVendor, "NVIDIA", StringComparison.OrdinalIgnoreCase))
             {
                 // Only cache successful checks. A network failure returns Checked=false and must
-                // not be cached; otherwise a transient outage permanently hides the "driver current"
-                // note until the app restarts.
+                // not be cached; otherwise a transient outage permanently hides the "up to date"
+                // state until the app restarts.
                 if (_nvidiaStatusCache is null)
                 {
                     var fresh = await _nvidiaService.CheckAsync();
@@ -131,20 +163,29 @@ public sealed partial class HardwareHubViewModel : ObservableObject
                 {
                     status = _nvidiaStatusCache;
                 }
-
-                // If we reliably know the driver is current, don't show a guide — show a
-                // reassuring "you're up to date" note instead so the page never looks broken.
-                if (status.Checked && !status.UpdateAvailable)
-                {
-                    CurrentDriverNote = string.Format(LocalizationManager.Instance["DriverCurrent"], status.InstalledVersion);
-                    continue;
-                }
             }
 
-            Guides.Add(new GuideCardViewModel(guide, appPath, completedSet, status, _completionStore, _logger));
+            // Always add the card, current or not — GuideCardViewModel.IsUpToDate drives which
+            // state the detail page and sidebar/landing entries show. A guide that applies to
+            // this machine never just vanishes because nothing needs doing right now.
+            var card = new GuideCardViewModel(guide, appPath, completedSet, status, _completionStore, _logger);
+            // Completion here is the user's own step checklist — self-reported, not proof the
+            // update actually happened. When it flips true, trigger a real re-verification
+            // (currently: the NVIDIA driver version check) instead of trusting it at face value.
+            card.PropertyChanged += OnGuideCardPropertyChanged;
+            Guides.Add(card);
         }
 
+        RefreshSidebarGuides();
+
+        // Re-resolve the selection by id: the cards were just rebuilt from scratch, so the old
+        // SelectedGuide instance is stale even if the same logical guide still exists.
+        SelectedGuide = _selectedGuideId is null
+            ? null
+            : Guides.FirstOrDefault(g => string.Equals(g.Id, _selectedGuideId, StringComparison.OrdinalIgnoreCase));
+
         OnPropertyChanged(nameof(HasGuides));
+        OnPropertyChanged(nameof(GuidesNeedingAttentionCount));
         OnPropertyChanged(nameof(ShowEmptyState));
 
         StatusMessage = HasGuides
@@ -152,13 +193,88 @@ public sealed partial class HardwareHubViewModel : ObservableObject
             : LocalizationManager.Instance["StatusGuidesNone"];
     }
 
-    private bool AppliesToCurrentHardware(GuideItem guide)
+    /// <summary>Shows a specific guide's detail (step wizard or up-to-date state) by its catalog id.</summary>
+    public void SelectGuideById(string id)
     {
-        if (string.IsNullOrWhiteSpace(guide.RequiredGpuVendor))
-            return true;
+        _selectedGuideId = id;
+        SelectedGuide = Guides.FirstOrDefault(g => string.Equals(g.Id, id, StringComparison.OrdinalIgnoreCase));
+    }
 
-        return string.Equals(guide.RequiredGpuVendor, Hardware.GpuVendor, StringComparison.OrdinalIgnoreCase);
+    /// <summary>Returns to the landing (explanation + entry cards), leaving Guides selected in the sidebar.</summary>
+    public void ShowLanding()
+    {
+        _selectedGuideId = null;
+        SelectedGuide = null;
+    }
+
+    private void RefreshSidebarGuides()
+    {
+        SidebarGuides.Clear();
+        foreach (var card in Guides)
+        {
+            if (!string.IsNullOrWhiteSpace(card.ShortLabel))
+                SidebarGuides.Add(new GuideSidebarItem(card.Id, card.ShortLabel));
+        }
+    }
+
+    private void OnGuideCardPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(GuideCardViewModel.IsCompleted) && sender is GuideCardViewModel { IsCompleted: true })
+        {
+            _ = RefreshAfterPossibleExternalChangeAsync();
+        }
+    }
+
+    /// <summary>
+    /// Forces a fresh dynamic check (bypassing the NVIDIA cache) and reloads guides, so an
+    /// update the user just performed — outside the app, or by finishing a guide's steps —
+    /// is reflected without needing an app restart. Call this when the window regains focus
+    /// or a guide's steps are finished; not on every ordinary page navigation, since that
+    /// would hit the network check far more often than needed.
+    /// </summary>
+    public async Task RefreshAfterPossibleExternalChangeAsync()
+    {
+        if (!_initialized)
+            return;
+
+        if (DateTime.UtcNow - _lastDynamicRefresh < DynamicRefreshThrottle)
+            return;
+
+        _lastDynamicRefresh = DateTime.UtcNow;
+        _nvidiaStatusCache = null;
+
+        try
+        {
+            await LoadGuidesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.Error("Dynamic guide re-verification failed.", ex);
+        }
+    }
+
+    /// <summary>
+    /// Decides whether a catalog guide should appear on this machine:
+    ///   - GPU-vendor guides only apply when the detected GPU vendor matches.
+    ///   - Software guides with a launch target only apply when that app is actually
+    ///     installed (<paramref name="appExePath"/> was resolved) — showing a guide for
+    ///     software the user doesn't have would just be clutter, not "hard to find" the
+    ///     one guide that does apply.
+    ///   - Anything else always applies.
+    /// </summary>
+    private bool AppliesToCurrentMachine(GuideItem guide, string? appExePath)
+    {
+        if (!string.IsNullOrWhiteSpace(guide.RequiredGpuVendor))
+            return string.Equals(guide.RequiredGpuVendor, Hardware.GpuVendor, StringComparison.OrdinalIgnoreCase);
+
+        if (guide.Category == GuideCategory.Software && guide.AppLaunch is { ExeCandidates.Count: > 0 })
+            return appExePath is not null;
+
+        return true;
     }
 
     partial void OnIsLoadingChanged(bool value) => OnPropertyChanged(nameof(ShowEmptyState));
 }
+
+/// <summary>A single applicable guide shown as a sidebar sub-branch under "Guides".</summary>
+public sealed record GuideSidebarItem(string Id, string Label);

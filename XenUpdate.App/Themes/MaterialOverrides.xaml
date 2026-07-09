@@ -2,6 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
                     xmlns:behaviors="clr-namespace:XenUpdate.App.Behaviors"
+                    xmlns:converters="clr-namespace:XenUpdate.App.Converters"
                     xmlns:loc="clr-namespace:XenUpdate.App.Services">
 
     <!--
@@ -22,6 +23,7 @@
         We register it here as a global resource so every View can use it.
     -->
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    <converters:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" />
 
     <!-- ===== Status Badge (shared across Programs, Windows Updates, Drivers) =====
 
@@ -594,11 +596,45 @@
         Glass-lite panels: semi-transparent fill + hairline border + rounded corners.
         No Blur effect — WPF blurs are expensive; this fakes glass with alpha only.
     -->
+    <!--
+        A plain Border has no built-in elevation, so without an explicit shadow these panels
+        (empty states, progress panels, hardware/guide cards) read as flat rectangles — most
+        noticeable in Light theme, where the panel fill and the ambient background are both
+        near-white with almost no luminance difference. The shadow gives every panel a
+        physical "resting on the background" depth cue regardless of theme.
+    -->
     <Style x:Key="ZenGlassPanelStyle" TargetType="Border">
         <Setter Property="Background" Value="{DynamicResource ZenGlassPanelBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource ZenGlassBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Effect">
+            <Setter.Value>
+                <DropShadowEffect BlurRadius="16"
+                                  ShadowDepth="3"
+                                  Direction="270"
+                                  Color="#000000"
+                                  Opacity="0.14"
+                                  RenderingBias="Performance" />
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        Clickable entry card (Guides landing, and any future "pick one of these" grid): same
+        glass panel base, but a primary-coloured border and a hand cursor mark it as
+        actionable, plus a hover highlight so it reads as a button-like surface, not just
+        another info panel.
+    -->
+    <Style x:Key="ZenGuideEntryCardStyle" TargetType="Border" BasedOn="{StaticResource ZenGlassPanelStyle}">
+        <Setter Property="BorderBrush" Value="{DynamicResource ZenPrimaryBrush}" />
+        <Setter Property="BorderThickness" Value="1.5" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource ZenSidebarHoverBrush}" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <!--
@@ -649,10 +685,27 @@
         </Setter>
     </Style>
 
-    <!-- Settings / summary cards: restrained elevation + glass fill -->
+    <!--
+        Settings / summary cards: restrained elevation + glass fill.
+        No BasedOn here — "MaterialDesignCard" is not an actual resource key in the
+        MaterialDesignThemes library (a guess that turned out wrong), and referencing a
+        missing StaticResource throws at style-application time, crashing the app the moment
+        the Settings page (the only ZenGlassCardStyle consumer) is opened. The explicit Effect
+        setter below is what actually delivers the shadow; it doesn't need a base style.
+    -->
     <Style x:Key="ZenGlassCardStyle" TargetType="materialDesign:Card">
         <Setter Property="Background" Value="{DynamicResource ZenGlassPanelBrush}" />
         <Setter Property="UniformCornerRadius" Value="14" />
+        <Setter Property="Effect">
+            <Setter.Value>
+                <DropShadowEffect BlurRadius="18"
+                                  ShadowDepth="3"
+                                  Direction="270"
+                                  Color="#000000"
+                                  Opacity="0.14"
+                                  RenderingBias="Performance" />
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!--

@@ -13,5 +13,8 @@ public enum UpdateSource
     WindowsUpdate,
 
     /// <summary>Update discovered by the Windows Update service (hardware drivers).</summary>
-    Driver
+    Driver,
+
+    /// <summary>Update discovered by pip (outdated Python packages).</summary>
+    Pip
 }

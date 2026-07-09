@@ -15,6 +15,12 @@ public sealed class GuideItem
     /// <summary>Short, user-facing title.</summary>
     public string Title { get; init; } = string.Empty;
 
+    /// <summary>
+    /// Compact label for tight spaces (the sidebar sub-branch) — a vendor/product name like
+    /// "NVIDIA" or "Visual Studio", not the full sentence-style <see cref="Title"/>.
+    /// </summary>
+    public string ShortLabel { get; init; } = string.Empty;
+
     /// <summary>Plain-language explanation of why this update matters.</summary>
     public string Why { get; init; } = string.Empty;
 
