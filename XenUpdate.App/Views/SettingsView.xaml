@@ -231,6 +231,60 @@
                 </StackPanel>
             </materialDesign:Card>
 
+            <!-- Whitelist Card: updates pre-approved to install themselves the moment the app is online. -->
+            <materialDesign:Card Style="{StaticResource ZenGlassCardStyle}" Padding="24" Margin="0,0,0,8">
+                <StackPanel>
+                    <TextBlock Text="{Binding [WhitelistTitle], Source={x:Static loc:LocalizationManager.Instance}}"
+                               Style="{StaticResource MaterialDesignSubtitle1TextBlock}"
+                               Margin="0,0,0,4" />
+                    <TextBlock Text="{Binding [WhitelistDesc], Source={x:Static loc:LocalizationManager.Instance}}"
+                               Opacity="0.6" FontSize="12" Margin="0,0,0,12" TextWrapping="Wrap" />
+
+                    <Border Style="{StaticResource ZenDataGridChromeStyle}">
+                        <DataGrid x:Name="WhitelistDataGrid"
+                                  ItemsSource="{Binding WhitelistEntries}"
+                                  SelectedItem="{Binding SelectedWhitelistEntry}"
+                                  SelectionMode="Extended"
+                                  AutoGenerateColumns="False"
+                                  CanUserAddRows="False"
+                                  CanUserDeleteRows="False"
+                                  IsReadOnly="True"
+                                  MinHeight="140"
+                                  Background="{DynamicResource ZenDataGridSurfaceBrush}"
+                                  Foreground="{DynamicResource ZenTextBrush}"
+                                  ColumnHeaderStyle="{StaticResource ZenDataGridColumnHeaderStyle}"
+                                  RowStyle="{StaticResource ZenDataGridRowStyle}"
+                                  CellStyle="{StaticResource ZenDataGridCellStyle}"
+                                  materialDesign:DataGridAssist.CellPadding="8 6"
+                                  materialDesign:DataGridAssist.ColumnHeaderPadding="8 6">
+                            <DataGrid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="{Binding [CtxCopyPackageId], Source={x:Static loc:LocalizationManager.Instance}}"
+                                              Click="CopyWhitelistIdMenuItem_OnClick" />
+                                </ContextMenu>
+                            </DataGrid.ContextMenu>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="{Binding [ColDisplayName], Source={x:Static loc:LocalizationManager.Instance}}"
+                                                    Binding="{Binding DisplayName}"
+                                                    Width="2*" />
+                                <DataGridTextColumn Header="{Binding [ColSource], Source={x:Static loc:LocalizationManager.Instance}}"
+                                                    Binding="{Binding Source}"
+                                                    Width="1*" />
+                                <DataGridTextColumn Header="{Binding [ColPackageId], Source={x:Static loc:LocalizationManager.Instance}}"
+                                                    Binding="{Binding Id}"
+                                                    Width="2*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+
+                    <Button Content="{Binding [RemoveSelected], Source={x:Static loc:LocalizationManager.Instance}}"
+                            Click="RemoveSelectedWhitelistButton_OnClick"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Margin="0,12,0,0"
+                            HorizontalAlignment="Left" />
+                </StackPanel>
+            </materialDesign:Card>
+
             <TextBlock Text="{Binding StatusMessage}"
                        Opacity="0.65"
                        FontSize="12"

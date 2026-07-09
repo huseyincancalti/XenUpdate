@@ -59,16 +59,21 @@ public partial class ProgramsView : UserControl
 
     private void ProgramsContextMenu_OnOpened(object sender, RoutedEventArgs e)
     {
-        var hasContextItem = GetContextItem() is not null;
+        var contextItem = GetContextItem();
+        var hasContextItem = contextItem is not null;
         var hasSelectedItems = GetSelectedItems().Count > 0;
 
         CopyPackageIdMenuItem.IsEnabled = hasContextItem;
         CopyAppNameMenuItem.IsEnabled = hasContextItem;
         CopyAppNameAndPackageIdMenuItem.IsEnabled = hasContextItem;
         AddToBlacklistMenuItem.IsEnabled = hasContextItem;
+        AddToWhitelistMenuItem.IsEnabled = hasContextItem && contextItem?.IsWhitelisted == false;
+        RemoveFromWhitelistMenuItem.IsEnabled = hasContextItem && contextItem?.IsWhitelisted == true;
 
         CopySelectedPackageIdsMenuItem.IsEnabled = hasSelectedItems;
         AddSelectedToBlacklistMenuItem.IsEnabled = hasSelectedItems;
+        AddSelectedToWhitelistMenuItem.IsEnabled = hasSelectedItems;
+        RemoveSelectedFromWhitelistMenuItem.IsEnabled = hasSelectedItems;
     }
 
     private void CopyPackageIdMenuItem_OnClick(object sender, RoutedEventArgs e)
@@ -144,6 +149,60 @@ public partial class ProgramsView : UserControl
         }
 
         await viewModel.AddItemsToBlacklistAsync(selectedItems);
+    }
+
+    private async void AddToWhitelistMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        var item = GetContextItem();
+        if (item is null || DataContext is not ProgramsViewModel viewModel)
+        {
+            return;
+        }
+
+        await viewModel.AddItemsToWhitelistAsync(new[] { item });
+    }
+
+    private async void RemoveFromWhitelistMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        var item = GetContextItem();
+        if (item is null || DataContext is not ProgramsViewModel viewModel)
+        {
+            return;
+        }
+
+        await viewModel.RemoveItemsFromWhitelistAsync(new[] { item });
+    }
+
+    private async void AddSelectedToWhitelistMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not ProgramsViewModel viewModel)
+        {
+            return;
+        }
+
+        var selectedItems = GetSelectedItems();
+        if (selectedItems.Count == 0)
+        {
+            return;
+        }
+
+        await viewModel.AddItemsToWhitelistAsync(selectedItems);
+    }
+
+    private async void RemoveSelectedFromWhitelistMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not ProgramsViewModel viewModel)
+        {
+            return;
+        }
+
+        var selectedItems = GetSelectedItems();
+        if (selectedItems.Count == 0)
+        {
+            return;
+        }
+
+        await viewModel.RemoveItemsFromWhitelistAsync(selectedItems);
     }
 
     private AppUpdateItem? GetContextItem()

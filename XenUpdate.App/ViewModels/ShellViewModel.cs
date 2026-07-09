@@ -44,6 +44,12 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private readonly NetworkMonitorService _networkMonitor = new();
 
+    private DateTime _lastWhitelistAutoUpdateRun = DateTime.MinValue;
+
+    // A flapping connection (wifi dropping in and out) would otherwise fire a fresh scan on
+    // every single reconnect; this keeps repeated triggers within a short window a no-op.
+    private static readonly TimeSpan WhitelistAutoUpdateThrottle = TimeSpan.FromSeconds(30);
+
     public LogConsoleViewModel LogConsole { get; }
 
     /// <summary>The Settings page VM. Also the single source of theme state for the title-bar toggle.</summary>
@@ -56,7 +62,13 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty]
     private ObservableObject? _currentPage;
 
-    /// <summary>The active navigation selection.</summary>
+    /// <summary>
+    /// The active navigation selection. This is the single source of truth for which page is
+    /// showing: setting it (from anywhere — the sidebar click, a stat-card click on Overview, a
+    /// sidebar guide sub-branch) both switches <see cref="CurrentPage"/> and keeps the sidebar's
+    /// own highlighted item in sync, since <c>NavList</c> binds its <c>SelectedValue</c> straight
+    /// to this property instead of driving it one-way from a code-behind event handler.
+    /// </summary>
     [ObservableProperty]
     private AppPage _selectedPage = AppPage.Overview;
 
@@ -106,18 +118,38 @@ public sealed partial class ShellViewModel : ObservableObject
         _settingsRepository = settingsRepository;
         _logger = logger;
 
-        NavigateTo(AppPage.Overview);
+        // Set directly rather than through NavigateTo: SelectedPage's field already defaults to
+        // AppPage.Overview, so calling NavigateTo(AppPage.Overview) here would be a no-op change
+        // (the generated property setter skips notification when the value is unchanged) and
+        // OnSelectedPageChanged would never fire to populate CurrentPage.
+        CurrentPage = _overviewVm;
 
         IsOnline = _networkMonitor.IsOnline;
         _networkMonitor.OnlineStatusChanged += online =>
+        {
             Application.Current.Dispatcher.InvokeAsync(() => IsOnline = online);
+
+            // Wifi/internet just came back — pre-approved (whitelisted) updates install
+            // themselves right now, with no manual click needed on any page.
+            if (online)
+            {
+                _ = RunWhitelistedAutoUpdatesAsync();
+            }
+        };
     }
 
     [RelayCommand]
-    public void NavigateTo(AppPage page)
+    public void NavigateTo(AppPage page) => SelectedPage = page;
+
+    /// <summary>
+    /// Switches the displayed page content whenever SelectedPage changes, from any source —
+    /// the sidebar's own SelectedValue binding, NavigateTo, or code setting SelectedPage
+    /// directly (e.g. a guide sub-branch click). Centralizing this here is what keeps the
+    /// sidebar highlight and the content area from ever disagreeing about the current page.
+    /// </summary>
+    partial void OnSelectedPageChanged(AppPage value)
     {
-        SelectedPage = page;
-        CurrentPage = page switch
+        CurrentPage = value switch
         {
             AppPage.Overview       => _overviewVm,
             AppPage.Programs       => _programsVm,
@@ -210,6 +242,14 @@ public sealed partial class ShellViewModel : ObservableObject
         // Detect hardware and load guides now (not lazily on first visit to the Guides page),
         // so the sidebar's category sub-branches are populated as soon as the app opens.
         _ = _hardwareHubVm.InitializeAsync();
+
+        // The machine may already be online when the app starts (the common case) — run
+        // whitelisted auto-updates now rather than waiting for a connectivity transition
+        // that may never come during this session.
+        if (_networkMonitor.IsOnline)
+        {
+            _ = RunWhitelistedAutoUpdatesAsync();
+        }
     }
 
     /// <summary>
@@ -218,6 +258,34 @@ public sealed partial class ShellViewModel : ObservableObject
     /// something outside the app.
     /// </summary>
     public Task RefreshGuidesAfterActivationAsync() => _hardwareHubVm.RefreshAfterPossibleExternalChangeAsync();
+
+    /// <summary>
+    /// Runs every page's whitelisted auto-update check in parallel. Each page ViewModel
+    /// bails out immediately if it's busy or has nothing whitelisted, so this is cheap to
+    /// call speculatively (app startup, every online transition).
+    /// </summary>
+    private async Task RunWhitelistedAutoUpdatesAsync()
+    {
+        if (DateTime.UtcNow - _lastWhitelistAutoUpdateRun < WhitelistAutoUpdateThrottle)
+        {
+            return;
+        }
+
+        _lastWhitelistAutoUpdateRun = DateTime.UtcNow;
+
+        try
+        {
+            await Task.WhenAll(
+                _programsVm.RunWhitelistedAutoUpdateAsync(),
+                _windowsUpdatesVm.RunWhitelistedAutoUpdateAsync(),
+                _driversVm.RunWhitelistedAutoUpdateAsync(),
+                _pipPackagesVm.RunWhitelistedAutoUpdateAsync());
+        }
+        catch (Exception ex)
+        {
+            _logger.Error("Whitelisted auto-update run failed.", ex);
+        }
+    }
 
     private async Task CheckForAppUpdateAsync()
     {

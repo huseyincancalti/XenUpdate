@@ -25,6 +25,7 @@ public sealed partial class SettingsViewModel : ObservableObject
 {
     private readonly ISettingsRepository _settingsRepo;
     private readonly IBlacklistRepository _blacklistRepo;
+    private readonly IWhitelistRepository _whitelistRepo;
     private readonly ILoggerService _logger;
     private readonly IThemeService _themeService;
 
@@ -60,6 +61,19 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     /// <summary>The list of blacklist entries shown in the Settings UI.</summary>
     public ObservableCollection<BlacklistEntry> BlacklistEntries { get; } = new();
+
+    /// <summary>The currently selected whitelist entry in the UI.</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RemoveSelectedWhitelistEntryCommand))]
+    private WhitelistEntry? _selectedWhitelistEntry;
+
+    /// <summary>
+    /// The list of whitelisted updates shown in the Settings UI. Entries are only ever added
+    /// from a page's "Add to Auto-Update" context menu action (where the display name and
+    /// source are known for certain) — there is no free-form add form here, unlike the
+    /// blacklist, since typing an arbitrary ID here would have nothing to match against.
+    /// </summary>
+    public ObservableCollection<WhitelistEntry> WhitelistEntries { get; } = new();
 
     /// <summary>A selectable UI language: its code plus a display name.</summary>
     public sealed record LanguageOption(string Code, string Display);
@@ -98,11 +112,13 @@ public sealed partial class SettingsViewModel : ObservableObject
     public SettingsViewModel(
         ISettingsRepository settingsRepo,
         IBlacklistRepository blacklistRepo,
+        IWhitelistRepository whitelistRepo,
         ILoggerService logger,
         IThemeService themeService)
     {
         _settingsRepo = settingsRepo;
         _blacklistRepo = blacklistRepo;
+        _whitelistRepo = whitelistRepo;
         _logger = logger;
         _themeService = themeService;
 
@@ -110,6 +126,10 @@ public sealed partial class SettingsViewModel : ObservableObject
         // the repository fires BlacklistChanged. We refresh the visible list so the
         // Settings page always stays in sync without a manual reload.
         _blacklistRepo.BlacklistChanged += OnBlacklistChangedExternally;
+
+        // Same idea for the whitelist: any page's context menu can add/remove an entry,
+        // so this page reloads its list whenever that happens elsewhere.
+        _whitelistRepo.WhitelistChanged += OnWhitelistChangedExternally;
 
         _ = InitializeAsync();
     }
@@ -141,6 +161,7 @@ public sealed partial class SettingsViewModel : ObservableObject
                     .Equals("tr", StringComparison.OrdinalIgnoreCase) ? "tr" : "en");
 
             await ReloadBlacklistEntriesAsync();
+            await ReloadWhitelistEntriesAsync();
             StatusMessage = L.T("SettingsLoaded");
             _logger.Info("Settings loaded.");
         }
@@ -270,6 +291,69 @@ public sealed partial class SettingsViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Removes the currently selected whitelist entry.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanRemoveSelectedWhitelistEntry))]
+    public async Task RemoveSelectedWhitelistEntryAsync()
+    {
+        if (SelectedWhitelistEntry is null)
+        {
+            return;
+        }
+
+        var entry = SelectedWhitelistEntry;
+
+        try
+        {
+            await _whitelistRepo.RemoveAsync(entry.Source, entry.Id);
+            await ReloadWhitelistEntriesAsync();
+            SelectedWhitelistEntry = null;
+            StatusMessage = string.Format(L.T("RemovedSingleFromWhitelist"), entry.DisplayName);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = L.T("WhitelistRemoveFailed");
+            _logger.Error("Whitelist remove failed.", ex);
+        }
+    }
+
+    /// <summary>
+    /// Removes every entry in <paramref name="entries"/> from the repository and
+    /// immediately refreshes the visible whitelist. Handles both single- and multi-selection.
+    /// </summary>
+    public async Task RemoveWhitelistEntriesAsync(IEnumerable<WhitelistEntry> entries)
+    {
+        var toRemove = entries.ToList();
+        if (toRemove.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            foreach (var entry in toRemove)
+            {
+                await _whitelistRepo.RemoveAsync(entry.Source, entry.Id);
+            }
+
+            await ReloadWhitelistEntriesAsync();
+
+            StatusMessage = toRemove.Count == 1
+                ? string.Format(L.T("RemovedSingleFromWhitelist"), toRemove[0].DisplayName)
+                : string.Format(L.T("RemovedMultipleFromWhitelist"), toRemove.Count);
+
+            _logger.Info($"Whitelist: removed {toRemove.Count} entry(ies).");
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = L.T("WhitelistBulkRemoveFailed");
+            _logger.Error("Whitelist bulk remove failed.", ex);
+        }
+    }
+
+    private bool CanRemoveSelectedWhitelistEntry() => SelectedWhitelistEntry is not null;
+
+    /// <summary>
     /// Called by the repository whenever the blacklist file changes from any source
     /// (e.g. Programs page context menu). Runs a UI-thread reload so this page stays
     /// in sync even when it is already open.
@@ -281,6 +365,19 @@ public sealed partial class SettingsViewModel : ObservableObject
         Application.Current.Dispatcher.InvokeAsync(async () =>
         {
             await ReloadBlacklistEntriesAsync();
+        });
+    }
+
+    /// <summary>
+    /// Called by the repository whenever the whitelist file changes from any source
+    /// (e.g. a page's "Add to Auto-Update" context menu action). Runs a UI-thread reload
+    /// so this page stays in sync even when it is already open.
+    /// </summary>
+    private void OnWhitelistChangedExternally()
+    {
+        Application.Current.Dispatcher.InvokeAsync(async () =>
+        {
+            await ReloadWhitelistEntriesAsync();
         });
     }
 
@@ -406,5 +503,18 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
 
         _logger.Info($"Blacklist loaded: {BlacklistEntries.Count} entry(ies).");
+    }
+
+    private async Task ReloadWhitelistEntriesAsync()
+    {
+        var entries = await _whitelistRepo.GetEntriesAsync();
+
+        WhitelistEntries.Clear();
+        foreach (var entry in entries)
+        {
+            WhitelistEntries.Add(entry);
+        }
+
+        _logger.Info($"Whitelist loaded: {WhitelistEntries.Count} entry(ies).");
     }
 }

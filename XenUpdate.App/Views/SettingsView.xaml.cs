@@ -66,6 +66,39 @@ public partial class SettingsView : UserControl
         }
     }
 
+    /// <summary>
+    /// Removes all currently selected whitelist rows.
+    /// Reads <see cref="DataGrid.SelectedItems"/> so every Ctrl/Shift-selected
+    /// row is included, then delegates to <see cref="SettingsViewModel.RemoveWhitelistEntriesAsync"/>.
+    /// </summary>
+    private async void RemoveSelectedWhitelistButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not SettingsViewModel viewModel)
+        {
+            return;
+        }
+
+        var selected = WhitelistDataGrid.SelectedItems
+            .OfType<WhitelistEntry>()
+            .ToList();
+
+        if (selected.Count == 0)
+        {
+            return;
+        }
+
+        await viewModel.RemoveWhitelistEntriesAsync(selected);
+    }
+
+    /// <summary>Copies the focused row's ID to the clipboard.</summary>
+    private void CopyWhitelistIdMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (WhitelistDataGrid.SelectedItem is WhitelistEntry entry)
+        {
+            CopyToClipboard(entry.Id);
+        }
+    }
+
     private static void CopyToClipboard(string text)
     {
         if (!string.IsNullOrWhiteSpace(text))

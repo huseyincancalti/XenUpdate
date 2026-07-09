@@ -1,5 +1,4 @@
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using XenUpdate.App.Messages;
@@ -87,23 +86,49 @@ public partial class MainWindow : Window
         }
     }
 
-    private void NavList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    // Clicking the "Guides" parent row itself always shows the guide list/landing — even if a
+    // specific guide was previously selected — so it reads as a clearly separate action from
+    // clicking one of its sub-branches below, instead of both looking like "the same tab".
+    //
+    // Wired to PreviewMouseLeftButtonDown, not Up: ListBoxItem selects on mouse-DOWN, so this
+    // needs to update GuidesViewModel's state before that selection change happens, not after.
+    private void GuidesParentRow_OnClick(object sender, MouseButtonEventArgs e)
     {
-        if (DataContext is ShellViewModel vm && NavList.SelectedItem is ListBoxItem { Tag: AppPage page })
+        if (DataContext is ShellViewModel vm)
         {
-            vm.NavigateToCommand.Execute(page);
+            vm.GuidesViewModel.ShowLanding();
         }
     }
 
-    // Fires before the click bubbles up and the ListBox selects the parent "Guides" item, so
-    // both the navigation (via NavList_SelectionChanged) and the specific-guide selection below
-    // happen from one click on a sidebar sub-branch.
+    // Wired to PreviewMouseLeftButtonDown for the same reason as GuidesParentRow_OnClick above —
+    // this needs to land before the ListBoxItem's own mouse-down-triggered selection change.
     private void GuideSidebarItem_OnClick(object sender, MouseButtonEventArgs e)
     {
         if (sender is FrameworkElement { DataContext: GuideSidebarItem item } && DataContext is ShellViewModel vm)
         {
             vm.GuidesViewModel.SelectGuideById(item.Id);
         }
+    }
+
+    // Each sidebar group is its own ListBox, and ListBox's default template contains its own
+    // ScrollViewer — which swallows the mouse wheel (marks it Handled) as soon as the cursor is
+    // over any of its rows, even though that inner ScrollViewer has nothing to scroll. Without
+    // this, the outer sidebar ScrollViewer only responds while the cursor happens to be over the
+    // gaps between cards. Re-raising a fresh bubbling MouseWheel event from here lets it propagate
+    // normally up to the outer ScrollViewer, which does the actual scrolling.
+    private void SidebarNavList_OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (e.Handled || sender is not UIElement element)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        var bubbledArgs = new MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta)
+        {
+            RoutedEvent = MouseWheelEvent
+        };
+        element.RaiseEvent(bubbledArgs);
     }
 
     private void MinimizeButton_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;

@@ -1,5 +1,6 @@
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using XenUpdate.App.Collections;
@@ -23,6 +24,7 @@ public sealed partial class PipPackagesViewModel : ObservableObject
 {
     private readonly IPipScanner _scanner;
     private readonly IPipInstaller _installer;
+    private readonly IWhitelistRepository _whitelistRepository;
     private readonly ILoggerService _logger;
 
     private CancellationTokenSource? _operationCts;
@@ -49,6 +51,18 @@ public sealed partial class PipPackagesViewModel : ObservableObject
     /// <summary>True only while a scan (initial or post-install refresh) is running.</summary>
     [ObservableProperty]
     private bool _isScanning;
+
+    /// <summary>
+    /// A simulated scan progress percentage (pip doesn't report real scan progress).
+    /// Climbs quickly at first then eases off, capped at 92 until the scan actually
+    /// finishes, at which point it jumps to 100 — gives a "this is completing" feel
+    /// instead of an indefinite spinner with no sense of how far along it is.
+    /// </summary>
+    [ObservableProperty]
+    private int _scanProgressPercent;
+
+    private readonly System.Windows.Threading.DispatcherTimer _scanProgressTimer =
+        new() { Interval = TimeSpan.FromMilliseconds(150) };
 
     /// <summary>Short status line shown below the page content.</summary>
     [ObservableProperty]
@@ -117,13 +131,31 @@ public sealed partial class PipPackagesViewModel : ObservableObject
     }
 
     /// <summary>Initializes the ViewModel with its required services.</summary>
-    public PipPackagesViewModel(IPipScanner scanner, IPipInstaller installer, ILoggerService logger)
+    public PipPackagesViewModel(IPipScanner scanner, IPipInstaller installer, IWhitelistRepository whitelistRepository, ILoggerService logger)
     {
         _scanner = scanner;
         _installer = installer;
+        _whitelistRepository = whitelistRepository;
         _logger = logger;
 
         Updates.CollectionChanged += OnUpdatesCollectionChanged;
+
+        // The whitelist can change from this page's own context menu, another page, or the
+        // Settings page — re-apply state whenever that happens so the star badge stays in sync.
+        _whitelistRepository.WhitelistChanged += OnWhitelistChangedExternally;
+
+        _scanProgressTimer.Tick += OnScanProgressTick;
+    }
+
+    private void OnScanProgressTick(object? sender, EventArgs e)
+    {
+        var remaining = 92 - ScanProgressPercent;
+        if (remaining <= 0)
+        {
+            return;
+        }
+
+        ScanProgressPercent = Math.Min(92, ScanProgressPercent + Math.Max(1, remaining / 8));
     }
 
     /// <summary>Scans for outdated pip packages in the background.</summary>
@@ -145,6 +177,9 @@ public sealed partial class PipPackagesViewModel : ObservableObject
         Updates.Clear();
         StatusMessage = L.T("StatusScanning");
 
+        ScanProgressPercent = 0;
+        _scanProgressTimer.Start();
+
         try
         {
             var results = await _scanner.GetAvailableUpdatesAsync(_operationCts!.Token);
@@ -154,9 +189,11 @@ public sealed partial class PipPackagesViewModel : ObservableObject
                 item.Status = UpdateStatus.Pending;
             }
             Updates.ReplaceAll(results);
+            await ApplyWhitelistStateAsync();
 
             HasUpdates = Updates.Count > 0;
             HasScanned = true;
+            ScanProgressPercent = 100;
 
             StatusMessage = HasUpdates
                 ? string.Format(L.T("StatusUpdatesAvailable"), Updates.Count)
@@ -173,6 +210,7 @@ public sealed partial class PipPackagesViewModel : ObservableObject
         }
         finally
         {
+            _scanProgressTimer.Stop();
             IsBusy = false;
             IsScanning = false;
             NotifyVisibilityPropertiesChanged();
@@ -290,6 +328,126 @@ public sealed partial class PipPackagesViewModel : ObservableObject
     }
 
     private bool CanInstallSelected() => !IsBusy && Updates.Any(update => update.IsSelected);
+
+    /// <summary>Refreshes <see cref="UpdateItem.IsWhitelisted"/> on every visible row from the repository.</summary>
+    private async Task ApplyWhitelistStateAsync()
+    {
+        var whitelistedIds = await _whitelistRepository.GetWhitelistedIdsAsync(UpdateSource.Pip);
+        var set = whitelistedIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var item in Updates)
+        {
+            item.IsWhitelisted = set.Contains(item.Id);
+        }
+    }
+
+    /// <summary>
+    /// Called whenever the whitelist changes from any source (this page's own context menu,
+    /// another page, or the Settings page). Re-applies whitelist state to the currently
+    /// visible rows so a star badge never lingers after the entry was removed elsewhere.
+    /// </summary>
+    private void OnWhitelistChangedExternally()
+    {
+        Application.Current.Dispatcher.InvokeAsync(async () =>
+        {
+            await ApplyWhitelistStateAsync();
+        });
+    }
+
+    /// <summary>
+    /// Adds the given rows to the whitelist — pre-approving them to install themselves the
+    /// moment the app is next online. Unlike blacklisting, whitelisted rows stay visible.
+    /// </summary>
+    public async Task<int> AddItemsToWhitelistAsync(IEnumerable<PipPackageItem> items)
+    {
+        var candidates = items.Where(item => item is not null && !item.IsWhitelisted && !string.IsNullOrWhiteSpace(item.Id)).ToList();
+        if (candidates.Count == 0)
+        {
+            return 0;
+        }
+
+        foreach (var item in candidates)
+        {
+            await _whitelistRepository.AddAsync(UpdateSource.Pip, item.Id, item.DisplayName);
+            item.IsWhitelisted = true;
+        }
+
+        StatusMessage = candidates.Count == 1
+            ? string.Format(L.T("AddedSingleToWhitelist"), candidates[0].DisplayName)
+            : string.Format(L.T("AddedMultipleToWhitelist"), candidates.Count);
+
+        _logger.Info($"Pip packages page added {candidates.Count} item(s) to the whitelist.");
+        return candidates.Count;
+    }
+
+    /// <summary>Removes the given rows from the whitelist.</summary>
+    public async Task<int> RemoveItemsFromWhitelistAsync(IEnumerable<PipPackageItem> items)
+    {
+        var candidates = items.Where(item => item is not null && item.IsWhitelisted).ToList();
+        if (candidates.Count == 0)
+        {
+            return 0;
+        }
+
+        foreach (var item in candidates)
+        {
+            await _whitelistRepository.RemoveAsync(UpdateSource.Pip, item.Id);
+            item.IsWhitelisted = false;
+        }
+
+        StatusMessage = candidates.Count == 1
+            ? string.Format(L.T("RemovedSingleFromWhitelist"), candidates[0].DisplayName)
+            : string.Format(L.T("RemovedMultipleFromWhitelist"), candidates.Count);
+
+        _logger.Info($"Pip packages page removed {candidates.Count} item(s) from the whitelist.");
+        return candidates.Count;
+    }
+
+    /// <summary>
+    /// Scans if needed, then silently installs any known update whose ID is on the
+    /// whitelist. Triggered when the app detects it just came online, so pre-approved
+    /// packages update themselves without the user ever opening this page.
+    /// </summary>
+    public async Task RunWhitelistedAutoUpdateAsync()
+    {
+        if (IsBusy)
+        {
+            return;
+        }
+
+        var whitelistedIds = await _whitelistRepository.GetWhitelistedIdsAsync(UpdateSource.Pip);
+        if (whitelistedIds.Count == 0)
+        {
+            return;
+        }
+
+        if (!HasScanned && ScanCommand.CanExecute(null))
+        {
+            await ScanCommand.ExecuteAsync(null);
+        }
+
+        if (IsBusy)
+        {
+            return;
+        }
+
+        var targets = Updates.Where(item => item.IsWhitelisted && item.Status == UpdateStatus.Pending).ToList();
+        if (targets.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var item in targets)
+        {
+            item.IsSelected = true;
+        }
+
+        if (InstallSelectedCommand.CanExecute(null))
+        {
+            _logger.Info($"Auto-installing {targets.Count} whitelisted pip package(s) after coming online.");
+            await InstallSelectedCommand.ExecuteAsync(null);
+        }
+    }
 
     /// <summary>Cancels the currently running scan or install batch.</summary>
     [RelayCommand]

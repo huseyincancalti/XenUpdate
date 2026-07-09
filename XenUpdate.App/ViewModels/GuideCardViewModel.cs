@@ -65,10 +65,20 @@ public sealed partial class GuideCardViewModel : ObservableObject
     /// </summary>
     public bool IsUpToDate => _driverStatus is { Checked: true, UpdateAvailable: false };
 
-    /// <summary>e.g. "Your NVIDIA driver is up to date (v566.36)".</summary>
-    public string UpToDateMessage => IsUpToDate
-        ? string.Format(LocalizationManager.Instance["DriverCurrent"], _driverStatus!.InstalledVersion)
-        : string.Empty;
+    /// <summary>
+    /// e.g. "Your NVIDIA driver is up to date (v566.36)" for a driver guide, or
+    /// "Visual Studio is up to date (v17.12.35527.113)" for a software guide — the driver
+    /// wording already names the vendor, so it only needs the version; the generic software
+    /// wording has no product name built in, so it needs both.
+    /// </summary>
+    public string UpToDateMessage => IsUpToDate switch
+    {
+        true when Category == GuideCategory.GraphicsDriver =>
+            string.Format(LocalizationManager.Instance["DriverCurrent"], _driverStatus!.InstalledVersion),
+        true =>
+            string.Format(LocalizationManager.Instance["SoftwareCurrent"], Title, _driverStatus!.InstalledVersion),
+        _ => string.Empty
+    };
 
     [ObservableProperty]
     private int _currentIndex;

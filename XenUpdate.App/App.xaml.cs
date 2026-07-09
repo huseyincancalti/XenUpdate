@@ -226,6 +226,17 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        // H.NotifyIcon's TaskbarIcon owns a native hidden window that receives tray messages.
+        // If it's never disposed, that window (and the process) can outlive the WPF shutdown
+        // sequence entirely — the app disappears from the taskbar/tray but keeps running,
+        // visible only in Task Manager. This runs for every exit path (explicit tray "Exit",
+        // or the window naturally closing when "Minimize to tray" is off), since OnExit fires
+        // regardless of which one triggered shutdown.
+        if (MainWindow is MainWindow mainWindow)
+        {
+            mainWindow.AppTrayIcon.Dispose();
+        }
+
         if (Services is IDisposable disposable)
         {
             disposable.Dispose();

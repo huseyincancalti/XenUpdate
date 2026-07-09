@@ -64,6 +64,9 @@
         <GradientStop Color="#4F46E5" Offset="1" />
     </LinearGradientBrush>
 
+    <!-- Sidebar group cards (Updates/Guides/Settings): near-white so each group reads as a clean raised region against the indigo-wash sidebar -->
+    <SolidColorBrush x:Key="ZenSidebarCardBrush" Color="#EDF1FF" />
+
     <!-- Log: flatter, less saturated than sidebar (matte console strip) -->
     <SolidColorBrush x:Key="ZenLogDrawerMatteBrush" Color="#E2E5F0" />
     <SolidColorBrush x:Key="ZenLogDrawerHeaderHoverBrush" Color="#D5DAE6" />

@@ -21,10 +21,12 @@ public sealed partial class HardwareHubViewModel : ObservableObject
     private readonly IGuideCompletionStore _completionStore;
     private readonly IInstalledAppDetector _appDetector;
     private readonly INvidiaDriverService _nvidiaService;
+    private readonly IVisualStudioUpdateService _visualStudioService;
     private readonly ILoggerService _logger;
 
     private bool _initialized;
     private DriverUpdateStatus? _nvidiaStatusCache;
+    private DriverUpdateStatus? _visualStudioStatusCache;
     private DateTime _lastDynamicRefresh = DateTime.MinValue;
 
     // Throttles RefreshAfterPossibleExternalChangeAsync so rapid window-activation events
@@ -84,6 +86,7 @@ public sealed partial class HardwareHubViewModel : ObservableObject
         IGuideCompletionStore completionStore,
         IInstalledAppDetector appDetector,
         INvidiaDriverService nvidiaService,
+        IVisualStudioUpdateService visualStudioService,
         ILoggerService logger)
     {
         _hardwareScanner = hardwareScanner;
@@ -91,6 +94,7 @@ public sealed partial class HardwareHubViewModel : ObservableObject
         _completionStore = completionStore;
         _appDetector = appDetector;
         _nvidiaService = nvidiaService;
+        _visualStudioService = visualStudioService;
         _logger = logger;
 
         LocalizationManager.Instance.LanguageChanged += OnLanguageChanged;
@@ -164,6 +168,20 @@ public sealed partial class HardwareHubViewModel : ObservableObject
                     status = _nvidiaStatusCache;
                 }
             }
+            else if (string.Equals(guide.VersionCheckKind, "VisualStudio", StringComparison.OrdinalIgnoreCase))
+            {
+                if (_visualStudioStatusCache is null)
+                {
+                    var fresh = await _visualStudioService.CheckAsync();
+                    if (fresh.Checked)
+                        _visualStudioStatusCache = fresh;
+                    status = fresh;
+                }
+                else
+                {
+                    status = _visualStudioStatusCache;
+                }
+            }
 
             // Always add the card, current or not — GuideCardViewModel.IsUpToDate drives which
             // state the detail page and sidebar/landing entries show. A guide that applies to
@@ -198,6 +216,7 @@ public sealed partial class HardwareHubViewModel : ObservableObject
     {
         _selectedGuideId = id;
         SelectedGuide = Guides.FirstOrDefault(g => string.Equals(g.Id, id, StringComparison.OrdinalIgnoreCase));
+        UpdateSidebarActiveStates();
     }
 
     /// <summary>Returns to the landing (explanation + entry cards), leaving Guides selected in the sidebar.</summary>
@@ -205,6 +224,7 @@ public sealed partial class HardwareHubViewModel : ObservableObject
     {
         _selectedGuideId = null;
         SelectedGuide = null;
+        UpdateSidebarActiveStates();
     }
 
     private void RefreshSidebarGuides()
@@ -214,6 +234,19 @@ public sealed partial class HardwareHubViewModel : ObservableObject
         {
             if (!string.IsNullOrWhiteSpace(card.ShortLabel))
                 SidebarGuides.Add(new GuideSidebarItem(card.Id, card.ShortLabel));
+        }
+
+        UpdateSidebarActiveStates();
+    }
+
+    // Marks exactly the sub-branch matching the current selection as active, so the sidebar can
+    // highlight it distinctly from its siblings instead of every branch looking identical at rest.
+    private void UpdateSidebarActiveStates()
+    {
+        foreach (var item in SidebarGuides)
+        {
+            item.IsActive = _selectedGuideId is not null &&
+                            string.Equals(item.Id, _selectedGuideId, StringComparison.OrdinalIgnoreCase);
         }
     }
 
@@ -242,6 +275,7 @@ public sealed partial class HardwareHubViewModel : ObservableObject
 
         _lastDynamicRefresh = DateTime.UtcNow;
         _nvidiaStatusCache = null;
+        _visualStudioStatusCache = null;
 
         try
         {
@@ -276,5 +310,23 @@ public sealed partial class HardwareHubViewModel : ObservableObject
     partial void OnIsLoadingChanged(bool value) => OnPropertyChanged(nameof(ShowEmptyState));
 }
 
-/// <summary>A single applicable guide shown as a sidebar sub-branch under "Guides".</summary>
-public sealed record GuideSidebarItem(string Id, string Label);
+/// <summary>
+/// A single applicable guide shown as a sidebar sub-branch under "Guides". <see cref="IsActive"/>
+/// is mutable (not a plain record) so the sidebar can highlight exactly the one branch whose
+/// detail is currently showing, updated in place by <see cref="HardwareHubViewModel.SelectGuideById"/>
+/// and <see cref="HardwareHubViewModel.ShowLanding"/> without needing to rebuild the whole list.
+/// </summary>
+public sealed partial class GuideSidebarItem : ObservableObject
+{
+    public string Id { get; }
+    public string Label { get; }
+
+    [ObservableProperty]
+    private bool _isActive;
+
+    public GuideSidebarItem(string id, string label)
+    {
+        Id = id;
+        Label = label;
+    }
+}

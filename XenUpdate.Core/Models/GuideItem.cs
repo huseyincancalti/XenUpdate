@@ -45,6 +45,14 @@ public sealed class GuideItem
     /// </summary>
     public string? RequiredGpuVendor { get; init; }
 
+    /// <summary>
+    /// When set, identifies which real version-check service should verify this guide's
+    /// up-to-date state (e.g. "VisualStudio"). Null means no automatic check exists for this
+    /// guide — it always shows its step wizard, never an "up to date" reassurance state,
+    /// since there is nothing to compare the installed version against.
+    /// </summary>
+    public string? VersionCheckKind { get; init; }
+
     /// <summary>Optional: the vendor tool to open directly when it is installed.</summary>
     public GuideAppLaunch? AppLaunch { get; init; }
 }

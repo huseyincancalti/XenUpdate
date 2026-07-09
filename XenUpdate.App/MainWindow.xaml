@@ -108,6 +108,105 @@
             </Setter>
         </Style>
 
+        <!--
+            "Guides" is the one sidebar item whose content owns per-row active state (the
+            parent row lights up for the landing, one sub-branch lights up for whichever guide
+            is open) via its own nested Borders. If this item ALSO painted its entire block with
+            SidebarItemStyle's IsSelected background — which fires as soon as the Guides page is
+            merely the active page, regardless of which specific row is "active" — every nested
+            row would sit on that same fill color and the per-row highlight would be invisible,
+            since it's the identical color painted on top of itself. This style drops the
+            IsSelected fill entirely (keeping only hover) so the nested rows are the only source
+            of highlight, and are therefore actually visible.
+        -->
+        <Style x:Key="GuidesSidebarItemStyle" TargetType="ListBoxItem" BasedOn="{StaticResource SidebarItemStyle}">
+            <!--
+                Padding=0: the parent row and sub-branch group below manage their own padding
+                independently (the parent row uses the same 14,0 other tabs get; sub-items use
+                their own tree-indent), so this outer container must not ALSO add its own 14,0
+                on top — that would double the indent and shrink the available content width.
+            -->
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <!--
+                            No IsMouseOver trigger here (unlike the base style): a whole-block
+                            hover wash on this Root would paint over/dilute the per-row hover
+                            feedback the parent row and each sub-branch already provide on their
+                            own, undoing the "which one am I actually pointing at" clarity.
+                        -->
+                        <Border x:Name="Root"
+                                Background="Transparent"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!--
+            Overview is the flagship landing page, so it gets its own hero-styled item instead
+            of sharing SidebarItemStyle's plain rows: bigger, permanently gradient-filled, with
+            a white ring appearing only while it's the active page. The Template is fully
+            replaced (not just a Setter override) so this needs its own IsMouseOver/IsSelected
+            triggers — they aren't inherited from SidebarItemStyle once Template is replaced.
+        -->
+        <Style x:Key="OverviewSidebarItemStyle" TargetType="ListBoxItem" BasedOn="{StaticResource SidebarItemStyle}">
+            <Setter Property="MinHeight" Value="64" />
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Root"
+                                CornerRadius="12"
+                                Padding="{TemplateBinding Padding}"
+                                Opacity="0.8"
+                                BorderThickness="0"
+                                BorderBrush="White">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#7C3AED" Offset="0" />
+                                    <GradientStop Color="#4F46E5" Offset="1" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <!-- Order matters — see the comment on GuidesParentRow's style further down. -->
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Opacity" Value="0.92" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Root" Property="Opacity" Value="1" />
+                                <Setter TargetName="Root" Property="BorderThickness" Value="2" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Uppercase label above each grouped sidebar card (Updates/Guides/Settings) -->
+        <Style x:Key="SidebarSectionHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{DynamicResource ZenMutedTextBrush}" />
+            <Setter Property="Opacity" Value="0.75" />
+            <Setter Property="Margin" Value="24,16,12,8" />
+        </Style>
+
+        <!-- Bounded panel behind each grouped section, so groups read as distinct regions rather than one flat list -->
+        <Style x:Key="SidebarCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource ZenSidebarCardBrush}" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Margin" Value="12,0,12,4" />
+            <Setter Property="Padding" Value="4" />
+        </Style>
+
         <!-- Page VM → View map for the shell content area -->
         <DataTemplate DataType="{x:Type vm:OverviewViewModel}">
             <views:OverviewView />
@@ -279,7 +378,6 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="20,22,20,18">
@@ -292,138 +390,304 @@
                                    VerticalAlignment="Center" />
                     </StackPanel>
 
-                    <ListBox x:Name="NavList"
-                             Grid.Row="1"
-                             SelectedIndex="0"
-                             SelectionChanged="NavList_SelectionChanged"
-                             Background="Transparent"
-                             BorderThickness="0"
-                             ItemContainerStyle="{StaticResource SidebarItemStyle}">
-                        <ListBoxItem Tag="{x:Static vm:AppPage.Overview}">
-                            <StackPanel Orientation="Horizontal">
-                                <materialDesign:PackIcon Kind="ViewDashboard" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center" />
-                                <TextBlock Text="{Binding [NavOverview], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
-                            </StackPanel>
-                        </ListBoxItem>
-                        <ListBoxItem Tag="{x:Static vm:AppPage.Programs}">
-                            <StackPanel Orientation="Horizontal">
-                                <materialDesign:PackIcon Kind="PackageVariant" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center" />
-                                <TextBlock Text="{Binding [NavPrograms], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
-                            </StackPanel>
-                        </ListBoxItem>
-                        <ListBoxItem Tag="{x:Static vm:AppPage.WindowsUpdates}">
-                            <StackPanel Orientation="Horizontal">
-                                <materialDesign:PackIcon Kind="MicrosoftWindows" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center" />
-                                <TextBlock Text="{Binding [NavWindowsUpdates], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
-                            </StackPanel>
-                        </ListBoxItem>
-                        <ListBoxItem Tag="{x:Static vm:AppPage.Drivers}">
-                            <StackPanel Orientation="Horizontal">
-                                <materialDesign:PackIcon Kind="Cpu64Bit" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center" />
-                                <TextBlock Text="{Binding [NavDrivers], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
-                            </StackPanel>
-                        </ListBoxItem>
-                        <ListBoxItem Tag="{x:Static vm:AppPage.PipPackages}">
-                            <StackPanel Orientation="Horizontal">
-                                <materialDesign:PackIcon Kind="LanguagePython" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center" />
-                                <TextBlock Text="{Binding [NavPipPackages], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
-                            </StackPanel>
-                        </ListBoxItem>
-                        <ListBoxItem Tag="{x:Static vm:AppPage.HardwareHub}">
-                            <StackPanel>
-                                <StackPanel Orientation="Horizontal">
-                                    <materialDesign:PackIcon Kind="MapMarkerPath" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center" />
-                                    <TextBlock Text="{Binding [NavGuides], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
-                                </StackPanel>
-                                <!--
-                                    Sub-branches: the specific guides that actually apply to this
-                                    machine (e.g. "NVIDIA", "Visual Studio"), populated from
-                                    HardwareHubViewModel.SidebarGuides. A tree-branch connector icon
-                                    gives each row the "child of Guides" look. A click anywhere in
-                                    this ListBoxItem — including these rows — selects it via the
-                                    normal ListBox mechanism and navigates here, so no extra
-                                    click-handling code is needed.
-                                -->
-                                <ItemsControl ItemsSource="{Binding GuidesViewModel.SidebarGuides}"
-                                              Margin="18,4,0,0"
-                                              Visibility="{Binding GuidesViewModel.HasGuides, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <!--
-                                                PreviewMouseLeftButtonUp (not Click, these aren't buttons):
-                                                selects this specific guide's detail before the click
-                                                bubbles up and the ListBox selects the parent "Guides"
-                                                item, so both happen from one click.
-                                            -->
-                                            <StackPanel Orientation="Horizontal" Margin="0,3,0,3" Cursor="Hand"
-                                                        PreviewMouseLeftButtonUp="GuideSidebarItem_OnClick">
-                                                <materialDesign:PackIcon Kind="SubdirectoryArrowRight"
-                                                                         Width="14" Height="14"
-                                                                         Opacity="0.5"
-                                                                         Margin="0,0,6,0"
-                                                                         VerticalAlignment="Center" />
-                                                <TextBlock Text="{Binding Label}"
-                                                           FontSize="12"
-                                                           Opacity="0.8"
-                                                           VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis" />
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </ListBoxItem>
-                        <ListBoxItem Tag="{x:Static vm:AppPage.Settings}">
-                            <StackPanel Orientation="Horizontal">
-                                <materialDesign:PackIcon Kind="Cog" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center" />
-                                <TextBlock Text="{Binding [NavSettings], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
-                            </StackPanel>
-                        </ListBoxItem>
-                    </ListBox>
+                    <!--
+                        Four visually bounded groups instead of one flat list: a hero Overview
+                        tile, then Updates/Guides/Settings each behind their own SidebarCardStyle
+                        panel with an uppercase header above it. Each group is its OWN ListBox
+                        (rather than one ListBox with inline dividers) because that's the only
+                        way to put a real Border/background behind a subset of items — a ListBox
+                        only lets you style individual item containers, not wrap several of them
+                        in a shared panel. All four bind SelectedValue TwoWay to the same
+                        SelectedPage property, so selecting an item in any one of them correctly
+                        clears the selection (SelectedIndex -1) in the other three.
+                    -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel Margin="0,0,0,8">
 
-                    <Border Grid.Row="2" Margin="14,0,14,18">
-                        <Button Command="{Binding ScanAllCommand}"
-                                Style="{StaticResource MaterialDesignRaisedButton}"
-                                Height="44"
-                                ToolTip="{Binding [ScanAllTooltip], Source={x:Static loc:LocalizationManager.Instance}}">
-                            <Grid>
-                                <!-- Idle: refresh icon + "Scan All" -->
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                    <StackPanel.Style>
-                                        <Style TargetType="StackPanel">
-                                            <Setter Property="Visibility" Value="Visible" />
+                            <ListBox SelectedValuePath="Tag"
+                                     SelectedValue="{Binding SelectedPage, Mode=TwoWay}"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     PreviewMouseWheel="SidebarNavList_OnPreviewMouseWheel"
+                                     ItemContainerStyle="{StaticResource OverviewSidebarItemStyle}">
+                                <ListBoxItem Tag="{x:Static vm:AppPage.Overview}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="ViewDashboard" Width="26" Height="26" Margin="0,0,12,0" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding [NavOverview], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="Bold" FontSize="16" />
+                                    </StackPanel>
+                                </ListBoxItem>
+                            </ListBox>
+
+                            <TextBlock Text="{Binding [SidebarSectionUpdates], Source={x:Static loc:LocalizationManager.Instance}}"
+                                       Style="{StaticResource SidebarSectionHeaderStyle}" />
+                            <Border Style="{StaticResource SidebarCardStyle}">
+                                <StackPanel>
+                                    <ListBox SelectedValuePath="Tag"
+                                             SelectedValue="{Binding SelectedPage, Mode=TwoWay}"
+                                             Background="Transparent"
+                                             BorderThickness="0"
+                                             PreviewMouseWheel="SidebarNavList_OnPreviewMouseWheel"
+                                             ItemContainerStyle="{StaticResource SidebarItemStyle}">
+                                        <ListBoxItem Tag="{x:Static vm:AppPage.Programs}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="PackageVariant" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding [NavPrograms], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
+                                            </StackPanel>
+                                        </ListBoxItem>
+                                        <ListBoxItem Tag="{x:Static vm:AppPage.WindowsUpdates}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="MicrosoftWindows" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding [NavWindowsUpdates], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
+                                            </StackPanel>
+                                        </ListBoxItem>
+                                        <ListBoxItem Tag="{x:Static vm:AppPage.Drivers}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="Cpu64Bit" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding [NavDrivers], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
+                                            </StackPanel>
+                                        </ListBoxItem>
+                                        <ListBoxItem Tag="{x:Static vm:AppPage.PipPackages}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="LanguagePython" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding [NavPipPackages], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
+                                            </StackPanel>
+                                        </ListBoxItem>
+                                    </ListBox>
+
+                                    <!-- Scan All lives here, not as a separate footer — it scans exactly the four pages in this card. -->
+                                    <Border Height="1" Background="{DynamicResource ZenDividerBrush}" Opacity="0.6" Margin="10,4,10,10" />
+                                    <Button Command="{Binding ScanAllCommand}"
+                                            Style="{StaticResource MaterialDesignRaisedButton}"
+                                            Height="40"
+                                            Margin="8,0,8,8"
+                                            ToolTip="{Binding [ScanAllTooltip], Source={x:Static loc:LocalizationManager.Instance}}">
+                                        <Grid>
+                                            <!-- Idle: refresh icon + "Scan All" -->
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                <StackPanel.Style>
+                                                    <Style TargetType="StackPanel">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsScanningAll}" Value="True">
+                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </StackPanel.Style>
+                                                <materialDesign:PackIcon Kind="Refresh" Width="16" Height="16" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding [ScanAll], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                            <!-- Busy: animated spinner + "Scanning…" -->
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                <StackPanel.Style>
+                                                    <Style TargetType="StackPanel">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsScanningAll}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </StackPanel.Style>
+                                                <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}"
+                                                             IsIndeterminate="True"
+                                                             Width="16" Height="16" Margin="0,0,8,0"
+                                                             Foreground="White"
+                                                             VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding [ScanAllBusy], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+
+                            <TextBlock Text="{Binding [SidebarSectionGuides], Source={x:Static loc:LocalizationManager.Instance}}"
+                                       Style="{StaticResource SidebarSectionHeaderStyle}" />
+                            <Border Style="{StaticResource SidebarCardStyle}">
+                                <ListBox SelectedValuePath="Tag"
+                                         SelectedValue="{Binding SelectedPage, Mode=TwoWay}"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         PreviewMouseWheel="SidebarNavList_OnPreviewMouseWheel"
+                                         ItemContainerStyle="{StaticResource GuidesSidebarItemStyle}">
+                                <ListBoxItem Tag="{x:Static vm:AppPage.HardwareHub}">
+                            <StackPanel>
+                                <!--
+                                    Parent row: solid "classic" highlight when the Guides landing
+                                    itself is what's showing, PLUS a soft glow rising from its
+                                    bottom edge whenever a child guide (NVIDIA/Visual Studio) is
+                                    open instead — so "Guides" always shows some cue that one of
+                                    its branches is active, distinct from being active itself.
+
+                                    IMPORTANT: Background is set via a plain Setter (not a local
+                                    XAML attribute) — a local value on Background would always
+                                    beat the Trigger's Setter for the same property (local values
+                                    outrank style triggers in WPF's precedence order), which is
+                                    exactly why this highlight silently never appeared before.
+                                -->
+                                <Border x:Name="GuidesParentRow" MinHeight="48" CornerRadius="8" Padding="14,0"
+                                        Cursor="Hand" PreviewMouseLeftButtonDown="GuidesParentRow_OnClick">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="Transparent" />
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsScanningAll}" Value="True">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                </DataTrigger>
+                                                <!--
+                                                    Order matters: later triggers win when more than
+                                                    one condition is true at once. Hover is listed
+                                                    FIRST and "active" LAST, so hovering the item that
+                                                    is already active keeps the active highlight
+                                                    instead of hover dimming it back to the plain
+                                                    hover shade — hovering a non-active row still
+                                                    gets the ordinary hover feedback since only that
+                                                    one trigger's condition is true in that case.
+                                                -->
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="{DynamicResource ZenSidebarHoverBrush}" />
+                                                </Trigger>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding SelectedPage}" Value="{x:Static vm:AppPage.HardwareHub}" />
+                                                        <Condition Binding="{Binding GuidesViewModel.IsShowingGuideDetail}" Value="False" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Background" Value="{DynamicResource ZenNavItemSelectedBackgroundBrush}" />
+                                                </MultiDataTrigger>
                                             </Style.Triggers>
                                         </Style>
-                                    </StackPanel.Style>
-                                    <materialDesign:PackIcon Kind="Refresh" Width="18" Height="18" Margin="0,0,8,0" VerticalAlignment="Center" />
-                                    <TextBlock Text="{Binding [ScanAll], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" />
-                                </StackPanel>
-                                <!-- Busy: animated spinner + "Scanning…" -->
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                    <StackPanel.Style>
-                                        <Style TargetType="StackPanel">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsScanningAll}" Value="True">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </StackPanel.Style>
-                                    <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}"
-                                                 IsIndeterminate="True"
-                                                 Width="18" Height="18" Margin="0,0,8,0"
-                                                 Foreground="White"
-                                                 VerticalAlignment="Center" />
-                                    <TextBlock Text="{Binding [ScanAllBusy], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" />
-                                </StackPanel>
-                            </Grid>
-                        </Button>
-                    </Border>
+                                    </Border.Style>
+                                    <Grid>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <materialDesign:PackIcon Kind="MapMarkerPath" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding [NavGuides], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
+                                        </StackPanel>
+                                        <!--
+                                            Glow-from-below, take three. Both earlier attempts had a
+                                            real problem, not just a look problem: a flat gradient
+                                            rectangle spanning the row's full height/width reads as a
+                                            hard bar, and a DropShadowEffect bleeding downward renders
+                                            BEHIND the sub-branch panel below it in z-order (that
+                                            panel is a later sibling, painted on top), so it was
+                                            invisible no matter its color. This version stays fully
+                                            INSIDE the row's own bounds — a thin, inset, horizontally
+                                            faded strip — so there's nothing below it to occlude it,
+                                            and the fade-to-transparent at both ends plus the small
+                                            height read as a soft accent rather than a slab.
+                                        -->
+                                        <Border VerticalAlignment="Bottom" Height="3" Margin="14,0,14,3" CornerRadius="1.5"
+                                                IsHitTestVisible="False"
+                                                Visibility="{Binding GuidesViewModel.IsShowingGuideDetail, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <Border.Background>
+                                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                    <GradientStop Color="Transparent" Offset="0" />
+                                                    <GradientStop Color="#7C3AED" Offset="0.5" />
+                                                    <GradientStop Color="Transparent" Offset="1" />
+                                                </LinearGradientBrush>
+                                            </Border.Background>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+
+                                <!--
+                                    Sub-branches hang off a vertical trunk line (like a tree/git
+                                    graph) so they read as literally connected to "Guides". Each
+                                    active row gets a solid fill + left accent bar (same as above,
+                                    set via Setter — not a local attribute, for the same reason)
+                                    plus a one-shot light sweep that plays left-to-right the moment
+                                    it becomes the active one, so switching between NVIDIA and
+                                    Visual Studio is unmistakable, not just a static color change.
+                                -->
+                                <Border Visibility="{Binding GuidesViewModel.HasGuides, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                        BorderBrush="{DynamicResource ZenDividerBrush}"
+                                        BorderThickness="1.5,0,0,0"
+                                        Margin="17,6,6,2"
+                                        Padding="10,2,0,2">
+                                    <ItemsControl ItemsSource="{Binding GuidesViewModel.SidebarGuides}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <!--
+                                                    PreviewMouseLeftButtonDown (not Up, and not Click since
+                                                    these aren't buttons): ListBoxItem selects on mouse-DOWN,
+                                                    not mouse-up. Wiring this on Up meant IsShowingGuideDetail
+                                                    only flipped to True a whole click-cycle AFTER SelectedPage
+                                                    had already become HardwareHub — a brief window where the
+                                                    parent "Guides" row's own MultiDataTrigger (SelectedPage==
+                                                    HardwareHub AND IsShowingGuideDetail==False) was genuinely
+                                                    satisfied, flashing its highlight before this handler caught
+                                                    up. Firing on Down instead means this state updates before
+                                                    the ListBoxItem's own bubbling selection change even starts.
+                                                -->
+                                                <Border CornerRadius="6" Padding="8,7" Margin="0,1,0,1"
+                                                        BorderThickness="3,0,0,0"
+                                                        ClipToBounds="True"
+                                                        Cursor="Hand" PreviewMouseLeftButtonDown="GuideSidebarItem_OnClick">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background" Value="Transparent" />
+                                                            <Setter Property="BorderBrush" Value="Transparent" />
+                                                            <Style.Triggers>
+                                                                <!-- Order matters here too — see the comment on GuidesParentRow's style above. -->
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter Property="Background" Value="{DynamicResource ZenSidebarHoverBrush}" />
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource ZenPrimaryBrush}" />
+                                                                </Trigger>
+                                                                <MultiDataTrigger>
+                                                                    <MultiDataTrigger.Conditions>
+                                                                        <Condition Binding="{Binding IsActive}" Value="True" />
+                                                                        <Condition Binding="{Binding DataContext.SelectedPage, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="{x:Static vm:AppPage.HardwareHub}" />
+                                                                    </MultiDataTrigger.Conditions>
+                                                                    <Setter Property="Background" Value="{DynamicResource ZenNavItemSelectedBackgroundBrush}" />
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource ZenPrimaryBrush}" />
+                                                                </MultiDataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <!--
+                                                        No more sweep animation here — it used to play a
+                                                        one-shot light streak across this TextBlock via a
+                                                        Storyboard animating a nested RenderTransform. That
+                                                        animation intermittently crashed the whole app with
+                                                        a XamlParseException ("cannot animate '(0).(1)' on a
+                                                        frozen Freezable instance") when switching between
+                                                        sub-branches, logged to %APPDATA%\XenUpdate\logs.txt.
+                                                        The solid background/border highlight above already
+                                                        conveys "this one is active" on its own — removed the
+                                                        animation rather than keep chasing a decorative extra.
+                                                    -->
+                                                    <TextBlock Text="{Binding Label}"
+                                                               FontSize="12"
+                                                               FontWeight="Medium"
+                                                               Opacity="0.9"
+                                                               VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Border>
+                            </StackPanel>
+                                </ListBoxItem>
+                                </ListBox>
+                            </Border>
+
+                            <TextBlock Text="{Binding [SidebarSectionSettings], Source={x:Static loc:LocalizationManager.Instance}}"
+                                       Style="{StaticResource SidebarSectionHeaderStyle}" />
+                            <Border Style="{StaticResource SidebarCardStyle}">
+                                <ListBox SelectedValuePath="Tag"
+                                         SelectedValue="{Binding SelectedPage, Mode=TwoWay}"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         PreviewMouseWheel="SidebarNavList_OnPreviewMouseWheel"
+                                         ItemContainerStyle="{StaticResource SidebarItemStyle}">
+                                    <ListBoxItem Tag="{x:Static vm:AppPage.Settings}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon Kind="Cog" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding [NavSettings], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontWeight="SemiBold" />
+                                        </StackPanel>
+                                    </ListBoxItem>
+                                </ListBox>
+                            </Border>
+
+                        </StackPanel>
+                    </ScrollViewer>
                 </Grid>
             </Border>
 

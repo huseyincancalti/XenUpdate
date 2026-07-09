@@ -97,7 +97,7 @@
                                     <!-- Needs attention: progress + call to action -->
                                     <StackPanel Visibility="{Binding IsUpToDate, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
                                         <TextBlock Text="{Binding Why}" FontSize="11.5" Opacity="0.7" TextWrapping="Wrap" Margin="0,0,0,12" MaxHeight="48" TextTrimming="CharacterEllipsis" />
-                                        <ProgressBar Height="5" Minimum="0" Maximum="100" Value="{Binding ProgressPercent}" Margin="0,0,0,10" />
+                                        <ProgressBar Height="5" Minimum="0" Maximum="100" Value="{Binding ProgressPercent, Mode=OneWay}" Margin="0,0,0,10" />
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />

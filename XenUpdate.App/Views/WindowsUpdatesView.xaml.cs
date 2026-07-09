@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using XenUpdate.App.ViewModels;
 using XenUpdate.Core.Models;
 
 namespace XenUpdate.App.Views;
@@ -54,6 +55,64 @@ public partial class WindowsUpdatesView : UserControl
         CopyKbArticleMenuItem.IsEnabled = hasContextItem && hasKbArticle;
         CopyUpdateTitleAndKbMenuItem.IsEnabled = hasContextItem && hasKbArticle;
         CopySelectedUpdateTitlesMenuItem.IsEnabled = hasSelectedItems;
+        AddToWhitelistMenuItem.IsEnabled = hasContextItem && item?.IsWhitelisted == false;
+        RemoveFromWhitelistMenuItem.IsEnabled = hasContextItem && item?.IsWhitelisted == true;
+        AddSelectedToWhitelistMenuItem.IsEnabled = hasSelectedItems;
+        RemoveSelectedFromWhitelistMenuItem.IsEnabled = hasSelectedItems;
+    }
+
+    private async void AddToWhitelistMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        var item = GetContextItem();
+        if (item is null || DataContext is not WindowsUpdatesViewModel viewModel)
+        {
+            return;
+        }
+
+        await viewModel.AddItemsToWhitelistAsync(new[] { item });
+    }
+
+    private async void RemoveFromWhitelistMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        var item = GetContextItem();
+        if (item is null || DataContext is not WindowsUpdatesViewModel viewModel)
+        {
+            return;
+        }
+
+        await viewModel.RemoveItemsFromWhitelistAsync(new[] { item });
+    }
+
+    private async void AddSelectedToWhitelistMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not WindowsUpdatesViewModel viewModel)
+        {
+            return;
+        }
+
+        var selectedItems = GetSelectedItems();
+        if (selectedItems.Count == 0)
+        {
+            return;
+        }
+
+        await viewModel.AddItemsToWhitelistAsync(selectedItems);
+    }
+
+    private async void RemoveSelectedFromWhitelistMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not WindowsUpdatesViewModel viewModel)
+        {
+            return;
+        }
+
+        var selectedItems = GetSelectedItems();
+        if (selectedItems.Count == 0)
+        {
+            return;
+        }
+
+        await viewModel.RemoveItemsFromWhitelistAsync(selectedItems);
     }
 
     private void CopyUpdateTitleMenuItem_OnClick(object sender, RoutedEventArgs e)

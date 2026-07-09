@@ -67,6 +67,7 @@
     "ShortLabel": "Visual Studio",
     "Why": "Visual Studio'nun kendi workload'ları ve bileşenleri winget veya Windows Update tarafından yönetilmez — güncellemeler yalnızca ayrı Visual Studio Installer üzerinden gelir.",
     "Category": "Software",
+    "VersionCheckKind": "VisualStudio",
     "OfficialUrl": "https://visualstudio.microsoft.com/downloads/",
     "Steps": [
       "Başlat Menüsü'nden \"Visual Studio Installer\"ı aç.",

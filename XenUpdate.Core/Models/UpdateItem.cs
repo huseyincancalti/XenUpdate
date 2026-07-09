@@ -40,6 +40,13 @@ public abstract partial class UpdateItem : ObservableObject
     private bool _isSelected;
 
     /// <summary>
+    /// Whether this update is on the whitelist: pre-approved to install itself the moment
+    /// the app detects it is online, with no manual click. Refreshed after every scan.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isWhitelisted;
+
+    /// <summary>
     /// Human-readable reason when this item's install failed.
     /// Null (default) on items that have not failed; shown as a tooltip on the "Failed" badge.
     /// </summary>

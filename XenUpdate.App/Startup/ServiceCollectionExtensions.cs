@@ -30,6 +30,7 @@ public static class ServiceCollectionExtensions
         // --- Shared singletons (real in every mode) ---
         services.AddSingleton<ILoggerService, FileLoggerService>();
         services.AddSingleton<IBlacklistRepository, BlacklistRepository>();
+        services.AddSingleton<IWhitelistRepository, WhitelistRepository>();
         services.AddSingleton<ISettingsRepository, SettingsRepository>();
         services.AddSingleton<IThemeService, ThemeService>();
         services.AddSingleton<IGuideCatalog, EmbeddedGuideCatalog>();
@@ -42,6 +43,7 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<ISystemRestoreService, MockSystemRestoreService>();
             services.AddSingleton<IAppUpdateService, MockAppUpdateService>();
             services.AddSingleton<INvidiaDriverService, MockNvidiaDriverService>();
+            services.AddSingleton<IVisualStudioUpdateService, MockVisualStudioUpdateService>();
             services.AddTransient<IWingetScanner, MockWingetScanner>();
             services.AddTransient<IWingetInstaller, MockWingetInstaller>();
             services.AddTransient<IWindowsUpdateService, MockWindowsUpdateService>();
@@ -55,6 +57,7 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<ISystemRestoreService, WindowsSystemRestoreService>();
             services.AddSingleton<IAppUpdateService, GitHubAppUpdateService>();
             services.AddSingleton<INvidiaDriverService, NvidiaDriverService>();
+            services.AddSingleton<IVisualStudioUpdateService, VisualStudioUpdateService>();
             services.AddTransient<ProcessRunner>();
             services.AddTransient<WingetOutputParser>();
             services.AddTransient<IWingetScanner, WingetScanner>();

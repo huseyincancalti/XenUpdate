@@ -65,6 +65,9 @@
         <GradientStop Color="#5B4FC9" Offset="1" />
     </LinearGradientBrush>
 
+    <!-- Sidebar group cards (Updates/Guides/Settings): a touch lighter than the sidebar's own gradient so each group reads as its own raised region -->
+    <SolidColorBrush x:Key="ZenSidebarCardBrush" Color="#241F52" />
+
     <!-- Log drawer: flat matte (avoid glass here — reads as a console bar) -->
     <SolidColorBrush x:Key="ZenLogDrawerMatteBrush" Color="#0A0A0F" />
     <SolidColorBrush x:Key="ZenLogDrawerHeaderHoverBrush" Color="#12121C" />

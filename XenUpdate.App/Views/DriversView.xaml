@@ -15,6 +15,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -34,6 +35,11 @@
                 Action toolbar sits top-right, away from the grid's select-all checkbox
                 (top-left of the DataGrid header below). It used to sit directly above that
                 checkbox, so a click aimed at "select all" could misfire into "Scan".
+                Only the two permanent buttons live here — Cancel and the scan progress bar
+                used to sit in this same row and, by appearing/disappearing, changed this
+                Auto-width column's total size and shoved these buttons sideways. They now
+                live in their own row (Grid.Row="1") below, which can grow or shrink without
+                touching this row's layout at all.
             -->
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                 <Button Content="{Binding [ScanForDriverUpdates], Source={x:Static loc:LocalizationManager.Instance}}"
@@ -43,29 +49,46 @@
 
                 <Button Content="{Binding [InstallSelected], Source={x:Static loc:LocalizationManager.Instance}}"
                         Command="{Binding InstallSelectedCommand}"
-                        Style="{StaticResource MaterialDesignOutlinedButton}"
-                        Margin="0,0,8,0" />
-
-                <Button Content="{Binding [Cancel], Source={x:Static loc:LocalizationManager.Instance}}"
-                        Command="{Binding CancelScanCommand}"
-                        Style="{StaticResource MaterialDesignOutlinedButton}"
-                        Margin="0,0,8,0"
-                        Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
-
-                <!--
-                    Scan-only thin progress bar.
-                    Bound to IsScanning so it stays hidden while installs run;
-                    install progress is shown by the dedicated feedback panel below.
-                -->
-                <ProgressBar IsIndeterminate="True"
-                             Width="120"
-                             Height="4"
-                             VerticalAlignment="Center"
-                             Visibility="{Binding IsScanning, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        Style="{StaticResource MaterialDesignOutlinedButton}" />
             </StackPanel>
         </Grid>
 
-        <Border Grid.Row="1"
+        <!--
+            Scan-busy row: a spinner + "Scanning…" label, then Cancel. Kept out of the row
+            above so their appearing/disappearing never shifts the permanent action buttons.
+            A circular spinner (not a thin linear bar) plus explicit text: a slim indeterminate
+            line reads as "a barely-visible sliver" at a glance, which is exactly what a user
+            reported — this is unambiguous even glanced at quickly. Bound to IsScanning only —
+            install progress uses the dedicated feedback panel further down instead.
+        -->
+        <Grid Grid.Row="1" Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center"
+                        Visibility="{Binding IsScanning, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}"
+                             IsIndeterminate="True"
+                             Width="18" Height="18"
+                             Foreground="{DynamicResource ZenPrimaryBrush}"
+                             Margin="0,0,8,0" />
+                <TextBlock Text="{Binding [ScanningShort], Source={x:Static loc:LocalizationManager.Instance}}"
+                           FontSize="13" FontWeight="SemiBold" Opacity="0.85" VerticalAlignment="Center" Margin="0,0,4,0" />
+                <TextBlock Text="{Binding ScanProgressPercent, StringFormat={}{0}%}"
+                           FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource ZenPrimaryBrush}" VerticalAlignment="Center" />
+            </StackPanel>
+
+            <Button Grid.Column="1"
+                    Content="{Binding [Cancel], Source={x:Static loc:LocalizationManager.Instance}}"
+                    Command="{Binding CancelScanCommand}"
+                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                    Margin="12,0,0,0"
+                    Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
+        </Grid>
+
+        <Border Grid.Row="2"
                 Style="{StaticResource ZenGlassPanelStyle}"
                 Margin="0,0,0,12"
                 Padding="12"
@@ -88,7 +111,7 @@
             </StackPanel>
         </Border>
 
-        <Grid Grid.Row="2">
+        <Grid Grid.Row="3">
             <Border Style="{StaticResource ZenDataGridChromeStyle}"
                     Visibility="{Binding HasUpdates, Converter={StaticResource BooleanToVisibilityConverter}}">
             <DataGrid x:Name="DriversDataGrid"
@@ -128,6 +151,19 @@
                         <MenuItem x:Name="CopySelectedDriverTitlesMenuItem"
                                   Header="{Binding [CtxCopySelectedTitles], Source={x:Static loc:LocalizationManager.Instance}}"
                                   Click="CopySelectedDriverTitlesMenuItem_OnClick" />
+                        <Separator />
+                        <MenuItem x:Name="AddToWhitelistMenuItem"
+                                  Header="{Binding [CtxAddToWhitelist], Source={x:Static loc:LocalizationManager.Instance}}"
+                                  Click="AddToWhitelistMenuItem_OnClick" />
+                        <MenuItem x:Name="RemoveFromWhitelistMenuItem"
+                                  Header="{Binding [CtxRemoveFromWhitelist], Source={x:Static loc:LocalizationManager.Instance}}"
+                                  Click="RemoveFromWhitelistMenuItem_OnClick" />
+                        <MenuItem x:Name="AddSelectedToWhitelistMenuItem"
+                                  Header="{Binding [CtxAddSelectedToWhitelist], Source={x:Static loc:LocalizationManager.Instance}}"
+                                  Click="AddSelectedToWhitelistMenuItem_OnClick" />
+                        <MenuItem x:Name="RemoveSelectedFromWhitelistMenuItem"
+                                  Header="{Binding [CtxRemoveSelectedFromWhitelist], Source={x:Static loc:LocalizationManager.Instance}}"
+                                  Click="RemoveSelectedFromWhitelistMenuItem_OnClick" />
                     </ContextMenu>
                 </DataGrid.ContextMenu>
                 <DataGrid.Columns>
@@ -152,16 +188,24 @@
                                             SortMemberPath="DisplayName">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <StackPanel Margin="0,3">
-                                    <TextBlock Text="{Binding DisplayName}"
-                                               TextTrimming="CharacterEllipsis"
-                                               VerticalAlignment="Center"
-                                               Padding="2,0"
-                                               ToolTip="{Binding DisplayName}" />
-                                    <ContentPresenter x:Name="FailurePresenter"
-                                                      Content="{Binding}"
-                                                      ContentTemplate="{StaticResource FailureReasonInlineTemplate}"
-                                                      Visibility="Collapsed" />
+                                <StackPanel Margin="0,3" Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="Star" Width="13" Height="13"
+                                                              Foreground="#FFC107"
+                                                              VerticalAlignment="Top"
+                                                              Margin="0,3,5,0"
+                                                              Visibility="{Binding IsWhitelisted, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                              ToolTip="{Binding [WhitelistBadgeTooltip], Source={x:Static loc:LocalizationManager.Instance}}" />
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding DisplayName}"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   VerticalAlignment="Center"
+                                                   Padding="2,0"
+                                                   ToolTip="{Binding DisplayName}" />
+                                        <ContentPresenter x:Name="FailurePresenter"
+                                                          Content="{Binding}"
+                                                          ContentTemplate="{StaticResource FailureReasonInlineTemplate}"
+                                                          Visibility="Collapsed" />
+                                    </StackPanel>
                                 </StackPanel>
                                 <DataTemplate.Triggers>
                                     <DataTrigger Binding="{Binding Status}" Value="Failed">
@@ -227,7 +271,7 @@
             </Border>
         </Grid>
 
-        <TextBlock Grid.Row="3"
+        <TextBlock Grid.Row="4"
                    Text="{Binding StatusMessage}"
                    Opacity="0.6"
                    Margin="0,8,0,0"

@@ -1,12 +1,15 @@
 {
   "LanguageName": "Türkçe",
   "NavOverview": "Genel Bakış",
+  "SidebarSectionUpdates": "Güncellemeler",
   "NavPrograms": "Programlar",
   "NavWindowsUpdates": "Windows Güncellemeleri",
   "NavDrivers": "Sürücüler",
   "NavPipPackages": "Python Paketleri",
   "NavGuides": "Rehberler",
   "NavSettings": "Ayarlar",
+  "SidebarSectionGuides": "Rehberler",
+  "SidebarSectionSettings": "Ayarlar",
   "ScanAll": "Tümünü Tara",
   "ScanAllBusy": "Taranıyor…",
   "ScanAllTooltip": "Uygulamaları, Windows güncellemelerini ve sürücüleri birlikte tara",
@@ -42,6 +45,11 @@
   "CtxCopySelectedIds": "Seçili Paket Kimliklerini Kopyala",
   "CtxAddToBlacklist": "Kara Listeye Ekle",
   "CtxAddSelectedToBlacklist": "Seçilenleri Kara Listeye Ekle",
+  "CtxAddToWhitelist": "Otomatik Güncellemeye Ekle",
+  "CtxRemoveFromWhitelist": "Otomatik Güncellemeden Çıkar",
+  "CtxAddSelectedToWhitelist": "Seçilenleri Otomatik Güncellemeye Ekle",
+  "CtxRemoveSelectedFromWhitelist": "Seçilenleri Otomatik Güncellemeden Çıkar",
+  "WhitelistBadgeTooltip": "İnternete bağlanır bağlanmaz otomatik güncellenir",
   "ProgramsEmptyTitle": "Uygulama güncellemesi bulunamadı. Şimdilik her şey güncel.",
   "ProgramsEmptyBody": "Yüklü programların zaten güncel, şu anda kurulacak bir şey yok.",
 
@@ -103,6 +111,11 @@
   "ColReason": "Sebep",
   "RemoveSelected": "Seçilenleri Kaldır",
 
+  "WhitelistTitle": "Otomatik Güncelleme Beyaz Listesi",
+  "WhitelistDesc": "Bu güncellemeler, XenUpdate internete bağlı olduğunu algıladığı anda kendini kurar — sayfasını açmana veya Kur'a basmana gerek kalmaz. Bir sayfanın sağ tık menüsünden ekleyebilirsin.",
+  "ColDisplayName": "Ad",
+  "ColSource": "Kaynak",
+
   "OverviewTitle": "Genel Bakış",
   "OverviewWelcome": "XenUpdate'e hoş geldin",
   "OverviewIntro": "Bu bilgisayardaki her şeyi güncel tutmak için tek yer: uygulamalar, Windows, sürücüler, Python paketleri ve rehber gerektiren manuel güncellemeler. Doğrudan gitmek için aşağıdan bir kart seç.",
@@ -146,6 +159,7 @@
   "OpenApp": "{0}'i Aç",
   "UpdateBadge": "Güncelleme var: v{0} → v{1}",
   "DriverCurrent": "NVIDIA sürücün güncel (v{0})",
+  "SoftwareCurrent": "{0} güncel (v{1})",
   "GuideCompleted": "Tamamlandı! Bu rehberi bitirdin.",
   "NextStep": "Sonraki adım",
   "PreviousStep": "Önceki adım",
@@ -161,6 +175,7 @@
   "StatusWindowsUpdatesInitial": "Taramak için 'Güncellemeleri Denetle'ye bas.",
   "StatusDriversInitial": "Başlamak için 'Sürücü Güncellemelerini Tara'ya bas.",
   "StatusScanning": "Güncellemeler taranıyor...",
+  "ScanningShort": "Taranıyor…",
   "StatusScanningSlow": "Taranıyor... Bu iki dakika kadar sürebilir.",
   "StatusScanCancelled": "Tarama iptal edildi.",
   "StatusScanFailed": "Tarama başarısız. Ayrıntılar için günlüğe bak.",
@@ -249,5 +264,12 @@
   "RemovedSingleFromBlacklist": "'{0}' kara listeden kaldırıldı.",
   "RemovedMultipleFromBlacklist": "{0} kara liste ögesi kaldırıldı.",
   "BlacklistRemoveFailed": "Kara liste ögesi kaldırılamadı. Ayrıntılar için günlüğe bak.",
-  "BlacklistBulkRemoveFailed": "Kara liste ögeleri kaldırılamadı. Ayrıntılar için günlüğe bak."
+  "BlacklistBulkRemoveFailed": "Kara liste ögeleri kaldırılamadı. Ayrıntılar için günlüğe bak.",
+
+  "AddedSingleToWhitelist": "'{0}' internete bağlanır bağlanmaz otomatik güncellenecek.",
+  "AddedMultipleToWhitelist": "{0} öge internete bağlanır bağlanmaz otomatik güncellenecek.",
+  "RemovedSingleFromWhitelist": "'{0}' otomatik güncelleme beyaz listesinden kaldırıldı.",
+  "RemovedMultipleFromWhitelist": "{0} beyaz liste ögesi kaldırıldı.",
+  "WhitelistRemoveFailed": "Beyaz liste ögesi kaldırılamadı. Ayrıntılar için günlüğe bak.",
+  "WhitelistBulkRemoveFailed": "Beyaz liste ögeleri kaldırılamadı. Ayrıntılar için günlüğe bak."
 }

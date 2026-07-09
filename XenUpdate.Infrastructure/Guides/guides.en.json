@@ -67,6 +67,7 @@
     "ShortLabel": "Visual Studio",
     "Why": "Visual Studio's own workloads and components aren't managed by winget or Windows Update — they only update through the separate Visual Studio Installer.",
     "Category": "Software",
+    "VersionCheckKind": "VisualStudio",
     "OfficialUrl": "https://visualstudio.microsoft.com/downloads/",
     "Steps": [
       "Open the Start Menu and launch \"Visual Studio Installer\".",

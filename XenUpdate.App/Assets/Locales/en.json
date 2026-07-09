@@ -1,12 +1,15 @@
 {
   "LanguageName": "English",
   "NavOverview": "Overview",
+  "SidebarSectionUpdates": "Updates",
   "NavPrograms": "Programs",
   "NavWindowsUpdates": "Windows Updates",
   "NavDrivers": "Drivers",
   "NavPipPackages": "Python Packages",
   "NavGuides": "Guides",
   "NavSettings": "Settings",
+  "SidebarSectionGuides": "Guides",
+  "SidebarSectionSettings": "Settings",
   "ScanAll": "Scan All",
   "ScanAllBusy": "Scanning…",
   "ScanAllTooltip": "Scan apps, Windows updates and drivers together",
@@ -42,6 +45,11 @@
   "CtxCopySelectedIds": "Copy Selected Package IDs",
   "CtxAddToBlacklist": "Add to Blacklist",
   "CtxAddSelectedToBlacklist": "Add Selected to Blacklist",
+  "CtxAddToWhitelist": "Add to Auto-Update",
+  "CtxRemoveFromWhitelist": "Remove from Auto-Update",
+  "CtxAddSelectedToWhitelist": "Add Selected to Auto-Update",
+  "CtxRemoveSelectedFromWhitelist": "Remove Selected from Auto-Update",
+  "WhitelistBadgeTooltip": "Auto-updates as soon as you're online",
   "ProgramsEmptyTitle": "No application updates found. All clear for now.",
   "ProgramsEmptyBody": "Your installed programs are already up to date, so there is nothing to install right now.",
 
@@ -103,6 +111,11 @@
   "ColReason": "Reason",
   "RemoveSelected": "Remove Selected",
 
+  "WhitelistTitle": "Auto-Update Whitelist",
+  "WhitelistDesc": "These updates install themselves the instant XenUpdate detects you're online — no need to open their page or click Install. Add entries from a page's right-click menu.",
+  "ColDisplayName": "Name",
+  "ColSource": "Source",
+
   "OverviewTitle": "Overview",
   "OverviewWelcome": "Welcome to XenUpdate",
   "OverviewIntro": "One place to keep everything on this PC current: apps, Windows, drivers, Python packages, and the manual updates that need a guided hand. Pick a card below to jump straight to it.",
@@ -146,6 +159,7 @@
   "OpenApp": "Open {0}",
   "UpdateBadge": "Update available: v{0} → v{1}",
   "DriverCurrent": "Your NVIDIA driver is up to date (v{0})",
+  "SoftwareCurrent": "{0} is up to date (v{1})",
   "GuideCompleted": "Done! You've completed this guide.",
   "NextStep": "Next step",
   "PreviousStep": "Previous step",
@@ -161,6 +175,7 @@
   "StatusWindowsUpdatesInitial": "Press 'Check for Updates' to scan.",
   "StatusDriversInitial": "Press 'Scan for Driver Updates' to start.",
   "StatusScanning": "Scanning for updates...",
+  "ScanningShort": "Scanning…",
   "StatusScanningSlow": "Scanning... This may take up to two minutes.",
   "StatusScanCancelled": "Scan cancelled.",
   "StatusScanFailed": "Scan failed. See the log for details.",
@@ -249,5 +264,12 @@
   "RemovedSingleFromBlacklist": "Removed '{0}' from blacklist.",
   "RemovedMultipleFromBlacklist": "Removed {0} blacklist entries.",
   "BlacklistRemoveFailed": "Could not remove blacklist entry. See log for details.",
-  "BlacklistBulkRemoveFailed": "Could not remove blacklist entries. See log for details."
+  "BlacklistBulkRemoveFailed": "Could not remove blacklist entries. See log for details.",
+
+  "AddedSingleToWhitelist": "'{0}' will auto-update as soon as you're online.",
+  "AddedMultipleToWhitelist": "{0} item(s) will auto-update as soon as you're online.",
+  "RemovedSingleFromWhitelist": "Removed '{0}' from the auto-update whitelist.",
+  "RemovedMultipleFromWhitelist": "Removed {0} whitelist entries.",
+  "WhitelistRemoveFailed": "Could not remove whitelist entry. See log for details.",
+  "WhitelistBulkRemoveFailed": "Could not remove whitelist entries. See log for details."
 }

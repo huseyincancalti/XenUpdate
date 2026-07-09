@@ -126,6 +126,18 @@ public sealed class MockNvidiaDriverService : INvidiaDriverService
         });
 }
 
+public sealed class MockVisualStudioUpdateService : IVisualStudioUpdateService
+{
+    public Task<DriverUpdateStatus> CheckAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(new DriverUpdateStatus
+        {
+            Checked = true,
+            InstalledVersion = "17.11.35327.3",
+            LatestVersion = "17.12.35527.113",
+            UpdateAvailable = true
+        });
+}
+
 public sealed class MockPipScanner : IPipScanner
 {
     public async Task<IReadOnlyList<PipPackageItem>> GetAvailableUpdatesAsync(CancellationToken cancellationToken)
