@@ -498,6 +498,49 @@
                                             </StackPanel>
                                         </Grid>
                                     </Button>
+
+                                    <!-- Installs every pending update found by Scan All across all four pages above, one page at a time. -->
+                                    <Button Command="{Binding UpdateAllCommand}"
+                                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                                            Height="36"
+                                            Margin="8,0,8,4"
+                                            ToolTip="{Binding [UpdateAllTooltip], Source={x:Static loc:LocalizationManager.Instance}}">
+                                        <Grid>
+                                            <!-- Idle: download icon + "Update All" -->
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                <StackPanel.Style>
+                                                    <Style TargetType="StackPanel">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsUpdatingAll}" Value="True">
+                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </StackPanel.Style>
+                                                <materialDesign:PackIcon Kind="TrayArrowDown" Width="15" Height="15" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding [UpdateAll], Source={x:Static loc:LocalizationManager.Instance}}" FontSize="12.5" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                            <!-- Busy: animated spinner + "Updating…" -->
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                <StackPanel.Style>
+                                                    <Style TargetType="StackPanel">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsUpdatingAll}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </StackPanel.Style>
+                                                <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}"
+                                                             IsIndeterminate="True"
+                                                             Width="15" Height="15" Margin="0,0,8,0"
+                                                             VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding [UpdateAllBusy], Source={x:Static loc:LocalizationManager.Instance}}" FontSize="12.5" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Button>
                                 </StackPanel>
                             </Border>
 
@@ -717,5 +760,137 @@
                                  HorizontalAlignment="Stretch"
                                  Panel.ZIndex="10000"
                                  MessageQueue="{materialDesign:MessageQueue}" />
+
+        <!--
+            "Update All" result card. A plain-text Snackbar can't show a succeeded/failed
+            breakdown, the failed item names, or a "View Log" action, so this is a dedicated
+            floating card instead of routed through MainSnackbar. Visible only while
+            ShellViewModel.UpdateAllSummary is non-null; DismissUpdateAllSummaryCommand and
+            ViewUpdateAllLogCommand both clear it back to null.
+        -->
+        <Border Grid.Row="1"
+                Panel.ZIndex="9000"
+                VerticalAlignment="Bottom"
+                HorizontalAlignment="Center"
+                Margin="0,0,0,24"
+                Width="460"
+                Padding="16,14">
+            <Border.Style>
+                <!--
+                    BasedOn ZenGlassPanelStyle for the border/corner-radius/shadow, but with the
+                    Background overridden to a near-opaque surface — the glass panel's own
+                    translucent brush was designed to sit on the ambient content background, and
+                    floating over that same ambient gradient here it read as barely-there.
+                -->
+                <Style TargetType="Border" BasedOn="{StaticResource ZenGlassPanelStyle}">
+                    <Setter Property="Background" Value="{DynamicResource ZenDataGridSurfaceBrush}" />
+                    <Setter Property="Visibility" Value="Visible" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding UpdateAllSummary}" Value="{x:Null}">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Status icon: warning triangle if anything failed, success check if the batch was clean -->
+                <Border Grid.Column="0" Width="34" Height="34" CornerRadius="17" VerticalAlignment="Top" Margin="0,1,12,0">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="#33059669" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding UpdateAllSummary.HasFailures}" Value="True">
+                                    <Setter Property="Background" Value="#33F59E0B" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <Grid>
+                        <materialDesign:PackIcon Kind="CheckCircleOutline" Width="18" Height="18"
+                                                 Foreground="{DynamicResource ZenSuccessBrush}"
+                                                 HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <materialDesign:PackIcon.Style>
+                                <Style TargetType="materialDesign:PackIcon">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding UpdateAllSummary.HasFailures}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </materialDesign:PackIcon.Style>
+                        </materialDesign:PackIcon>
+                        <materialDesign:PackIcon Kind="AlertOutline" Width="18" Height="18"
+                                                 Foreground="{DynamicResource ZenWarningBrush}"
+                                                 HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <materialDesign:PackIcon.Style>
+                                <Style TargetType="materialDesign:PackIcon">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding UpdateAllSummary.HasFailures}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </materialDesign:PackIcon.Style>
+                        </materialDesign:PackIcon>
+                    </Grid>
+                </Border>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding [UpdateAllCardTitle], Source={x:Static loc:LocalizationManager.Instance}}"
+                               FontSize="13.5" FontWeight="Bold" Foreground="{DynamicResource ZenTextBrush}" />
+
+                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                        <TextBlock Text="{Binding UpdateAllSummary.SucceededText}"
+                                   FontSize="12.5" Foreground="{DynamicResource ZenSuccessBrush}" />
+                        <TextBlock Text=" · " FontSize="12.5" Opacity="0.4" Foreground="{DynamicResource ZenTextBrush}" />
+                        <TextBlock Text="{Binding UpdateAllSummary.FailedText}"
+                                   FontSize="12.5" Foreground="{DynamicResource ZenErrorBrush}" />
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding UpdateAllSummary.FailedNamesLine}"
+                               FontSize="11.5" Foreground="{DynamicResource ZenMutedTextBrush}"
+                               Margin="0,7,0,0" TextWrapping="Wrap">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Visible" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding UpdateAllSummary.FailedNamesLine}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <Button Content="{Binding [ViewLog], Source={x:Static loc:LocalizationManager.Instance}}"
+                                Command="{Binding ViewUpdateAllLogCommand}"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                Padding="8,4" Margin="-8,0,8,0" FontSize="12" FontWeight="Bold"
+                                Foreground="{DynamicResource ZenPrimaryBrush}" />
+                        <Button Content="{Binding [Dismiss], Source={x:Static loc:LocalizationManager.Instance}}"
+                                Command="{Binding DismissUpdateAllSummaryCommand}"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                Padding="8,4" FontSize="12" FontWeight="Bold"
+                                Foreground="{DynamicResource ZenPrimaryBrush}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <Button Grid.Column="2" Command="{Binding DismissUpdateAllSummaryCommand}"
+                        Style="{StaticResource MaterialDesignIconButton}"
+                        Width="26" Height="26" VerticalAlignment="Top" Margin="4,-4,-4,0"
+                        Foreground="{DynamicResource ZenMutedTextBrush}">
+                    <materialDesign:PackIcon Kind="Close" Width="15" Height="15" />
+                </Button>
+            </Grid>
+        </Border>
     </Grid>
 </Window>

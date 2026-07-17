@@ -56,6 +56,17 @@ public sealed partial class ProgramsViewModel : ObservableObject
     private string? _lastItemFailureReasonKey;
     private string? _lastItemFailureDetail;
 
+    /// <summary>
+    /// Succeeded/failed counts from the most recently completed install batch on this page.
+    /// Read by ShellViewModel right after InstallSelectedCommand finishes to build the
+    /// cross-page "Update All" summary — captured here rather than re-derived from Updates
+    /// afterward, since succeeded rows are quietly removed from Updates a couple of seconds
+    /// after finishing (see RemoveSucceededItemsLocallyAsync), which would undercount them.
+    /// </summary>
+    public int LastBatchSucceededCount { get; private set; }
+    public int LastBatchFailedCount { get; private set; }
+    public IReadOnlyList<string> LastBatchFailedNames { get; private set; } = Array.Empty<string>();
+
     /// <summary>True while any operation (scan or install) is running. Drives command enable/disable.</summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ScanCommand))]
@@ -337,6 +348,7 @@ public sealed partial class ProgramsViewModel : ObservableObject
 
         var succeededItems = new List<AppUpdateItem>();
         var failedCount = 0;
+        var failedNames = new List<string>();
         var batchCompletedCleanly = false;
 
         try
@@ -371,6 +383,7 @@ public sealed partial class ProgramsViewModel : ObservableObject
                     else
                     {
                         failedCount++;
+                        failedNames.Add(item.DisplayName);
                     }
 
                     UpdateOverallProgress(succeededItems.Count + failedCount, selectedItems.Count);
@@ -385,10 +398,16 @@ public sealed partial class ProgramsViewModel : ObservableObject
             StatusMessage = string.Format(L.T("AppUpdatesCompleted"), succeededItems.Count, failedCount);
             _logger.Info($"Winget update batch completed. Total: {selectedItems.Count}, Succeeded: {succeededItems.Count}, Failed: {failedCount}.");
             batchCompletedCleanly = true;
+            LastBatchSucceededCount = succeededItems.Count;
+            LastBatchFailedCount = failedCount;
+            LastBatchFailedNames = failedNames;
         }
         catch (OperationCanceledException)
         {
             StatusMessage = string.Format(L.T("AppUpdatesCancelled"), succeededItems.Count, failedCount);
+            LastBatchSucceededCount = succeededItems.Count;
+            LastBatchFailedCount = failedCount;
+            LastBatchFailedNames = failedNames;
             _logger.Info($"Winget update batch was cancelled. Completed before cancel: {succeededItems.Count + failedCount} of {selectedItems.Count}.");
         }
         catch (Exception ex)

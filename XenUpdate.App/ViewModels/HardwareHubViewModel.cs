@@ -25,6 +25,7 @@ public sealed partial class HardwareHubViewModel : ObservableObject
     private readonly ILoggerService _logger;
 
     private bool _initialized;
+    private bool _isLoadingGuides;
     private DriverUpdateStatus? _nvidiaStatusCache;
     private DriverUpdateStatus? _visualStudioStatusCache;
     private DateTime _lastDynamicRefresh = DateTime.MinValue;
@@ -134,7 +135,33 @@ public sealed partial class HardwareHubViewModel : ObservableObject
         }
     }
 
+    // Guards against concurrent/re-entrant calls. LoadGuidesAsync clears and rebuilds Guides
+    // across several `await`s (per-guide network/process checks), so if a second call started
+    // while a first was still mid-flight — e.g. the window's Loaded and Activated events both
+    // firing around startup — the two loops interleaved writes into the same Guides collection,
+    // producing duplicate entries (this is exactly how "Visual Studio" showed up twice in the
+    // sidebar: one card from each concurrent, uncoordinated pass). A second call arriving while
+    // one is already running is always redundant — it would just rebuild the same thing — so
+    // it's safe to drop rather than queue or run alongside the first.
     private async Task LoadGuidesAsync()
+    {
+        if (_isLoadingGuides)
+        {
+            return;
+        }
+
+        _isLoadingGuides = true;
+        try
+        {
+            await LoadGuidesCoreAsync();
+        }
+        finally
+        {
+            _isLoadingGuides = false;
+        }
+    }
+
+    private async Task LoadGuidesCoreAsync()
     {
         var all = await _guideCatalog.GetGuidesAsync(LocalizationManager.Instance.CurrentLanguage);
         var completed = await _completionStore.GetCompletedIdsAsync();

@@ -42,6 +42,15 @@ public sealed partial class DriversViewModel : ObservableObject
     /// </summary>
     public BulkObservableCollection<DriverUpdateItem> Updates { get; } = new();
 
+    /// <summary>
+    /// Succeeded/failed counts from the most recently completed install batch on this page.
+    /// Read by ShellViewModel right after InstallSelectedCommand finishes to build the
+    /// cross-page "Update All" summary.
+    /// </summary>
+    public int LastBatchSucceededCount { get; private set; }
+    public int LastBatchFailedCount { get; private set; }
+    public IReadOnlyList<string> LastBatchFailedNames { get; private set; } = Array.Empty<string>();
+
     /// <summary>True while any operation (scan or install) is running. Drives command enable/disable.</summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ScanCommand))]
@@ -270,6 +279,7 @@ public sealed partial class DriversViewModel : ObservableObject
 
         var succeededItems = new List<DriverUpdateItem>();
         var failedCount = 0;
+        var failedNames = new List<string>();
         var rebootRequired = false;
         var batchCompletedCleanly = false;
 
@@ -303,6 +313,7 @@ public sealed partial class DriversViewModel : ObservableObject
                     else
                     {
                         failedCount++;
+                        failedNames.Add(update.DisplayName);
                     }
                 }
                 catch (OperationCanceledException)
@@ -322,11 +333,17 @@ public sealed partial class DriversViewModel : ObservableObject
 
             _logger.Info($"Driver install batch completed. Total: {selectedUpdates.Count}, Succeeded: {succeededItems.Count}, Failed: {failedCount}, RebootRequired: {rebootRequired}.");
             batchCompletedCleanly = true;
+            LastBatchSucceededCount = succeededItems.Count;
+            LastBatchFailedCount = failedCount;
+            LastBatchFailedNames = failedNames;
         }
         catch (OperationCanceledException)
         {
             CurrentInstallDetailText = L.T("InstallationCancelled");
             StatusMessage = string.Format(L.T("DriverInstallCancelled"), succeededItems.Count, failedCount);
+            LastBatchSucceededCount = succeededItems.Count;
+            LastBatchFailedCount = failedCount;
+            LastBatchFailedNames = failedNames;
             _logger.Info($"Driver install batch was cancelled. Completed before cancel: {succeededItems.Count + failedCount} of {selectedUpdates.Count}.");
         }
         catch (Exception ex)

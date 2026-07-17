@@ -226,21 +226,63 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        // Every cleanup step below is individually try/caught: if any single step throws,
+        // that must NOT skip the Environment.Exit(0) call at the bottom. An uncaught exception
+        // partway through this method would abort the rest of it — including the hard exit —
+        // which would silently reproduce the exact "still running in Task Manager" bug this
+        // method exists to prevent.
+
         // H.NotifyIcon's TaskbarIcon owns a native hidden window that receives tray messages.
         // If it's never disposed, that window (and the process) can outlive the WPF shutdown
         // sequence entirely — the app disappears from the taskbar/tray but keeps running,
         // visible only in Task Manager. This runs for every exit path (explicit tray "Exit",
         // or the window naturally closing when "Minimize to tray" is off), since OnExit fires
         // regardless of which one triggered shutdown.
-        if (MainWindow is MainWindow mainWindow)
+        try
         {
-            mainWindow.AppTrayIcon.Dispose();
+            if (MainWindow is MainWindow mainWindow)
+            {
+                mainWindow.AppTrayIcon.Dispose();
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[XenUpdate] Tray icon dispose failed during exit: {ex}");
         }
 
-        if (Services is IDisposable disposable)
+        try
         {
-            disposable.Dispose();
+            if (Services is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
         }
-        base.OnExit(e);
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[XenUpdate] Service container dispose failed during exit: {ex}");
+        }
+
+        try
+        {
+            base.OnExit(e);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[XenUpdate] base.OnExit failed: {ex}");
+        }
+
+        // Belt-and-suspenders: a graceful shutdown is only as reliable as every single
+        // library and service involved being well-behaved about background threads. One
+        // confirmed repeat offender was ShellViewModel's NetworkMonitorService, which
+        // subscribed to NetworkChange.NetworkAvailabilityChanged — a .NET networking API
+        // backed by a dedicated, non-background OS-notification thread. A single live
+        // foreground thread anywhere is enough to keep the whole process in Task Manager
+        // indefinitely, invisible, even after every window has closed, OnExit has finished,
+        // and the DI container has disposed every registered service. That specific leak is
+        // now fixed (see ShellViewModel.Dispose), but rather than trust the NEXT library or
+        // service to also be well-behaved, force the process to actually end here. This must
+        // stay the unconditional last line of every exit path — do not gate it behind any
+        // condition, and do not remove it even if the underlying leak looks fixed.
+        Environment.Exit(0);
     }
 }

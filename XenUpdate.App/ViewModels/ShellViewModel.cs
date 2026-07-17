@@ -1,3 +1,4 @@
+using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -5,7 +6,9 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using XenUpdate.App.Messages;
 using XenUpdate.App.Services;
+using XenUpdate.Core.Enums;
 using XenUpdate.Core.Interfaces;
+using XenUpdate.Core.Models;
 
 namespace XenUpdate.App.ViewModels;
 
@@ -27,7 +30,7 @@ public enum AppPage
 /// banner, and one-shot startup tasks. The title-bar theme toggle binds through
 /// <see cref="Settings"/> so theme state has a single owner (the Settings page).
 /// </summary>
-public sealed partial class ShellViewModel : ObservableObject
+public sealed partial class ShellViewModel : ObservableObject, IDisposable
 {
     private readonly OverviewViewModel _overviewVm;
     private readonly ProgramsViewModel _programsVm;
@@ -79,6 +82,18 @@ public sealed partial class ShellViewModel : ObservableObject
     /// <summary>True while a "Scan All" run is in progress; drives the sidebar button's spinner/label.</summary>
     [ObservableProperty]
     private bool _isScanningAll;
+
+    /// <summary>True while an "Update All" run is in progress; drives the sidebar button's spinner/label.</summary>
+    [ObservableProperty]
+    private bool _isUpdatingAll;
+
+    /// <summary>
+    /// The most recent "Update All" result, shown as a dismissible card at the bottom of the
+    /// window. Null hides the card entirely — set back to null by DismissUpdateAllSummary or
+    /// ViewUpdateAllLog once the user has acknowledged it.
+    /// </summary>
+    [ObservableProperty]
+    private UpdateAllSummaryInfo? _updateAllSummary;
 
     /// <summary>True when the machine has network connectivity; false dims the UI and shows the title-bar badge.</summary>
     [ObservableProperty]
@@ -194,6 +209,104 @@ public sealed partial class ShellViewModel : ObservableObject
             command.CanExecute(null) ? command.ExecuteAsync(null) : Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Installs whatever is currently checked across all four scan pages, one page at a time.
+    /// This does NOT select anything itself — it only acts on rows the user already checked via
+    /// each page's own checkboxes. An earlier version force-selected every still-Pending row
+    /// regardless of what was actually checked, so clicking this after hand-picking a few items
+    /// across different tabs silently installed everything else too — a real bug, not the
+    /// intended "update my selections" behavior.
+    /// Pages run sequentially (not in parallel like <see cref="ScanAllAsync"/>) since an
+    /// install batch is far more consequential than a scan — stacking four simultaneous
+    /// install batches (winget + Windows Update + drivers + pip) would make progress
+    /// reporting unreadable and risks resource contention between installers.
+    /// </summary>
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private async Task UpdateAllAsync()
+    {
+        if (IsUpdatingAll || IsScanningAll)
+        {
+            return;
+        }
+
+        IsUpdatingAll = true;
+        try
+        {
+            var installedAny = false;
+            var totalSucceeded = 0;
+            var totalFailed = 0;
+            var failedNames = new List<string>();
+
+            if (_programsVm.Updates.Any(item => item.IsSelected) && _programsVm.InstallSelectedCommand.CanExecute(null))
+            {
+                installedAny = true;
+                await _programsVm.InstallSelectedCommand.ExecuteAsync(null);
+                totalSucceeded += _programsVm.LastBatchSucceededCount;
+                totalFailed += _programsVm.LastBatchFailedCount;
+                failedNames.AddRange(_programsVm.LastBatchFailedNames);
+            }
+
+            if (_windowsUpdatesVm.Updates.Any(item => item.IsSelected) && _windowsUpdatesVm.InstallSelectedCommand.CanExecute(null))
+            {
+                installedAny = true;
+                await _windowsUpdatesVm.InstallSelectedCommand.ExecuteAsync(null);
+                totalSucceeded += _windowsUpdatesVm.LastBatchSucceededCount;
+                totalFailed += _windowsUpdatesVm.LastBatchFailedCount;
+                failedNames.AddRange(_windowsUpdatesVm.LastBatchFailedNames);
+            }
+
+            if (_driversVm.Updates.Any(item => item.IsSelected) && _driversVm.InstallSelectedCommand.CanExecute(null))
+            {
+                installedAny = true;
+                await _driversVm.InstallSelectedCommand.ExecuteAsync(null);
+                totalSucceeded += _driversVm.LastBatchSucceededCount;
+                totalFailed += _driversVm.LastBatchFailedCount;
+                failedNames.AddRange(_driversVm.LastBatchFailedNames);
+            }
+
+            if (_pipPackagesVm.Updates.Any(item => item.IsSelected) && _pipPackagesVm.InstallSelectedCommand.CanExecute(null))
+            {
+                installedAny = true;
+                await _pipPackagesVm.InstallSelectedCommand.ExecuteAsync(null);
+                totalSucceeded += _pipPackagesVm.LastBatchSucceededCount;
+                totalFailed += _pipPackagesVm.LastBatchFailedCount;
+                failedNames.AddRange(_pipPackagesVm.LastBatchFailedNames);
+            }
+
+            if (!installedAny)
+            {
+                WeakReferenceMessenger.Default.Send(new NotificationMessage(LocalizationManager.Instance["NoUpdatesSelected"]));
+            }
+            else
+            {
+                UpdateAllSummary = new UpdateAllSummaryInfo(totalSucceeded, totalFailed, failedNames);
+
+                // The Windows toast is sent unconditionally — MainWindow's BalloonTipMessage
+                // handler is the one place that decides whether the window is currently visible,
+                // and only actually raises it when it isn't. Deciding that here would duplicate
+                // view-state ShellViewModel has no business owning. The in-app side is the rich
+                // UpdateAllSummary card above, not the plain-text snackbar (that's for simpler,
+                // single-line notifications elsewhere in the app).
+                var balloonText = string.Format(LocalizationManager.Instance["UpdateAllSummary"], totalSucceeded, totalFailed);
+                WeakReferenceMessenger.Default.Send(new BalloonTipMessage(LocalizationManager.Instance["UpdateAllBalloonTitle"], balloonText));
+            }
+        }
+        finally
+        {
+            IsUpdatingAll = false;
+        }
+    }
+
+    [RelayCommand]
+    private void DismissUpdateAllSummary() => UpdateAllSummary = null;
+
+    [RelayCommand]
+    private void ViewUpdateAllLog()
+    {
+        RequestOpenLogViewer?.Invoke();
+        UpdateAllSummary = null;
+    }
+
     [RelayCommand]
     private void ShowWindow() => RequestShowWindow?.Invoke();
 
@@ -305,6 +418,56 @@ public sealed partial class ShellViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.Info($"App update check failed (non-fatal): {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Unsubscribes from <see cref="NetworkChange.NetworkAvailabilityChanged"/> via
+    /// <see cref="_networkMonitor"/>. That event is backed by a dedicated, non-background
+    /// OS-notification thread in the .NET networking stack — as long as anything is still
+    /// subscribed, that thread keeps running, and a live foreground thread is enough to keep
+    /// the whole process alive in Task Manager even after every window has closed and
+    /// <c>Application.OnExit</c> has finished. ShellViewModel is registered as a DI singleton,
+    /// so the container calls this automatically when <c>App.OnExit</c> disposes it.
+    /// </summary>
+    public void Dispose()
+    {
+        _networkMonitor.Dispose();
+    }
+}
+
+/// <summary>Result of an "Update All" run, shown as a dismissible card at the bottom of the window.</summary>
+public sealed record UpdateAllSummaryInfo(int SucceededCount, int FailedCount, IReadOnlyList<string> FailedNames)
+{
+    /// <summary>True when at least one item failed — drives the card's icon/accent color and whether the failed-names line shows at all.</summary>
+    public bool HasFailures => FailedCount > 0;
+
+    public string SucceededText => string.Format(LocalizationManager.Instance["UpdateAllSucceededLabel"], SucceededCount);
+
+    public string FailedText => string.Format(LocalizationManager.Instance["UpdateAllFailedLabel"], FailedCount);
+
+    /// <summary>
+    /// A full "Failed: name, name and N more" line, capped so a large failed batch can't blow
+    /// out the card's height. Null when nothing failed, so the XAML can hide the row entirely
+    /// by null-checking this instead of needing a separate visibility binding on HasFailures.
+    /// </summary>
+    public string? FailedNamesLine
+    {
+        get
+        {
+            if (FailedNames.Count == 0)
+            {
+                return null;
+            }
+
+            const int maxShown = 3;
+            var shown = string.Join(", ", FailedNames.Take(maxShown));
+            var remaining = FailedNames.Count - maxShown;
+            var names = remaining > 0
+                ? string.Format(LocalizationManager.Instance["UpdateAllFailedNamesAndMore"], shown, remaining)
+                : shown;
+
+            return $"{LocalizationManager.Instance["UpdateAllFailedPrefix"]} {names}";
         }
     }
 }

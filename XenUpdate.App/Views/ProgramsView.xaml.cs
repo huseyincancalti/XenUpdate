@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using XenUpdate.App.ViewModels;
+using XenUpdate.Core.Enums;
 using XenUpdate.Core.Models;
 
 namespace XenUpdate.App.Views;
@@ -16,6 +17,7 @@ namespace XenUpdate.App.Views;
 public partial class ProgramsView : UserControl
 {
     private AppUpdateItem? _contextItem;
+    private int? _lastClickedIndex;
 
     /// <summary>Initializes the Programs view.</summary>
     public ProgramsView()
@@ -48,13 +50,36 @@ public partial class ProgramsView : UserControl
     /// Toggles the clicked row's selection checkbox. The checkbox is hit-test invisible, so
     /// the entire row is the click target — clicking anywhere on a row checks/unchecks it.
     /// Row highlighting (used by the context menu) is left intact.
+    /// Shift+click checks every row between the last-clicked row and this one (inclusive),
+    /// matching the familiar file-explorer range-select gesture, without touching rows outside
+    /// that range — a plain click still only ever affects the one row it lands on.
     /// </summary>
     private void ProgramsDataGrid_OnPreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
-        if (FindVisualParent<DataGridRow>(e.OriginalSource as DependencyObject)?.Item is AppUpdateItem item)
+        if (FindVisualParent<DataGridRow>(e.OriginalSource as DependencyObject)?.Item is not AppUpdateItem item
+            || DataContext is not ProgramsViewModel viewModel)
+        {
+            return;
+        }
+
+        var items = viewModel.Updates;
+        var clickedIndex = items.IndexOf(item);
+
+        if (Keyboard.Modifiers == ModifierKeys.Shift && _lastClickedIndex is int anchor && clickedIndex >= 0)
+        {
+            var start = Math.Min(anchor, clickedIndex);
+            var end = Math.Max(anchor, clickedIndex);
+            for (var i = start; i <= end; i++)
+            {
+                items[i].IsSelected = true;
+            }
+        }
+        else
         {
             item.IsSelected = !item.IsSelected;
         }
+
+        _lastClickedIndex = clickedIndex;
     }
 
     private void ProgramsContextMenu_OnOpened(object sender, RoutedEventArgs e)
@@ -63,6 +88,7 @@ public partial class ProgramsView : UserControl
         var hasContextItem = contextItem is not null;
         var hasSelectedItems = GetSelectedItems().Count > 0;
 
+        CopyErrorMessageMenuItem.IsEnabled = hasContextItem && contextItem?.Status == UpdateStatus.Failed;
         CopyPackageIdMenuItem.IsEnabled = hasContextItem;
         CopyAppNameMenuItem.IsEnabled = hasContextItem;
         CopyAppNameAndPackageIdMenuItem.IsEnabled = hasContextItem;
@@ -74,6 +100,17 @@ public partial class ProgramsView : UserControl
         AddSelectedToBlacklistMenuItem.IsEnabled = hasSelectedItems;
         AddSelectedToWhitelistMenuItem.IsEnabled = hasSelectedItems;
         RemoveSelectedFromWhitelistMenuItem.IsEnabled = hasSelectedItems;
+    }
+
+    private void CopyErrorMessageMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        var item = GetContextItem();
+        if (item?.ErrorMessage is null)
+        {
+            return;
+        }
+
+        CopyToClipboard(item.ErrorMessage);
     }
 
     private void CopyPackageIdMenuItem_OnClick(object sender, RoutedEventArgs e)

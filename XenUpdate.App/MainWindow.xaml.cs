@@ -19,8 +19,17 @@ public partial class MainWindow : Window
         WeakReferenceMessenger.Default.Register<NotificationMessage>(this, (_, m) =>
             Dispatcher.InvokeAsync(() => MainSnackbar.MessageQueue?.Enqueue(m.Message)));
 
+        // Only actually raise the Windows toast while the window is hidden/minimized to tray —
+        // if it's visible, the in-app snackbar (registered above) already covers it, and firing
+        // both would just be redundant noise for something the user is already looking at.
         WeakReferenceMessenger.Default.Register<BalloonTipMessage>(this, (_, m) =>
-            Dispatcher.InvokeAsync(() => AppTrayIcon.ShowNotification(m.Title, m.Message, H.NotifyIcon.Core.NotificationIcon.Info)));
+            Dispatcher.InvokeAsync(() =>
+            {
+                if (!IsVisible)
+                {
+                    AppTrayIcon.ShowNotification(m.Title, m.Message, H.NotifyIcon.Core.NotificationIcon.Info);
+                }
+            }));
 
         if (DataContext is ShellViewModel vm)
         {
@@ -53,7 +62,7 @@ public partial class MainWindow : Window
         };
         vm.RequestOpenLogViewer = () =>
         {
-            var logWin = new Views.LogViewerWindow { Owner = this };
+            var logWin = new Views.LogViewerWindow(vm.LogConsole) { Owner = this };
             logWin.Show();
         };
     }

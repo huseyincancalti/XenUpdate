@@ -138,10 +138,14 @@
                       RowStyle="{StaticResource ZenDataGridRowStyle}"
                       CellStyle="{StaticResource ZenDataGridCellStyle}"
                       PreviewMouseRightButtonDown="PipPackagesDataGrid_OnPreviewMouseRightButtonDown"
+                      PreviewMouseLeftButtonUp="PipPackagesDataGrid_OnPreviewMouseLeftButtonUp"
                       materialDesign:DataGridAssist.CellPadding="8 6"
                       materialDesign:DataGridAssist.ColumnHeaderPadding="8 6">
                 <DataGrid.ContextMenu>
                     <ContextMenu Opened="PipPackagesContextMenu_OnOpened">
+                        <MenuItem x:Name="CopyErrorMessageMenuItem"
+                                  Header="{Binding [CtxCopyErrorMessage], Source={x:Static loc:LocalizationManager.Instance}}"
+                                  Click="CopyErrorMessageMenuItem_OnClick" />
                         <MenuItem x:Name="CopyPackageNameMenuItem"
                                   Header="{Binding [CtxCopyPackageName], Source={x:Static loc:LocalizationManager.Instance}}"
                                   Click="CopyPackageNameMenuItem_OnClick" />

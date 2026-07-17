@@ -530,13 +530,22 @@
                 BorderBrush="{DynamicResource ZenBadgeFailedForegroundBrush}"
                 BorderThickness="2,0,0,0"
                 Padding="8,6,6,7"
-                Margin="0,4,4,2">
+                Margin="0,4,4,2"
+                ToolTip="{Binding ErrorMessage}"
+                ToolTipService.ShowDuration="60000">
             <!--
                 Grid, not a horizontal StackPanel: a horizontal StackPanel measures its
                 children with infinite available width, so a wrapping TextBlock inside it
                 never actually wraps — it renders one long line and gets clipped by the cell.
-                A Grid's star column IS constrained to the real available width, so the text
-                column here wraps and grows the row's height instead of overflowing sideways.
+                A Grid's star column IS constrained to the real available width.
+
+                TextTrimming, not TextWrapping: wrapping relies on the DataGrid re-measuring
+                and growing the row's height whenever this content changes, which the
+                virtualized DataGrid doesn't reliably do — long reasons ended up vertically
+                clipped mid-line instead of wrapping, looking like a half-rendered message.
+                A single trimmed line is a fixed height the row always fits, and the ToolTip
+                above (plus the right-click "Copy Error Message" item) gives access to the
+                untruncated text without depending on row growth at all.
             -->
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -554,13 +563,13 @@
                                Foreground="{DynamicResource ZenTextBrush}"
                                FontSize="12"
                                FontWeight="SemiBold"
-                               TextWrapping="Wrap" />
+                               TextTrimming="CharacterEllipsis" />
                     <!-- The reason alone doesn't tell anyone what to do next; this line does. -->
                     <TextBlock Text="{Binding [RetryHint], Source={x:Static loc:LocalizationManager.Instance}}"
                                Foreground="{DynamicResource ZenMutedTextBrush}"
                                FontSize="10.5"
                                Margin="0,3,0,0"
-                               TextWrapping="Wrap" />
+                               TextTrimming="CharacterEllipsis" />
                 </StackPanel>
             </Grid>
         </Border>

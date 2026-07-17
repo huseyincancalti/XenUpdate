@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using XenUpdate.App.ViewModels;
+using XenUpdate.Core.Enums;
 using XenUpdate.Core.Models;
 
 namespace XenUpdate.App.Views;
@@ -16,6 +17,7 @@ namespace XenUpdate.App.Views;
 public partial class DriversView : UserControl
 {
     private DriverUpdateItem? _contextItem;
+    private int? _lastClickedIndex;
 
     /// <summary>Initializes the Drivers view.</summary>
     public DriversView()
@@ -44,6 +46,42 @@ public partial class DriversView : UserControl
         row.Focus();
     }
 
+    /// <summary>
+    /// Toggles the clicked row's selection checkbox. The checkbox is hit-test invisible, so
+    /// the entire row is the click target — clicking anywhere on a row checks/unchecks it,
+    /// matching Programs/Python Packages.
+    /// Shift+click checks every row between the last-clicked row and this one (inclusive),
+    /// matching the familiar file-explorer range-select gesture, without touching rows outside
+    /// that range — a plain click still only ever affects the one row it lands on.
+    /// </summary>
+    private void DriversDataGrid_OnPreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (FindVisualParent<DataGridRow>(e.OriginalSource as DependencyObject)?.Item is not DriverUpdateItem item
+            || DataContext is not DriversViewModel viewModel)
+        {
+            return;
+        }
+
+        var items = viewModel.Updates;
+        var clickedIndex = items.IndexOf(item);
+
+        if (Keyboard.Modifiers == ModifierKeys.Shift && _lastClickedIndex is int anchor && clickedIndex >= 0)
+        {
+            var start = Math.Min(anchor, clickedIndex);
+            var end = Math.Max(anchor, clickedIndex);
+            for (var i = start; i <= end; i++)
+            {
+                items[i].IsSelected = true;
+            }
+        }
+        else
+        {
+            item.IsSelected = !item.IsSelected;
+        }
+
+        _lastClickedIndex = clickedIndex;
+    }
+
     private void DriversContextMenu_OnOpened(object sender, RoutedEventArgs e)
     {
         var item = GetContextItem();
@@ -51,6 +89,7 @@ public partial class DriversView : UserControl
         var hasManufacturer = !string.IsNullOrWhiteSpace(item?.Manufacturer);
         var hasSelectedItems = GetSelectedItems().Count > 0;
 
+        CopyErrorMessageMenuItem.IsEnabled = hasContextItem && item?.Status == UpdateStatus.Failed;
         CopyDriverTitleMenuItem.IsEnabled = hasContextItem;
         CopyDriverManufacturerMenuItem.IsEnabled = hasContextItem && hasManufacturer;
         CopyDriverTitleAndManufacturerMenuItem.IsEnabled = hasContextItem && hasManufacturer;
@@ -113,6 +152,17 @@ public partial class DriversView : UserControl
         }
 
         await viewModel.RemoveItemsFromWhitelistAsync(selectedItems);
+    }
+
+    private void CopyErrorMessageMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        var item = GetContextItem();
+        if (item?.ErrorMessage is null)
+        {
+            return;
+        }
+
+        CopyToClipboard(item.ErrorMessage);
     }
 
     private void CopyDriverTitleMenuItem_OnClick(object sender, RoutedEventArgs e)
