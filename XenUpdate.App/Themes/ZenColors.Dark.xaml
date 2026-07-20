@@ -19,8 +19,10 @@
     <SolidColorBrush x:Key="ZenBackgroundBrush"      Color="#0F172A" />
     <SolidColorBrush x:Key="ZenDeepBackgroundBrush"  Color="#09090B" />
     <SolidColorBrush x:Key="ZenSurfaceBrush"         Color="#1E1B4B" />
-    <SolidColorBrush x:Key="ZenSidebarBrush"         Color="#1E1B4B" />
-    <SolidColorBrush x:Key="ZenSidebarHoverBrush"    Color="#3D355C" />
+    <!-- Sidebar surfaces carry alpha (glassmorphism over the background photo layer) — same
+         values ThemeService.ApplyBackgroundDerivedBrushes re-derives at runtime. -->
+    <SolidColorBrush x:Key="ZenSidebarBrush"         Color="#C81E1B4B" />
+    <SolidColorBrush x:Key="ZenSidebarHoverBrush"    Color="#D53D355C" />
     <SolidColorBrush x:Key="ZenSidebarSelectedBrush" Color="#4F46E5" />
     <SolidColorBrush x:Key="ZenDividerBrush"         Color="#1E293B" />
 
@@ -34,10 +36,10 @@
         <GradientStop Color="#24243E" Offset="1" />
     </LinearGradientBrush>
 
-    <!-- Sidebar: gentle vertical depth (top slightly darker) -->
+    <!-- Sidebar: gentle vertical depth (top slightly darker), translucent so the photo shows through -->
     <LinearGradientBrush x:Key="ZenSidebarPanelBrush" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#191543" Offset="0" />
-        <GradientStop Color="#1E1B4B" Offset="1" />
+        <GradientStop Color="#C8191543" Offset="0" />
+        <GradientStop Color="#D51E1B4B" Offset="1" />
     </LinearGradientBrush>
 
     <!-- Glass-lite panel fills (no blur — layered alpha over ambient bg) -->
@@ -65,8 +67,8 @@
         <GradientStop Color="#5B4FC9" Offset="1" />
     </LinearGradientBrush>
 
-    <!-- Sidebar group cards (Updates/Guides/Settings): a touch lighter than the sidebar's own gradient so each group reads as its own raised region -->
-    <SolidColorBrush x:Key="ZenSidebarCardBrush" Color="#241F52" />
+    <!-- Sidebar group cards (Updates/Guides/Settings): a touch lighter than the sidebar's own gradient so each group reads as its own raised region; translucent for the glass look -->
+    <SolidColorBrush x:Key="ZenSidebarCardBrush" Color="#AA241F52" />
 
     <!-- Log drawer: flat matte (avoid glass here — reads as a console bar) -->
     <SolidColorBrush x:Key="ZenLogDrawerMatteBrush" Color="#0A0A0F" />
@@ -78,6 +80,10 @@
 
     <!-- ===== Semantic accents ===== -->
     <SolidColorBrush x:Key="ZenPrimaryBrush"  Color="#7C3AED" />
+    <!-- Raw Color companion to ZenPrimaryBrush — needed anywhere a GradientStop.Color binds to the accent directly (Brush resources can't feed that property). ThemeService.ApplyPalette keeps both in sync. -->
+    <Color x:Key="ZenPrimaryColor">#7C3AED</Color>
+    <SolidColorBrush x:Key="ZenSecondaryBrush" Color="#A78BFA" />
+    <Color x:Key="ZenSecondaryColor">#A78BFA</Color>
     <SolidColorBrush x:Key="ZenSuccessBrush"  Color="#059669" />
     <SolidColorBrush x:Key="ZenErrorBrush"    Color="#EF4444" />
     <SolidColorBrush x:Key="ZenWarningBrush"  Color="#F59E0B" />

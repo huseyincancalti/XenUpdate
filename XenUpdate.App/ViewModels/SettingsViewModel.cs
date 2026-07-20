@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using XenUpdate.App.Services;
@@ -40,6 +41,72 @@ public sealed partial class SettingsViewModel : ObservableObject
     /// the correct next-action icon without needing enum-string comparisons.
     /// </summary>
     public bool IsLightTheme => Settings.Theme == AppTheme.Light;
+
+    /// <summary>
+    /// A curated Primary/Secondary/Background combo offered as a one-click preset on the
+    /// Settings page — background is a full palette, not just a single accent, so picking one
+    /// changes the app's whole look (sidebar, surfaces, glass panels, the log/update-queue
+    /// windows) consistently, not just button colors.
+    /// </summary>
+    public sealed record ThemePalette(string Name, string PrimaryHex, string? SecondaryHex, string BackgroundHex)
+    {
+        /// <summary>Pre-converted brushes for the preset's swatch preview — XAML data binding doesn't run TypeConverters on bound string values the way a literal attribute would.</summary>
+        public Brush PrimarySwatch { get; } = (Brush)new BrushConverter().ConvertFromString(PrimaryHex)!;
+        public Brush SecondarySwatch { get; } = (Brush)new BrushConverter().ConvertFromString(SecondaryHex ?? PrimaryHex)!;
+        public Brush BackgroundSwatch { get; } = (Brush)new BrushConverter().ConvertFromString(BackgroundHex)!;
+    }
+
+    /// <summary>
+    /// Five curated palettes, replacing an earlier hand-picked set the user found looked bad in
+    /// practice (in particular "Blossom", a near-white background that read as broken rather than
+    /// intentional against the app's dark-theme text). These are grounded in 2026 SaaS/dashboard
+    /// design-trend research instead: dark surfaces settle on well-regarded near-blacks
+    /// (#0D1117 GitHub dark, #0F172A Tailwind slate-900, #121212 Material dark) rather than pure
+    /// black, and violet/cyan plus navy/purple are called out repeatedly as premium-reading 2026
+    /// accent pairings — all four dark entries keep the logo's violet (#7C3AED/#8B5CF6) as
+    /// primary. The two light entries use Tailwind's slate-50 and a warm off-white, both paired
+    /// with violet so a user who prefers Light mode still gets brand-consistent accents instead of
+    /// a generic default blue.
+    /// </summary>
+    public IReadOnlyList<ThemePalette> ThemePalettes { get; } = new[]
+    {
+        new ThemePalette("Nova", "#8B5CF6", "#06B6D4", "#0D1117"),
+        new ThemePalette("Origin", "#7C3AED", null, "#0F172A"),
+        new ThemePalette("Emerald", "#10B981", "#7C3AED", "#121212"),
+        new ThemePalette("Daylight", "#7C3AED", "#2563EB", "#F8FAFC"),
+        new ThemePalette("Linen", "#7C3AED", "#D97706", "#FAF7F2"),
+    };
+
+    /// <summary>
+    /// Current Primary/Secondary/Background as brushes for the swatch buttons that open the
+    /// inline picker panel (Controls/ColorPickerControl — a self-drawn SV-square + hue strip +
+    /// hex box, not the native OS color dialog, which read as visibly out of place against the
+    /// rest of this glassmorphism UI). Re-notified from ApplyPaletteAndSave whenever the
+    /// underlying hex changes.
+    /// </summary>
+    public Brush PrimarySwatchBrush => ToBrush(Settings.AccentColorHex);
+    public Brush SecondarySwatchBrush => ToBrush(Settings.SecondaryColorHex ?? Settings.AccentColorHex);
+    public Brush BackgroundSwatchBrush => ToBrush(Settings.BackgroundColorHex);
+
+    /// <summary>True once a secondary color is explicitly set — drives whether the "revert to automatic" action shows.</summary>
+    public bool HasCustomSecondary => !string.IsNullOrWhiteSpace(Settings.SecondaryColorHex);
+
+    /// <summary>
+    /// UI mirror of <see cref="AppSettings.SavedCustomColors"/> — reusable single-color
+    /// swatches shown inside the color picker panel. Mutated only through the Save/Apply/
+    /// Remove commands below, which keep the settings list in lockstep and persist.
+    /// </summary>
+    public ObservableCollection<string> SavedColors { get; } = new();
+
+    /// <summary>
+    /// UI mirror of <see cref="AppSettings.SavedCustomPalettes"/>, projected into the same
+    /// <see cref="ThemePalette"/> shape the built-in presets use so both rows share one tile
+    /// template and one apply path (SelectThemePaletteCommand). Index-aligned with the
+    /// settings list — RemoveSavedPalette relies on that.
+    /// </summary>
+    public ObservableCollection<ThemePalette> SavedPalettes { get; } = new();
+
+    private static Brush ToBrush(string hex) => (Brush)new BrushConverter().ConvertFromString(hex)!;
 
     /// <summary>The package ID entered for a new blacklist entry.</summary>
     [ObservableProperty]
@@ -107,6 +174,13 @@ public sealed partial class SettingsViewModel : ObservableObject
     }
 
     /// <summary>
+    /// The live log console, embedded as a card at the bottom of the Settings page — the
+    /// separate log window can be closed (or never opened) and the entries stay reachable here.
+    /// Same DI singleton instance the LogViewerWindow shows, so the two views never diverge.
+    /// </summary>
+    public LogConsoleViewModel LogConsole { get; }
+
+    /// <summary>
     /// Initializes the SettingsViewModel with its required repositories.
     /// </summary>
     public SettingsViewModel(
@@ -114,13 +188,15 @@ public sealed partial class SettingsViewModel : ObservableObject
         IBlacklistRepository blacklistRepo,
         IWhitelistRepository whitelistRepo,
         ILoggerService logger,
-        IThemeService themeService)
+        IThemeService themeService,
+        LogConsoleViewModel logConsole)
     {
         _settingsRepo = settingsRepo;
         _blacklistRepo = blacklistRepo;
         _whitelistRepo = whitelistRepo;
         _logger = logger;
         _themeService = themeService;
+        LogConsole = logConsole;
 
         // When ProgramsViewModel (or any other code) adds/removes blacklist entries,
         // the repository fires BlacklistChanged. We refresh the visible list so the
@@ -150,6 +226,7 @@ public sealed partial class SettingsViewModel : ObservableObject
 
             Settings = await _settingsRepo.LoadAsync();
             Settings.PropertyChanged += OnSettingsPropertyChanged;
+            SyncSavedAppearance();
 
             // Ensure toggle icon reflects the loaded theme (covers cold-start with Light saved).
             OnPropertyChanged(nameof(IsLightTheme));
@@ -414,8 +491,67 @@ public sealed partial class SettingsViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsLightTheme));
                 ApplyThemeAndSave(Settings.Theme);
                 break;
+
+            // AccentColorHex/SecondaryColorHex/BackgroundColorHex are intentionally NOT handled
+            // here — SelectThemePalette/PickPrimaryColor/PickSecondaryColor/ClearSecondaryColor/
+            // PickBackgroundColor set the relevant hex(es) and call ApplyPaletteAndSave()
+            // explicitly once, rather than reacting to each property change separately (which
+            // would apply the palette redundantly for one logical change — harmless, since
+            // ApplyPalette is idempotent, but wasteful).
+
+            case nameof(AppSettings.BackgroundImagePath):
+            case nameof(AppSettings.BackgroundBlurRadius):
+            case nameof(AppSettings.SpotlightEnabled):
+                // No service call needed here — MainWindow's background layer binds directly
+                // to these AppSettings properties and updates live on its own.
+                _ = SaveAsync();
+                break;
         }
     }
+
+    /// <summary>Applies the current Primary/Secondary/Background settings to the running app and persists them, mirroring ApplyThemeAndSave.</summary>
+    private void ApplyPaletteAndSave()
+    {
+        try
+        {
+            if (TryParseHexColor(Settings.AccentColorHex, out var primary)
+                && TryParseHexColor(Settings.BackgroundColorHex, out var background))
+            {
+                // A light background needs the Light theme's dark text (and vice versa) — Zen*
+                // text brushes stay whatever the CURRENT theme dictates regardless of how light
+                // or dark the chosen background actually is, so without this, a light background
+                // picked while still in Dark theme renders light-on-light and is unreadable
+                // (exactly what happened before this existed). SetField on AppSettings already
+                // no-ops if the theme is already correct, so this is safe to call unconditionally.
+                Settings.Theme = Luminance(background) > 0.6 ? AppTheme.Light : AppTheme.Dark;
+
+                Color? secondary = null;
+                if (!string.IsNullOrWhiteSpace(Settings.SecondaryColorHex) && TryParseHexColor(Settings.SecondaryColorHex, out var parsedSecondary))
+                {
+                    secondary = parsedSecondary;
+                }
+
+                _themeService.ApplyPalette(primary, secondary, background);
+                _logger.Info($"Palette changed: primary={Settings.AccentColorHex}, secondary={Settings.SecondaryColorHex ?? "(auto)"}, background={Settings.BackgroundColorHex}.");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Error("Failed to apply palette.", ex);
+        }
+
+        // The swatch buttons in Settings read these as computed properties (not bound directly
+        // to Settings.XHex), so nothing else would tell WPF to re-read them after a pick/preset.
+        OnPropertyChanged(nameof(PrimarySwatchBrush));
+        OnPropertyChanged(nameof(SecondarySwatchBrush));
+        OnPropertyChanged(nameof(BackgroundSwatchBrush));
+        OnPropertyChanged(nameof(HasCustomSecondary));
+
+        _ = SaveAsync();
+    }
+
+    /// <summary>Standard perceptual luminance (0=black, 1=white), used to decide whether a background needs Light or Dark theme text to stay readable against it.</summary>
+    private static double Luminance(Color c) => (0.299 * c.R + 0.587 * c.G + 0.114 * c.B) / 255.0;
 
     /// <summary>
     /// Writes or removes the XenUpdate entry in the Windows Run registry key
@@ -485,6 +621,223 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
 
         _ = SaveAsync();
+    }
+
+    /// <summary>Applies one of the curated <see cref="ThemePalettes"/> — the preset cards pass the palette itself as the command parameter.</summary>
+    [RelayCommand]
+    private void SelectThemePalette(ThemePalette palette)
+    {
+        // Set all three, then apply once — OnSettingsPropertyChanged would otherwise fire (and
+        // apply) three separate times for one logical change, harmless but wasteful.
+        Settings.AccentColorHex = palette.PrimaryHex;
+        Settings.SecondaryColorHex = palette.SecondaryHex;
+        Settings.BackgroundColorHex = palette.BackgroundHex;
+        ApplyPaletteAndSave();
+    }
+
+    /// <summary>Which swatch button opened the inline picker panel — None means the panel is closed.</summary>
+    public enum ColorPickerTarget { None, Primary, Secondary, Background }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsColorPickerOpen))]
+    [NotifyPropertyChangedFor(nameof(ColorPickerTitle))]
+    private ColorPickerTarget _activeColorPickerTarget = ColorPickerTarget.None;
+
+    /// <summary>The color the inline picker is currently showing/editing — only committed to Settings (and applied) on Confirm, discarded on Cancel.</summary>
+    [ObservableProperty]
+    private Color _editingColor;
+
+    public bool IsColorPickerOpen => ActiveColorPickerTarget != ColorPickerTarget.None;
+
+    public string ColorPickerTitle => ActiveColorPickerTarget switch
+    {
+        ColorPickerTarget.Primary => L.T("SettingsPrimaryHint"),
+        ColorPickerTarget.Secondary => L.T("SettingsSecondaryHint"),
+        ColorPickerTarget.Background => L.T("SettingsBackgroundHint"),
+        _ => string.Empty,
+    };
+
+    [RelayCommand]
+    private void OpenPrimaryColorPicker() => OpenColorPicker(ColorPickerTarget.Primary, Settings.AccentColorHex);
+
+    [RelayCommand]
+    private void OpenSecondaryColorPicker() => OpenColorPicker(ColorPickerTarget.Secondary, Settings.SecondaryColorHex ?? Settings.AccentColorHex);
+
+    [RelayCommand]
+    private void OpenBackgroundColorPicker() => OpenColorPicker(ColorPickerTarget.Background, Settings.BackgroundColorHex);
+
+    private void OpenColorPicker(ColorPickerTarget target, string seedHex)
+    {
+        if (TryParseHexColor(seedHex, out var color))
+        {
+            EditingColor = color;
+        }
+
+        ActiveColorPickerTarget = target;
+    }
+
+    /// <summary>Writes EditingColor into whichever hex property is being edited and applies it immediately, same as clicking a preset.</summary>
+    [RelayCommand]
+    private void ConfirmColorPicker()
+    {
+        var hex = $"#{EditingColor.R:X2}{EditingColor.G:X2}{EditingColor.B:X2}";
+        switch (ActiveColorPickerTarget)
+        {
+            case ColorPickerTarget.Primary:
+                Settings.AccentColorHex = hex;
+                break;
+            case ColorPickerTarget.Secondary:
+                Settings.SecondaryColorHex = hex;
+                break;
+            case ColorPickerTarget.Background:
+                Settings.BackgroundColorHex = hex;
+                break;
+        }
+
+        ActiveColorPickerTarget = ColorPickerTarget.None;
+        ApplyPaletteAndSave();
+    }
+
+    /// <summary>Closes the panel without touching Settings — whatever was dragged in the picker is discarded.</summary>
+    [RelayCommand]
+    private void CancelColorPicker() => ActiveColorPickerTarget = ColorPickerTarget.None;
+
+    /// <summary>Reverts to "no explicit secondary" — ThemeService then derives one from the primary, exactly as if it had never been set.</summary>
+    [RelayCommand]
+    private void ClearSecondaryColor()
+    {
+        Settings.SecondaryColorHex = null;
+        ApplyPaletteAndSave();
+    }
+
+    /// <summary>Rebuilds the observable mirrors from the freshly loaded settings lists.</summary>
+    private void SyncSavedAppearance()
+    {
+        SavedColors.Clear();
+        foreach (var hex in Settings.SavedCustomColors)
+        {
+            SavedColors.Add(hex);
+        }
+
+        SavedPalettes.Clear();
+        foreach (var palette in Settings.SavedCustomPalettes)
+        {
+            SavedPalettes.Add(new ThemePalette(palette.Name, palette.PrimaryHex, palette.SecondaryHex, palette.BackgroundHex));
+        }
+    }
+
+    /// <summary>Adds the color currently shown in the picker to the saved swatches (no duplicates; unlimited otherwise).</summary>
+    [RelayCommand]
+    private void SaveEditingColor()
+    {
+        var hex = $"#{EditingColor.R:X2}{EditingColor.G:X2}{EditingColor.B:X2}";
+        if (Settings.SavedCustomColors.Contains(hex, StringComparer.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        Settings.SavedCustomColors.Add(hex);
+        SavedColors.Add(hex);
+        _ = SaveAsync();
+    }
+
+    /// <summary>Loads a saved swatch into the open picker — Confirm still decides whether it's actually applied.</summary>
+    [RelayCommand]
+    private void ApplySavedColor(string hex)
+    {
+        if (TryParseHexColor(hex, out var color))
+        {
+            EditingColor = color;
+        }
+    }
+
+    [RelayCommand]
+    private void RemoveSavedColor(string hex)
+    {
+        Settings.SavedCustomColors.RemoveAll(h => string.Equals(h, hex, StringComparison.OrdinalIgnoreCase));
+        SavedColors.Remove(hex);
+        _ = SaveAsync();
+    }
+
+    /// <summary>Captures the currently applied Primary/Secondary/Background trio as a new saved theme tile.</summary>
+    [RelayCommand]
+    private void SaveCurrentPalette()
+    {
+        var saved = new SavedPalette
+        {
+            Name = string.Format(L.T("CustomPaletteName"), Settings.SavedCustomPalettes.Count + 1),
+            PrimaryHex = Settings.AccentColorHex,
+            SecondaryHex = Settings.SecondaryColorHex,
+            BackgroundHex = Settings.BackgroundColorHex,
+        };
+
+        Settings.SavedCustomPalettes.Add(saved);
+        SavedPalettes.Add(new ThemePalette(saved.Name, saved.PrimaryHex, saved.SecondaryHex, saved.BackgroundHex));
+        _ = SaveAsync();
+    }
+
+    /// <summary>Deletes a saved theme tile — index-based because SavedPalettes mirrors Settings.SavedCustomPalettes 1:1 by position.</summary>
+    [RelayCommand]
+    private void RemoveSavedPalette(ThemePalette palette)
+    {
+        var index = SavedPalettes.IndexOf(palette);
+        if (index < 0)
+        {
+            return;
+        }
+
+        SavedPalettes.RemoveAt(index);
+        Settings.SavedCustomPalettes.RemoveAt(index);
+        _ = SaveAsync();
+    }
+
+    /// <summary>Lets the user pick an image file to show, blurred, behind the app's content.</summary>
+    [RelayCommand]
+    private void ChooseBackgroundImage()
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Filter = "Images (*.png;*.jpg;*.jpeg;*.bmp;*.webp)|*.png;*.jpg;*.jpeg;*.bmp;*.webp|All files (*.*)|*.*",
+            CheckFileExists = true
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            Settings.BackgroundImagePath = dialog.FileName;
+        }
+    }
+
+    /// <summary>Removes the custom background photo, falling back to the app's built-in ambient gradient.</summary>
+    [RelayCommand]
+    private void ClearBackgroundImage()
+    {
+        Settings.BackgroundImagePath = null;
+    }
+
+    private static bool TryParseHexColor(string hex, out Color color)
+    {
+        color = default;
+
+        if (string.IsNullOrWhiteSpace(hex))
+        {
+            return false;
+        }
+
+        try
+        {
+            var converted = ColorConverter.ConvertFromString(hex.StartsWith('#') ? hex : $"#{hex}");
+            if (converted is Color parsed)
+            {
+                color = parsed;
+                return true;
+            }
+        }
+        catch (FormatException)
+        {
+            // Falls through to return false below.
+        }
+
+        return false;
     }
 
     private async Task InitializeAsync()

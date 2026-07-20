@@ -10,6 +10,11 @@ public partial class MainWindow : Window
 {
     private bool _exitRequested;
 
+    // Lazily created, then reused for the lifetime of the app — RequestShow fires once per
+    // page every time "Update All" moves on to the next one (up to 4 times per run), so this
+    // must not construct a fresh window each call or four copies would stack up.
+    private Views.UpdateQueueWindow? _updateQueueWindow;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -62,7 +67,27 @@ public partial class MainWindow : Window
         };
         vm.RequestOpenLogViewer = () =>
         {
-            var logWin = new Views.LogViewerWindow(vm.LogConsole) { Owner = this };
+            var logWin = new Views.LogViewerWindow(vm.LogConsole, vm.Settings.Settings) { Owner = this };
+            logWin.Show();
+        };
+        vm.UpdateQueue.RequestShow = () =>
+        {
+            // Not just ??= — if the cached window was ever genuinely closed (Alt+F4, or the
+            // app shutting down while it happened to be open), its Closed handler below resets
+            // this to null. Reusing a closed WPF Window instance throws, so the null check must
+            // reflect "was it actually closed", not just "was it ever created".
+            if (_updateQueueWindow is null)
+            {
+                _updateQueueWindow = new Views.UpdateQueueWindow(vm.UpdateQueue, vm.Settings.Settings) { Owner = this };
+                _updateQueueWindow.Closed += (_, _) => _updateQueueWindow = null;
+            }
+
+            _updateQueueWindow.Show();
+            _updateQueueWindow.Activate();
+        };
+        vm.UpdateQueue.RequestOpenLog = () =>
+        {
+            var logWin = new Views.LogViewerWindow(vm.LogConsole, vm.Settings.Settings) { Owner = this };
             logWin.Show();
         };
     }
@@ -138,6 +163,19 @@ public partial class MainWindow : Window
             RoutedEvent = MouseWheelEvent
         };
         element.RaiseEvent(bubbledArgs);
+    }
+
+    private void MainWindow_OnPreviewMouseMove(object sender, MouseEventArgs e) =>
+        BackgroundLayer.UpdateSpotlightPosition(e.GetPosition(BackgroundLayer));
+
+    // The FAB reuses the exact same open path UpdateQueueViewModel itself uses when a batch
+    // starts (RequestShow), so there's one construction/caching flow for the window, not two.
+    private void UpdateQueueFab_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is ShellViewModel vm)
+        {
+            vm.UpdateQueue.RequestShow?.Invoke();
+        }
     }
 
     private void MinimizeButton_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;

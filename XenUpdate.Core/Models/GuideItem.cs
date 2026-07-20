@@ -55,4 +55,14 @@ public sealed class GuideItem
 
     /// <summary>Optional: the vendor tool to open directly when it is installed.</summary>
     public GuideAppLaunch? AppLaunch { get; init; }
+
+    /// <summary>
+    /// True for symptom-driven repair guides (e.g. "fix missing VCRUNTIME140.dll") as opposed
+    /// to keep-this-updated guides (GPU driver, Visual Studio). There is nothing to version-
+    /// check for these — whether the user "needs" one depends entirely on whether they're
+    /// seeing the symptom — so the UI must present them as optional reference material:
+    /// excluded from "guides needing attention" counts, badged as troubleshooting, and never
+    /// implying an outstanding task on a healthy machine.
+    /// </summary>
+    public bool IsTroubleshooting { get; init; }
 }

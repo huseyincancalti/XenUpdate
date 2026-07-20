@@ -79,6 +79,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<HardwareHubViewModel>();
         services.AddSingleton<LogConsoleViewModel>();
+        services.AddSingleton<UpdateQueueViewModel>();
 
         return services;
     }

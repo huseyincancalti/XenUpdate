@@ -14,9 +14,11 @@
     <SolidColorBrush x:Key="ZenBackgroundBrush"      Color="#F8FAFC" />
     <SolidColorBrush x:Key="ZenDeepBackgroundBrush"  Color="#E0E7FF" />
     <SolidColorBrush x:Key="ZenSurfaceBrush"         Color="#FFFFFF" />
-    <SolidColorBrush x:Key="ZenSidebarBrush"         Color="#E0E7FF" />
-    <!-- Hover: strong enough to be clearly visible against #E0E7FF sidebar -->
-    <SolidColorBrush x:Key="ZenSidebarHoverBrush"    Color="#A8B4FF" />
+    <!-- Sidebar surfaces carry alpha (glassmorphism over the background photo layer) — same
+         values ThemeService.ApplyBackgroundDerivedBrushes re-derives at runtime. -->
+    <SolidColorBrush x:Key="ZenSidebarBrush"         Color="#C8E0E7FF" />
+    <!-- Hover: strong enough to be clearly visible against the translucent sidebar -->
+    <SolidColorBrush x:Key="ZenSidebarHoverBrush"    Color="#D5A8B4FF" />
     <SolidColorBrush x:Key="ZenSidebarSelectedBrush" Color="#4F46E5" />
     <SolidColorBrush x:Key="ZenDividerBrush"         Color="#CBD5E1" />
 
@@ -29,8 +31,8 @@
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="ZenSidebarPanelBrush" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#E4E8FF" Offset="0" />
-        <GradientStop Color="#E0E7FF" Offset="1" />
+        <GradientStop Color="#C8E4E8FF" Offset="0" />
+        <GradientStop Color="#D5E0E7FF" Offset="1" />
     </LinearGradientBrush>
 
     <!--
@@ -64,8 +66,8 @@
         <GradientStop Color="#4F46E5" Offset="1" />
     </LinearGradientBrush>
 
-    <!-- Sidebar group cards (Updates/Guides/Settings): near-white so each group reads as a clean raised region against the indigo-wash sidebar -->
-    <SolidColorBrush x:Key="ZenSidebarCardBrush" Color="#EDF1FF" />
+    <!-- Sidebar group cards (Updates/Guides/Settings): near-white so each group reads as a clean raised region against the indigo-wash sidebar; translucent for the glass look -->
+    <SolidColorBrush x:Key="ZenSidebarCardBrush" Color="#AAEDF1FF" />
 
     <!-- Log: flatter, less saturated than sidebar (matte console strip) -->
     <SolidColorBrush x:Key="ZenLogDrawerMatteBrush" Color="#E2E5F0" />
@@ -77,6 +79,10 @@
 
     <!-- ===== Semantic accents ===== -->
     <SolidColorBrush x:Key="ZenPrimaryBrush"  Color="#4F46E5" />
+    <!-- Raw Color companion to ZenPrimaryBrush — needed anywhere a GradientStop.Color binds to the accent directly (Brush resources can't feed that property). ThemeService.ApplyPalette keeps both in sync. -->
+    <Color x:Key="ZenPrimaryColor">#4F46E5</Color>
+    <SolidColorBrush x:Key="ZenSecondaryBrush" Color="#818CF8" />
+    <Color x:Key="ZenSecondaryColor">#818CF8</Color>
     <SolidColorBrush x:Key="ZenSuccessBrush"  Color="#10B981" />
     <SolidColorBrush x:Key="ZenErrorBrush"    Color="#E11D48" />
     <SolidColorBrush x:Key="ZenWarningBrush"  Color="#D97706" />

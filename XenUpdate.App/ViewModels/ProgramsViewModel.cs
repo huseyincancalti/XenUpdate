@@ -3,7 +3,9 @@ using System.ComponentModel;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using XenUpdate.App.Collections;
+using XenUpdate.App.Messages;
 using XenUpdate.App.Services;
 using XenUpdate.Core.Enums;
 using XenUpdate.Core.Interfaces;
@@ -65,7 +67,6 @@ public sealed partial class ProgramsViewModel : ObservableObject
     /// </summary>
     public int LastBatchSucceededCount { get; private set; }
     public int LastBatchFailedCount { get; private set; }
-    public IReadOnlyList<string> LastBatchFailedNames { get; private set; } = Array.Empty<string>();
 
     /// <summary>True while any operation (scan or install) is running. Drives command enable/disable.</summary>
     [ObservableProperty]
@@ -338,6 +339,24 @@ public sealed partial class ProgramsViewModel : ObservableObject
             return;
         }
 
+        WeakReferenceMessenger.Default.Send(new InstallBatchStartedMessage(L.T("NavPrograms"), selectedItems));
+        await RunInstallBatchAsync(selectedItems);
+    }
+
+    /// <summary>
+    /// Runs the install batch over exactly the given items, in the given order — no selection
+    /// snapshot, no InstallBatchStartedMessage (the caller already announced this batch to the
+    /// Update Queue window, e.g. via ShellViewModel.UpdateAllAsync's AnnouncePlan). This is what
+    /// makes item-level drag-reordering inside the Update Queue window actually change
+    /// execution order rather than just the visual: ShellViewModel reads UpdateQueueGroup.Items'
+    /// live order and passes it straight here instead of letting this page recompute its own
+    /// order from Updates.
+    /// </summary>
+    public async Task InstallItemsAsync(IReadOnlyList<UpdateItem> items) =>
+        await RunInstallBatchAsync(items.Cast<AppUpdateItem>().ToList());
+
+    private async Task RunInstallBatchAsync(List<AppUpdateItem> selectedItems)
+    {
         ResetOperationCancellation();
 
         IsBusy = true;
@@ -348,7 +367,6 @@ public sealed partial class ProgramsViewModel : ObservableObject
 
         var succeededItems = new List<AppUpdateItem>();
         var failedCount = 0;
-        var failedNames = new List<string>();
         var batchCompletedCleanly = false;
 
         try
@@ -365,7 +383,7 @@ public sealed partial class ProgramsViewModel : ObservableObject
                     _lastItemFailureReasonKey = null;
                     _lastItemFailureDetail = null;
                     SetCurrentInstallPhase(L.T("PhaseInstalling"), null);
-                    var progress = new Progress<InstallProgress>(OnInstallProgressReported);
+                    var progress = new Progress<InstallProgress>(update => OnInstallProgressReported(item, update));
                     var success = await _installer.InstallUpdateAsync(item, progress, _operationCts.Token);
 
                     // Set the reason before flipping Status so the failure-details row
@@ -383,7 +401,6 @@ public sealed partial class ProgramsViewModel : ObservableObject
                     else
                     {
                         failedCount++;
-                        failedNames.Add(item.DisplayName);
                     }
 
                     UpdateOverallProgress(succeededItems.Count + failedCount, selectedItems.Count);
@@ -400,14 +417,12 @@ public sealed partial class ProgramsViewModel : ObservableObject
             batchCompletedCleanly = true;
             LastBatchSucceededCount = succeededItems.Count;
             LastBatchFailedCount = failedCount;
-            LastBatchFailedNames = failedNames;
         }
         catch (OperationCanceledException)
         {
             StatusMessage = string.Format(L.T("AppUpdatesCancelled"), succeededItems.Count, failedCount);
             LastBatchSucceededCount = succeededItems.Count;
             LastBatchFailedCount = failedCount;
-            LastBatchFailedNames = failedNames;
             _logger.Info($"Winget update batch was cancelled. Completed before cancel: {succeededItems.Count + failedCount} of {selectedItems.Count}.");
         }
         catch (Exception ex)
@@ -644,6 +659,7 @@ public sealed partial class ProgramsViewModel : ObservableObject
     private async Task ShowInstallingStateAsync(AppUpdateItem item, int currentIndex, int totalCount)
     {
         item.Status = UpdateStatus.Installing;
+        item.ProgressPercent = 0;
         CurrentBatchProgressText = string.Format(L.T("UpdatingXOfY"), currentIndex + 1, totalCount);
         CurrentAppName = item.DisplayName;
         CurrentItemProgressPercent = 0;
@@ -654,7 +670,7 @@ public sealed partial class ProgramsViewModel : ObservableObject
         await Task.Yield();
     }
 
-    private void OnInstallProgressReported(InstallProgress update)
+    private void OnInstallProgressReported(AppUpdateItem item, InstallProgress update)
     {
         // Failure reason arrives on the final progress event when the install fails.
         // Store it so InstallSelectedAsync can attach it to the item and status bar.
@@ -675,12 +691,14 @@ public sealed partial class ProgramsViewModel : ObservableObject
 
         if (update.Percent is > 0 and < 100)
         {
+            item.ProgressPercent = update.Percent;
             CurrentItemProgressPercent = update.Percent;
             IsCurrentItemProgressIndeterminate = false;
             SetCurrentInstallPhase(hasDownloadText ? L.T("PhaseDownloading") : L.T("PhaseInstalling"), null);
         }
         else if (update.Percent >= 100)
         {
+            item.ProgressPercent = 100;
             CurrentItemProgressPercent = 0;
             IsCurrentItemProgressIndeterminate = true;
             if (!hasDownloadText)

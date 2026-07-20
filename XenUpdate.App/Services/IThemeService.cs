@@ -1,3 +1,4 @@
+using System.Windows.Media;
 using XenUpdate.Core.Enums;
 
 namespace XenUpdate.App.Services;
@@ -16,4 +17,17 @@ public interface IThemeService
     /// </summary>
     /// <param name="theme">The theme to activate.</param>
     void ApplyTheme(AppTheme theme);
+
+    /// <summary>
+    /// Repoints every palette-tied Zen* brush app-wide — primary/secondary accents AND every
+    /// background-derived surface, sidebar, divider, glass panel, and log-drawer/update-queue
+    /// window brush — to the given colors, plus MaterialDesignThemes' own primary/secondary
+    /// palette. Independent of <see cref="ApplyTheme"/> — the chosen palette stays the same
+    /// across a Light/Dark switch, since it overrides individual keys directly on
+    /// Application.Resources rather than living inside the swapped dictionary.
+    /// </summary>
+    /// <param name="primary">The main accent color.</param>
+    /// <param name="secondary">An optional secondary accent. Null derives a lighter variant of <paramref name="primary"/> instead.</param>
+    /// <param name="background">The base background color every surface/chrome brush is derived from.</param>
+    void ApplyPalette(Color primary, Color? secondary, Color background);
 }

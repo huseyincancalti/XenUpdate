@@ -90,5 +90,37 @@
       "Kurulumun bitmesini bekle, isterse Visual Studio'yu yeniden başlat.",
       "Geri dön ve bu rehberi tamamlandı işaretle."
     ]
+  },
+  {
+    "Id": "runtime-dotnet",
+    "IsTroubleshooting": true,
+    "Title": "Güncellenen bir uygulama açılmıyor ve .NET istiyor",
+    "ShortLabel": ".NET Runtime",
+    "Why": "Bazen yeni güncellediğin bir uygulama daha yeni bir .NET sürümüne geçer ve \"To run this application, you must install .NET\" benzeri bir mesajla açılmayı reddeder. Çözümü hızlıdır: hatanın adını verdiği .NET Desktop Runtime sürümünü kur. Her ana sürüm yan yana kurulur; bu diğer uygulamalarını asla bozmaz.",
+    "Category": "Software",
+    "OfficialUrl": "https://dotnet.microsoft.com/download/dotnet",
+    "Steps": [
+      "Hata penceresini dikkatle oku — tam olarak hangi sürümü istediğini yazar (ör. \".NET 8.0\") ve çoğu zaman indirme bağlantısı da verir.",
+      "Aşağıdaki \"Resmi sayfayı aç\"a tıkla ve listeden aynı ana sürümü seç.",
+      "\"Run desktop apps\" başlığının altından Windows x64 için \".NET Desktop Runtime\" kurulumunu indir (uygulama 32-bit ise x86).",
+      "Kurulumu çalıştırıp bitmesini bekle — genellikle yeniden başlatma gerekmez.",
+      "Açılmayan uygulamayı tekrar dene — sonra bu rehberi tamamlandı işaretle."
+    ]
+  },
+  {
+    "Id": "gpu-clean-install",
+    "IsTroubleshooting": true,
+    "Title": "GPU sürücü güncellemesinden hemen sonra sorun mu çıktı? Temiz kur (DDU)",
+    "ShortLabel": "Temiz GPU Kurulumu",
+    "Why": "Ekran kartı sürücünü güncelledikten hemen sonra (Sürücüler sayfasından ya da buradaki rehberlerle) siyah ekran, titreme, görüntü bozulması veya çökme yaşıyorsan — ya da sürücü kurulumu sürekli yarıda kalıyorsa — suçlu genellikle eski sürücülerden kalan dosyalardır. Display Driver Uninstaller (DDU), eski sürücüyü tamamen söküp yenisinin temiz kurulmasını sağlayan ücretsiz, topluluk standardı araçtır.",
+    "Category": "Software",
+    "OfficialUrl": "https://www.wagnardsoft.com/",
+    "Steps": [
+      "ÖNCE ekran kartın için yeni sürücüyü indir (yukarıdaki NVIDIA/AMD/Intel rehberleri) — temizlikten sonra sürücün olmayacak ve ekran düşük çözünürlükte kalacak.",
+      "Aşağıdaki \"Resmi sayfayı aç\"a tıkla ve Wagnardsoft'tan en yeni Display Driver Uninstaller'ı (DDU) indir.",
+      "İnterneti kes (Windows temizlik sırasında kendi sürücüsünü kurmasın), sonra Güvenli Mod'a geç: Başlat → Güç → Shift'e basılı tutarak Yeniden Başlat → Sorun Gider → Başlangıç Ayarları.",
+      "Güvenli Mod'da DDU'yu çalıştır, GPU türünü seç ve \"Clean and restart\" (Temizle ve yeniden başlat) de.",
+      "Yeniden başlayınca 1. adımda indirdiğin yeni sürücü kurulumunu çalıştır, interneti geri bağla ve bu rehberi tamamlandı işaretle."
+    ]
   }
 ]

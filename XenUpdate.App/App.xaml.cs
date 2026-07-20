@@ -138,13 +138,60 @@ public partial class App : Application
             Debug.WriteLine($"[XenUpdate] Language apply failed at startup: {ex}");
         }
 
+        // A light background needs the Light theme's dark text (and vice versa) — this is
+        // computed BEFORE ApplyTheme below, rather than trusting settings.Theme as saved, so a
+        // settings.json saved before this check existed (Theme=Dark with an already-light
+        // BackgroundColorHex, the exact broken combination that was reported: white-on-white,
+        // unreadable) self-heals on next launch instead of requiring the user to touch a color
+        // setting again to trigger the same logic in SettingsViewModel.ApplyPaletteAndSave.
+        var effectiveTheme = settings.Theme;
         try
         {
-            Services.GetRequiredService<IThemeService>().ApplyTheme(settings.Theme);
+            var backgroundForLuminance = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(settings.BackgroundColorHex)!;
+            var luminance = (0.299 * backgroundForLuminance.R + 0.587 * backgroundForLuminance.G + 0.114 * backgroundForLuminance.B) / 255.0;
+            effectiveTheme = luminance > 0.6 ? Core.Enums.AppTheme.Light : Core.Enums.AppTheme.Dark;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[XenUpdate] Background luminance check failed at startup, using saved theme as-is: {ex}");
+        }
+
+        try
+        {
+            Services.GetRequiredService<IThemeService>().ApplyTheme(effectiveTheme);
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[XenUpdate] Theme apply failed at startup: {ex}");
+        }
+
+        // Write the corrected value back to settings.json (fire-and-forget, non-blocking) so
+        // SettingsViewModel's own load picks up the same theme this method just applied —
+        // otherwise its Light/Dark toggle button would keep showing the stale saved value even
+        // though the window it's sitting in is now visibly the other theme.
+        if (effectiveTheme != settings.Theme)
+        {
+            settings.Theme = effectiveTheme;
+            _ = Task.Run(() => Services.GetRequiredService<ISettingsRepository>().SaveAsync(settings));
+        }
+
+        // Applied synchronously here, before MainWindow is even constructed, for the same
+        // reason as the theme above: without this, the window would briefly flash the default
+        // built-in palette before SettingsViewModel's own (async) load completes and the saved
+        // one catches up.
+        try
+        {
+            var primary = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(settings.AccentColorHex)!;
+            var background = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(settings.BackgroundColorHex)!;
+            System.Windows.Media.Color? secondary = string.IsNullOrWhiteSpace(settings.SecondaryColorHex)
+                ? null
+                : (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(settings.SecondaryColorHex)!;
+
+            Services.GetRequiredService<IThemeService>().ApplyPalette(primary, secondary, background);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[XenUpdate] Palette apply failed at startup: {ex}");
         }
     }
 

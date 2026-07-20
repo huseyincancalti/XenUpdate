@@ -3,7 +3,9 @@ using System.ComponentModel;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using XenUpdate.App.Collections;
+using XenUpdate.App.Messages;
 using XenUpdate.App.Services;
 using XenUpdate.Core.Enums;
 using XenUpdate.Core.Interfaces;
@@ -48,7 +50,6 @@ public sealed partial class WindowsUpdatesViewModel : ObservableObject
     /// </summary>
     public int LastBatchSucceededCount { get; private set; }
     public int LastBatchFailedCount { get; private set; }
-    public IReadOnlyList<string> LastBatchFailedNames { get; private set; } = Array.Empty<string>();
 
     /// <summary>True while any operation (scan or install) is running. Drives command enable/disable.</summary>
     [ObservableProperty]
@@ -264,6 +265,24 @@ public sealed partial class WindowsUpdatesViewModel : ObservableObject
             return;
         }
 
+        WeakReferenceMessenger.Default.Send(new InstallBatchStartedMessage(L.T("NavWindowsUpdates"), selectedUpdates));
+        await RunInstallBatchAsync(selectedUpdates);
+    }
+
+    /// <summary>
+    /// Runs the install batch over exactly the given items, in the given order — no selection
+    /// snapshot, no InstallBatchStartedMessage (the caller already announced this batch to the
+    /// Update Queue window, e.g. via ShellViewModel.UpdateAllAsync's AnnouncePlan). This is what
+    /// makes item-level drag-reordering inside the Update Queue window actually change
+    /// execution order rather than just the visual: ShellViewModel reads UpdateQueueGroup.Items'
+    /// live order and passes it straight here instead of letting this page recompute its own
+    /// order from Updates.
+    /// </summary>
+    public async Task InstallItemsAsync(IReadOnlyList<UpdateItem> items) =>
+        await RunInstallBatchAsync(items.Cast<WindowsUpdateItem>().ToList());
+
+    private async Task RunInstallBatchAsync(List<WindowsUpdateItem> selectedUpdates)
+    {
         ResetCancellation();
 
         IsBusy = true;
@@ -273,7 +292,6 @@ public sealed partial class WindowsUpdatesViewModel : ObservableObject
 
         var succeededItems = new List<WindowsUpdateItem>();
         var failedCount = 0;
-        var failedNames = new List<string>();
         var rebootRequired = false;
         var batchCompletedCleanly = false;
 
@@ -292,7 +310,7 @@ public sealed partial class WindowsUpdatesViewModel : ObservableObject
 
                     var result = await _service.InstallUpdateAsync(
                         update,
-                        new Progress<int>(OnInstallProgressReported),
+                        new Progress<int>(percent => OnInstallProgressReported(update, percent)),
                         _operationCts.Token);
 
                     // Reason set before Status so the failure-details row renders with
@@ -309,7 +327,6 @@ public sealed partial class WindowsUpdatesViewModel : ObservableObject
                     else
                     {
                         failedCount++;
-                        failedNames.Add(update.DisplayName);
                     }
 
                     if (result.RebootRequired)
@@ -336,7 +353,6 @@ public sealed partial class WindowsUpdatesViewModel : ObservableObject
             batchCompletedCleanly = true;
             LastBatchSucceededCount = succeededItems.Count;
             LastBatchFailedCount = failedCount;
-            LastBatchFailedNames = failedNames;
         }
         catch (OperationCanceledException)
         {
@@ -344,7 +360,6 @@ public sealed partial class WindowsUpdatesViewModel : ObservableObject
             StatusMessage = string.Format(L.T("WinUpdateInstallCancelled"), succeededItems.Count, failedCount);
             LastBatchSucceededCount = succeededItems.Count;
             LastBatchFailedCount = failedCount;
-            LastBatchFailedNames = failedNames;
             _logger.Info($"Windows Update install batch was cancelled. Completed before cancel: {succeededItems.Count + failedCount} of {selectedUpdates.Count}.");
         }
         catch (Exception ex)
@@ -532,6 +547,7 @@ public sealed partial class WindowsUpdatesViewModel : ObservableObject
     private async Task ShowInstallingStateAsync(WindowsUpdateItem update, int currentIndex, int totalCount)
     {
         update.Status = UpdateStatus.Installing;
+        update.ProgressPercent = 0;
         CurrentBatchProgressText = string.Format(L.T("InstallingXOfY"), currentIndex + 1, totalCount);
         CurrentUpdateTitle = update.DisplayName;
         CurrentKbArticle = update.KbArticleId;
@@ -541,8 +557,10 @@ public sealed partial class WindowsUpdatesViewModel : ObservableObject
         await Task.Yield();
     }
 
-    private void OnInstallProgressReported(int percent)
+    private void OnInstallProgressReported(WindowsUpdateItem update, int percent)
     {
+        update.ProgressPercent = percent;
+
         if (percent <= 25)
         {
             CurrentInstallDetailText = L.T("PreparingDownload");

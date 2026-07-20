@@ -21,19 +21,26 @@
 
             <TextBlock Text="{Binding [OverviewTitle], Source={x:Static loc:LocalizationManager.Instance}}" Style="{StaticResource PageTitleStyle}" />
 
-            <!-- Welcome banner -->
+            <!--
+                Welcome banner — was a hardcoded #7C3AED/#4F46E5 gradient (the app's original
+                built-in violet), so it stayed purple no matter what accent/palette the user
+                picked in Settings. ZenPrimaryColor/ZenSecondaryColor are the raw Color resources
+                ThemeService.ApplyPalette keeps in sync with the chosen palette specifically for
+                cases like this (GradientStop.Color can't bind to a Brush resource), so this now
+                follows the live palette the same way the sidebar's selected-nav gradient does.
+            -->
             <Border CornerRadius="14" Padding="26" Margin="0,0,0,26">
                 <Border.Background>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                        <GradientStop Color="#7C3AED" Offset="0" />
-                        <GradientStop Color="#4F46E5" Offset="1" />
+                        <GradientStop Color="{DynamicResource ZenPrimaryColor}" Offset="0" />
+                        <GradientStop Color="{DynamicResource ZenSecondaryColor}" Offset="1" />
                     </LinearGradientBrush>
                 </Border.Background>
                 <StackPanel>
                     <TextBlock Text="{Binding [OverviewWelcome], Source={x:Static loc:LocalizationManager.Instance}}"
                                FontSize="20" FontWeight="Bold" Foreground="White" Margin="0,0,0,8" TextWrapping="Wrap" />
                     <TextBlock Text="{Binding [OverviewIntro], Source={x:Static loc:LocalizationManager.Instance}}"
-                               FontSize="13" Foreground="#F0EAFF" TextWrapping="Wrap" Opacity="0.95" />
+                               FontSize="13" Foreground="White" TextWrapping="Wrap" Opacity="0.9" />
                 </StackPanel>
             </Border>
 

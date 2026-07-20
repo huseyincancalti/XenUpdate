@@ -1,0 +1,391 @@
+<Window x:Class="XenUpdate.App.Views.UpdateQueueWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:vm="clr-namespace:XenUpdate.App.ViewModels"
+        xmlns:loc="clr-namespace:XenUpdate.App.Services"
+        xmlns:views="clr-namespace:XenUpdate.App.Views"
+        xmlns:dd="urn:gong-wpf-dragdrop"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Updates"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        SizeToContent="WidthAndHeight"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        TextElement.FontFamily="{DynamicResource MaterialDesignFont}"
+        PreviewMouseMove="UpdateQueueWindow_OnPreviewMouseMove"
+        d:DataContext="{d:DesignInstance vm:UpdateQueueViewModel, IsDesignTimeCreatable=False}">
+
+    <!--
+        Same window chrome/interaction model as LogViewerWindow (no title bar, custom drag
+        header, ZenLogDrawerMatteBrush) — closing this window does NOT cancel anything: the
+        installs it's watching are driven entirely by each page's own InstallSelectedCommand,
+        which keeps running whether or not this window is open. This is purely a live viewport
+        into state that already exists (Status/ErrorMessage/ProgressPercent on the same
+        UpdateItem instances each page's DataGrid shows), not a second install pipeline.
+    -->
+    <Border Width="640"
+            CornerRadius="16"
+            Background="{DynamicResource ZenLogDrawerMatteBrush}"
+            BorderBrush="{DynamicResource ZenDividerBrush}"
+            BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="50" ShadowDepth="0" Opacity="0.65" Color="#000000" />
+        </Border.Effect>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="380" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Spotlight only — see the matching comment in LogViewerWindow.xaml. -->
+            <views:AppBackgroundLayer x:Name="BackgroundLayer"
+                                       Grid.RowSpan="3"
+                                       ShowPhotoBackdrop="False"
+                                       ShowAmbientFallback="False" />
+
+            <!-- Header -->
+            <Border Grid.Row="0"
+                    Background="{DynamicResource ZenDeepBackgroundBrush}"
+                    CornerRadius="16,16,0,0"
+                    Padding="18,14"
+                    MouseLeftButtonDown="Header_MouseLeftButtonDown">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="TrayArrowDown"
+                                                 Width="20" Height="20"
+                                                 Foreground="{DynamicResource ZenPrimaryBrush}"
+                                                 VerticalAlignment="Center"
+                                                 Margin="0,0,10,0" />
+                        <TextBlock FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ZenTextBrush}"
+                                   VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="{Binding [UpdateQueueRunningTitle], Source={x:Static loc:LocalizationManager.Instance}}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsComplete}" Value="True">
+                                            <Setter Property="Text" Value="{Binding [UpdateQueueCompleteTitle], Source={x:Static loc:LocalizationManager.Instance}}" />
+                                        </DataTrigger>
+                                        <!-- Last trigger wins in WPF, so the empty-board case deliberately
+                                             sits below IsComplete: an empty queue (opened idle via the FAB)
+                                             must never claim "Updating…" when nothing is running. -->
+                                        <DataTrigger Binding="{Binding TotalCount}" Value="0">
+                                            <Setter Property="Text" Value="{Binding [UpdateQueueIdleTitle], Source={x:Static loc:LocalizationManager.Instance}}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                    <Button Grid.Column="1"
+                            Click="CloseButton_Click"
+                            Style="{StaticResource MaterialDesignIconButton}"
+                            Width="32" Height="32" Padding="0"
+                            Foreground="{DynamicResource ZenMutedTextBrush}"
+                            ToolTip="Close">
+                        <materialDesign:PackIcon Kind="Close" Width="16" Height="16" />
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!--
+                Queue: ONE flat list, no per-source section headers (explicitly rejected by the
+                user) — each row instead carries a faint inline tag naming where it came from.
+                Every still-Pending row can be dragged anywhere among the other Pending rows,
+                even interleaving sources (a pip package between two winget apps); see
+                UpdateQueueEntryDropHandler. ShellViewModel's Update All loop re-reads this
+                list's live order before every single item it installs, so a drag here genuinely
+                changes what runs next, Steam-download-queue-style. The drag adorner (a floating
+                semi-transparent copy of the row under the cursor) and the accent-colored
+                insertion line come from GongSolutions.WPF.DragDrop.
+            -->
+            <!-- Empty state: the FAB can open this window with nothing queued — explain what it's for instead of showing a bare void -->
+            <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="420">
+                <StackPanel.Style>
+                    <Style TargetType="StackPanel">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding TotalCount}" Value="0">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
+                <materialDesign:PackIcon Kind="TrayArrowDown" Width="34" Height="34"
+                                         Foreground="{DynamicResource ZenMutedTextBrush}" Opacity="0.5"
+                                         HorizontalAlignment="Center" Margin="0,0,0,10" />
+                <TextBlock Text="{Binding [UpdateQueueEmptyBody], Source={x:Static loc:LocalizationManager.Instance}}"
+                           FontSize="13" Foreground="{DynamicResource ZenMutedTextBrush}"
+                           TextWrapping="Wrap" TextAlignment="Center" />
+            </StackPanel>
+
+            <ScrollViewer x:Name="QueueScrollViewer" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="14,10">
+                <ItemsControl ItemsSource="{Binding Entries}"
+                              dd:DragDrop.IsDragSource="True"
+                              dd:DragDrop.IsDropTarget="True"
+                              dd:DragDrop.DropTargetAdornerBrush="{DynamicResource ZenPrimaryBrush}"
+                              dd:DragDrop.DropHandler="{Binding QueueDropHandler}">
+                    <!-- Custom drag adorner (replaces the default screenshot-copy): the dragged
+                         row rendered as a slightly rotated, accent-outlined, shadowed card —
+                         the "picked up off the list" look from the approved queue mockup. -->
+                    <dd:DragDrop.DragAdornerTemplate>
+                        <DataTemplate>
+                            <Border Width="440" CornerRadius="10" Padding="12,10"
+                                    Background="{DynamicResource ZenLogDrawerMatteBrush}"
+                                    BorderBrush="{DynamicResource ZenPrimaryBrush}"
+                                    BorderThickness="1.5"
+                                    Opacity="0.95"
+                                    RenderTransformOrigin="0.5,0.5">
+                                <Border.RenderTransform>
+                                    <RotateTransform Angle="-1.5" />
+                                </Border.RenderTransform>
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="26" ShadowDepth="5" Opacity="0.55" Color="#000000" />
+                                </Border.Effect>
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="DragVertical" Width="15" Height="15"
+                                                             Foreground="{DynamicResource ZenPrimaryBrush}"
+                                                             VerticalAlignment="Center" Margin="0,0,8,0" />
+                                    <TextBlock Text="{Binding Item.DisplayName}"
+                                               FontSize="12.5" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ZenTextBrush}"
+                                               VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding SourceLabel}"
+                                               FontSize="10.5"
+                                               Foreground="{DynamicResource ZenMutedTextBrush}"
+                                               Opacity="0.6"
+                                               VerticalAlignment="Center"
+                                               Margin="8,1,0,0" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </dd:DragDrop.DragAdornerTemplate>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border CornerRadius="10"
+                                    Background="{DynamicResource ZenGlassPanelBrush}"
+                                    BorderBrush="Transparent"
+                                    BorderThickness="1"
+                                    Padding="10,9"
+                                    Margin="0,0,0,6">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="BorderBrush" Value="{DynamicResource ZenDividerBrush}" />
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Grip: only shown while the row is still Pending, i.e. actually draggable -->
+                                    <materialDesign:PackIcon Grid.Column="0" Kind="DragVertical" Width="15" Height="15"
+                                                             Foreground="{DynamicResource ZenMutedTextBrush}"
+                                                             VerticalAlignment="Center" Margin="0,0,8,0">
+                                        <materialDesign:PackIcon.Style>
+                                            <Style TargetType="materialDesign:PackIcon">
+                                                <Setter Property="Opacity" Value="0.15" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Item.Status}" Value="Pending">
+                                                        <Setter Property="Opacity" Value="0.55" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </materialDesign:PackIcon.Style>
+                                    </materialDesign:PackIcon>
+
+                                    <!-- Status icon: pending clock / spinner / success check / error alert -->
+                                    <Grid Grid.Column="1" Width="20" Height="20" Margin="0,0,10,0" VerticalAlignment="Top">
+                                        <materialDesign:PackIcon Kind="ClockOutline" Width="16" Height="16" Foreground="{DynamicResource ZenMutedTextBrush}">
+                                            <materialDesign:PackIcon.Style>
+                                                <Style TargetType="materialDesign:PackIcon">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Item.Status}" Value="Pending">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </materialDesign:PackIcon.Style>
+                                        </materialDesign:PackIcon>
+                                        <ProgressBar IsIndeterminate="True" Width="16" Height="16"
+                                                     Foreground="{DynamicResource ZenPrimaryBrush}">
+                                            <ProgressBar.Style>
+                                                <Style TargetType="ProgressBar" BasedOn="{StaticResource MaterialDesignCircularProgressBar}">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Item.Status}" Value="Installing">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ProgressBar.Style>
+                                        </ProgressBar>
+                                        <materialDesign:PackIcon Kind="CheckCircle" Width="16" Height="16" Foreground="{DynamicResource ZenSuccessBrush}">
+                                            <materialDesign:PackIcon.Style>
+                                                <Style TargetType="materialDesign:PackIcon">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Item.Status}" Value="Succeeded">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </materialDesign:PackIcon.Style>
+                                        </materialDesign:PackIcon>
+                                        <materialDesign:PackIcon Kind="AlertCircle" Width="16" Height="16" Foreground="{DynamicResource ZenErrorBrush}">
+                                            <materialDesign:PackIcon.Style>
+                                                <Style TargetType="materialDesign:PackIcon">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Item.Status}" Value="Failed">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </materialDesign:PackIcon.Style>
+                                        </materialDesign:PackIcon>
+                                    </Grid>
+
+                                    <StackPanel Grid.Column="2">
+                                        <!-- Name + faint source tag on one line — the tag replaces the old section headers -->
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Item.DisplayName}"
+                                                       FontSize="12.5" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource ZenTextBrush}"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding SourceLabel}"
+                                                       FontSize="10.5"
+                                                       Foreground="{DynamicResource ZenMutedTextBrush}"
+                                                       Opacity="0.55"
+                                                       VerticalAlignment="Center"
+                                                       Margin="8,1,0,0" />
+                                        </StackPanel>
+
+                                        <!-- Determinate progress bar, visible only while this specific item is installing -->
+                                        <ProgressBar Value="{Binding Item.ProgressPercent, Mode=OneWay}"
+                                                     Minimum="0" Maximum="100"
+                                                     Height="4" Margin="0,5,0,0"
+                                                     Foreground="{DynamicResource ZenPrimaryBrush}">
+                                            <ProgressBar.Style>
+                                                <Style TargetType="ProgressBar">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Item.Status}" Value="Installing">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ProgressBar.Style>
+                                        </ProgressBar>
+
+                                        <!-- Reuses the same failure block the DataGrids show, so a failure reads identically wherever it's seen -->
+                                        <ContentPresenter Content="{Binding Item}"
+                                                          ContentTemplate="{StaticResource FailureReasonInlineTemplate}">
+                                            <ContentPresenter.Style>
+                                                <Style TargetType="ContentPresenter">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Item.Status}" Value="Failed">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ContentPresenter.Style>
+                                        </ContentPresenter>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- Footer: overall progress, then View Log / Close -->
+            <Grid Grid.Row="2" Margin="16,10,16,16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Margin="0,0,0,10">
+                    <!-- Hidden when the board is empty: with Maximum=0 a WPF ProgressBar renders
+                         as FULL (Value equals Maximum), which read as "everything done" right
+                         after clearing. -->
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding TotalCount}" Value="0">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    <TextBlock Text="{Binding ProgressText}"
+                               FontSize="12" FontWeight="SemiBold"
+                               Foreground="{DynamicResource ZenTextBrush}" Margin="0,0,0,5" />
+                    <ProgressBar Minimum="0" Maximum="{Binding TotalCount}" Value="{Binding CompletedCount, Mode=OneWay}"
+                                 Height="5" Foreground="{DynamicResource ZenPrimaryBrush}" />
+                </StackPanel>
+
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="10" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="10" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <Button Grid.Column="0"
+                            Command="{Binding ViewLogCommand}"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Height="36">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="TextBoxSearch" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding [ViewLog], Source={x:Static loc:LocalizationManager.Instance}}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Only meaningful once everything's finished — arriving batches now always
+                         append/replace-in-place instead of auto-clearing, so this is the one way
+                         the user resets the board (Steam-queue-style: history sticks around until
+                         you dismiss it, not until the next item happens to start). -->
+                    <Button Grid.Column="2"
+                            Command="{Binding ClearCommand}"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Height="36"
+                            ToolTip="{Binding [ClearUpdateQueue], Source={x:Static loc:LocalizationManager.Instance}}">
+                        <materialDesign:PackIcon Kind="Delete" Width="16" Height="16" />
+                    </Button>
+
+                    <Button Grid.Column="4"
+                            Click="CloseButton_Click"
+                            Style="{StaticResource MaterialDesignRaisedButton}"
+                            Height="36"
+                            Content="{Binding [Dismiss], Source={x:Static loc:LocalizationManager.Instance}}" />
+                </Grid>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

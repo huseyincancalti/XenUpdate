@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:vm="clr-namespace:XenUpdate.App.ViewModels"
+        xmlns:views="clr-namespace:XenUpdate.App.Views"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
@@ -15,6 +16,7 @@
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         TextElement.FontFamily="{DynamicResource MaterialDesignFont}"
+        PreviewMouseMove="LogViewerWindow_OnPreviewMouseMove"
         d:DataContext="{d:DesignInstance vm:LogConsoleViewModel, IsDesignTimeCreatable=False}">
 
     <!--
@@ -40,6 +42,18 @@
                 <RowDefinition Height="340" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
+
+            <!--
+                Spotlight only — no photo/scrim (ShowPhotoBackdrop/ShowAmbientFallback both
+                false), so it needs an AppSettings DataContext only for SpotlightEnabled; set
+                explicitly in code-behind since this window's own DataContext is
+                LogConsoleViewModel, not AppSettings. Sits behind the readable content Grid
+                below, so it never risks the readability this window was already fixed for.
+            -->
+            <views:AppBackgroundLayer x:Name="BackgroundLayer"
+                                       Grid.RowSpan="3"
+                                       ShowPhotoBackdrop="False"
+                                       ShowAmbientFallback="False" />
 
             <!-- Header -->
             <Border Grid.Row="0"

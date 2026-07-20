@@ -1,0 +1,56 @@
+<UserControl x:Class="XenUpdate.App.Views.AppBackgroundLayer"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             IsHitTestVisible="False">
+    <!--
+        Reused as-is across MainWindow, LogViewerWindow and UpdateQueueWindow, so the whole app
+        (not just the main window) shares one look. Whatever placed this control is responsible
+        for setting its DataContext to something exposing BackgroundImagePath/BackgroundBlurRadius/
+        SpotlightEnabled (an AppSettings instance) and for forwarding PreviewMouseMove into
+        UpdateSpotlightPosition — this control is IsHitTestVisible="False" throughout, so it never
+        intercepts a click meant for whatever's drawn on top of it.
+
+        Layer order (back to front):
+          1. ZenAmbientBackgroundBrush — the app's original gradient, always there as a fallback
+             and as the base every other layer sits on.
+          2. The user's chosen photo, blurred. Collapsed entirely when no photo is set.
+          3. The SAME ambient gradient again, laid over the photo at partial opacity as a scrim —
+             keeps text contrast solid regardless of what the photo looks like, and makes a custom
+             photo still read as "this app's ambience" rather than a random wallpaper.
+          4. A soft, cursor-following accent-colored glow (opt-out via Settings).
+    -->
+    <Grid ClipToBounds="True">
+
+        <Rectangle x:Name="AmbientFallbackRect" Fill="{DynamicResource ZenAmbientBackgroundBrush}" />
+
+        <!--
+            Grouped so ShowPhotoBackdrop (set false for the small utility windows — a hard-edged
+            photo doesn't suit their compact rounded card, unlike this window's full canvas) can
+            hide both at once from code-behind, independent of whether a photo path is even set.
+        -->
+        <Grid x:Name="PhotoLayerGrid">
+            <Image Stretch="UniformToFill"
+                   Source="{Binding BackgroundImagePath, Converter={StaticResource PathToImageSourceConverter}}"
+                   Visibility="{Binding BackgroundImagePath, Converter={StaticResource NullToVisibilityConverter}}">
+                <Image.Effect>
+                    <BlurEffect Radius="{Binding BackgroundBlurRadius}" KernelType="Gaussian" RenderingBias="Performance" />
+                </Image.Effect>
+            </Image>
+
+            <Rectangle Fill="{DynamicResource ZenAmbientBackgroundBrush}"
+                       Opacity="0.82"
+                       Visibility="{Binding BackgroundImagePath, Converter={StaticResource NullToVisibilityConverter}}" />
+        </Grid>
+
+        <Rectangle x:Name="SpotlightRect"
+                   Opacity="0.14"
+                   Visibility="{Binding SpotlightEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Rectangle.Fill>
+                <RadialGradientBrush x:Name="SpotlightBrush" Center="0.5,0.5" GradientOrigin="0.5,0.5">
+                    <GradientStop Color="{DynamicResource ZenPrimaryColor}" Offset="0" />
+                    <GradientStop Color="Transparent" Offset="1" />
+                </RadialGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
+    </Grid>
+</UserControl>

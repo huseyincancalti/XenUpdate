@@ -55,6 +55,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
     public LogConsoleViewModel LogConsole { get; }
 
+    /// <summary>Backs the update queue window. Exposed so MainWindow can wire its RequestShow/RequestOpenLog actions.</summary>
+    public UpdateQueueViewModel UpdateQueue { get; }
+
     /// <summary>The Settings page VM. Also the single source of theme state for the title-bar toggle.</summary>
     public SettingsViewModel Settings => _settingsVm;
 
@@ -87,14 +90,6 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool _isUpdatingAll;
 
-    /// <summary>
-    /// The most recent "Update All" result, shown as a dismissible card at the bottom of the
-    /// window. Null hides the card entirely — set back to null by DismissUpdateAllSummary or
-    /// ViewUpdateAllLog once the user has acknowledged it.
-    /// </summary>
-    [ObservableProperty]
-    private UpdateAllSummaryInfo? _updateAllSummary;
-
     /// <summary>True when the machine has network connectivity; false dims the UI and shows the title-bar badge.</summary>
     [ObservableProperty]
     private bool _isOnline = true;
@@ -117,6 +112,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         SettingsViewModel settingsVm,
         HardwareHubViewModel hardwareHubVm,
         LogConsoleViewModel logConsole,
+        UpdateQueueViewModel updateQueue,
         IAppUpdateService appUpdateService,
         ISettingsRepository settingsRepository,
         ILoggerService logger)
@@ -129,6 +125,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         _settingsVm = settingsVm;
         _hardwareHubVm = hardwareHubVm;
         LogConsole = logConsole;
+        UpdateQueue = updateQueue;
         _appUpdateService = appUpdateService;
         _settingsRepository = settingsRepository;
         _logger = logger;
@@ -210,16 +207,49 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Installs whatever is currently checked across all four scan pages, one page at a time.
-    /// This does NOT select anything itself — it only acts on rows the user already checked via
-    /// each page's own checkboxes. An earlier version force-selected every still-Pending row
-    /// regardless of what was actually checked, so clicking this after hand-picking a few items
-    /// across different tabs silently installed everything else too — a real bug, not the
+    /// Checks every row on all four scan pages at once — each page's own AreAllSelected
+    /// setter already does the per-page bulk-select, this just fires all four together so
+    /// "Update All" can be made to genuinely cover everything found without visiting each
+    /// tab individually first. A no-op for any page with nothing scanned yet (Updates empty).
+    /// </summary>
+    [RelayCommand]
+    private void SelectAllPending()
+    {
+        _programsVm.AreAllSelected = true;
+        _windowsUpdatesVm.AreAllSelected = true;
+        _driversVm.AreAllSelected = true;
+        _pipPackagesVm.AreAllSelected = true;
+    }
+
+    /// <summary>
+    /// One page's contribution to an "Update All" run — enough to announce it to the queue
+    /// upfront and, later, actually run any of its items. Run takes the items to install
+    /// explicitly (rather than the page just re-reading its own Updates.Where(IsSelected))
+    /// because the queue window's flat list is freely drag-reorderable, even interleaving items
+    /// from different sources — so the execution loop feeds each page exactly the item whose
+    /// turn the live queue order says it is, one at a time.
+    /// </summary>
+    private sealed record UpdateAllCandidate(
+        string Label,
+        IReadOnlyList<UpdateItem> Items,
+        Func<IReadOnlyList<UpdateItem>, Task> Run);
+
+    /// <summary>
+    /// Installs whatever is currently checked across all four scan pages. This does NOT select
+    /// anything itself — it only acts on rows the user already checked via each page's own
+    /// checkboxes (or SelectAllPending). An earlier version force-selected every still-Pending
+    /// row regardless of what was actually checked, so clicking this after hand-picking a few
+    /// items across different tabs silently installed everything else too — a real bug, not the
     /// intended "update my selections" behavior.
-    /// Pages run sequentially (not in parallel like <see cref="ScanAllAsync"/>) since an
-    /// install batch is far more consequential than a scan — stacking four simultaneous
-    /// install batches (winget + Windows Update + drivers + pip) would make progress
-    /// reporting unreadable and risks resource contention between installers.
+    /// Pages still run sequentially, not in parallel like <see cref="ScanAllAsync"/> — an install
+    /// batch is far more consequential than a scan, and stacking four simultaneous install
+    /// batches (winget + Windows Update + drivers + pip) would make progress reporting unreadable
+    /// and risks resource contention between installers. But which page runs next is no longer
+    /// fixed at Programs→WindowsUpdates→Drivers→PipPackages: every selected page's group is
+    /// announced to the queue window upfront (so the whole plan is visible immediately, not
+    /// discovered one "surprise" page at a time), and the execution order below re-reads the
+    /// queue's live group order before each step — so dragging a not-yet-started group to the
+    /// front in the Update Queue window actually changes what runs next, Steam-queue-style.
     /// </summary>
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task UpdateAllAsync()
@@ -232,61 +262,95 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         IsUpdatingAll = true;
         try
         {
-            var installedAny = false;
-            var totalSucceeded = 0;
-            var totalFailed = 0;
-            var failedNames = new List<string>();
+            var candidates = new List<UpdateAllCandidate>();
 
             if (_programsVm.Updates.Any(item => item.IsSelected) && _programsVm.InstallSelectedCommand.CanExecute(null))
             {
-                installedAny = true;
-                await _programsVm.InstallSelectedCommand.ExecuteAsync(null);
-                totalSucceeded += _programsVm.LastBatchSucceededCount;
-                totalFailed += _programsVm.LastBatchFailedCount;
-                failedNames.AddRange(_programsVm.LastBatchFailedNames);
+                candidates.Add(new UpdateAllCandidate(
+                    LocalizationManager.Instance["NavPrograms"],
+                    _programsVm.Updates.Where(item => item.IsSelected).ToList(),
+                    orderedItems => _programsVm.InstallItemsAsync(orderedItems)));
             }
 
             if (_windowsUpdatesVm.Updates.Any(item => item.IsSelected) && _windowsUpdatesVm.InstallSelectedCommand.CanExecute(null))
             {
-                installedAny = true;
-                await _windowsUpdatesVm.InstallSelectedCommand.ExecuteAsync(null);
-                totalSucceeded += _windowsUpdatesVm.LastBatchSucceededCount;
-                totalFailed += _windowsUpdatesVm.LastBatchFailedCount;
-                failedNames.AddRange(_windowsUpdatesVm.LastBatchFailedNames);
+                candidates.Add(new UpdateAllCandidate(
+                    LocalizationManager.Instance["NavWindowsUpdates"],
+                    _windowsUpdatesVm.Updates.Where(item => item.IsSelected).ToList(),
+                    orderedItems => _windowsUpdatesVm.InstallItemsAsync(orderedItems)));
             }
 
             if (_driversVm.Updates.Any(item => item.IsSelected) && _driversVm.InstallSelectedCommand.CanExecute(null))
             {
-                installedAny = true;
-                await _driversVm.InstallSelectedCommand.ExecuteAsync(null);
-                totalSucceeded += _driversVm.LastBatchSucceededCount;
-                totalFailed += _driversVm.LastBatchFailedCount;
-                failedNames.AddRange(_driversVm.LastBatchFailedNames);
+                candidates.Add(new UpdateAllCandidate(
+                    LocalizationManager.Instance["NavDrivers"],
+                    _driversVm.Updates.Where(item => item.IsSelected).ToList(),
+                    orderedItems => _driversVm.InstallItemsAsync(orderedItems)));
             }
 
             if (_pipPackagesVm.Updates.Any(item => item.IsSelected) && _pipPackagesVm.InstallSelectedCommand.CanExecute(null))
             {
-                installedAny = true;
-                await _pipPackagesVm.InstallSelectedCommand.ExecuteAsync(null);
-                totalSucceeded += _pipPackagesVm.LastBatchSucceededCount;
-                totalFailed += _pipPackagesVm.LastBatchFailedCount;
-                failedNames.AddRange(_pipPackagesVm.LastBatchFailedNames);
+                candidates.Add(new UpdateAllCandidate(
+                    LocalizationManager.Instance["NavPipPackages"],
+                    _pipPackagesVm.Updates.Where(item => item.IsSelected).ToList(),
+                    orderedItems => _pipPackagesVm.InstallItemsAsync(orderedItems)));
             }
 
-            if (!installedAny)
+            if (candidates.Count == 0)
             {
                 WeakReferenceMessenger.Default.Send(new NotificationMessage(LocalizationManager.Instance["NoUpdatesSelected"]));
             }
             else
             {
-                UpdateAllSummary = new UpdateAllSummaryInfo(totalSucceeded, totalFailed, failedNames);
+                UpdateQueue.AnnouncePlan(candidates.Select(c => (c.Label, c.Items)).ToList());
 
-                // The Windows toast is sent unconditionally — MainWindow's BalloonTipMessage
+                var byLabel = candidates.ToDictionary(c => c.Label);
+                var plannedItems = candidates.SelectMany(c => c.Items).ToHashSet();
+
+                // One item at a time, re-reading the queue's live flat order before every pick —
+                // this, not the announce, is what makes drag-reordering in the queue window real:
+                // whatever Pending row is highest when the previous install finishes is simply
+                // what runs next, even if the user interleaved sources (a pip package between two
+                // winget apps). The attempted set guards against an infinite loop when an item
+                // comes back as Pending instead of Succeeded/Failed (each page's cancel path
+                // deliberately resets in-flight items to Pending).
+                var attempted = new HashSet<UpdateItem>();
+                while (true)
+                {
+                    var nextEntry = UpdateQueue.Entries.FirstOrDefault(e =>
+                        e.Item.Status == UpdateStatus.Pending
+                        && plannedItems.Contains(e.Item)
+                        && !attempted.Contains(e.Item)
+                        && byLabel.ContainsKey(e.SourceLabel));
+                    if (nextEntry is null)
+                    {
+                        break;
+                    }
+
+                    attempted.Add(nextEntry.Item);
+                    await byLabel[nextEntry.SourceLabel].Run(new[] { nextEntry.Item });
+
+                    // Every page's cancel path resets its in-flight item back to Pending instead
+                    // of Succeeded/Failed — so "still Pending after its own run" reliably means
+                    // the user hit Cancel. Stop the WHOLE run, not just this item: when batches
+                    // became one-item-at-a-time, cancel silently degraded to skipping a single
+                    // item while the loop marched on through everything else — the opposite of
+                    // what pressing Cancel means.
+                    if (nextEntry.Item.Status == UpdateStatus.Pending)
+                    {
+                        break;
+                    }
+                }
+
+                var totalSucceeded = plannedItems.Count(i => i.Status == UpdateStatus.Succeeded);
+                var totalFailed = plannedItems.Count(i => i.Status == UpdateStatus.Failed);
+
+                // The in-app side of this is the update queue window (see UpdateQueueViewModel),
+                // which was already popped open as AnnouncePlan ran and already shows the final
+                // succeeded/failed state live — no separate summary notification needed here.
+                // The Windows toast is still sent unconditionally; MainWindow's BalloonTipMessage
                 // handler is the one place that decides whether the window is currently visible,
-                // and only actually raises it when it isn't. Deciding that here would duplicate
-                // view-state ShellViewModel has no business owning. The in-app side is the rich
-                // UpdateAllSummary card above, not the plain-text snackbar (that's for simpler,
-                // single-line notifications elsewhere in the app).
+                // and only actually raises it when it isn't.
                 var balloonText = string.Format(LocalizationManager.Instance["UpdateAllSummary"], totalSucceeded, totalFailed);
                 WeakReferenceMessenger.Default.Send(new BalloonTipMessage(LocalizationManager.Instance["UpdateAllBalloonTitle"], balloonText));
             }
@@ -295,16 +359,6 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         {
             IsUpdatingAll = false;
         }
-    }
-
-    [RelayCommand]
-    private void DismissUpdateAllSummary() => UpdateAllSummary = null;
-
-    [RelayCommand]
-    private void ViewUpdateAllLog()
-    {
-        RequestOpenLogViewer?.Invoke();
-        UpdateAllSummary = null;
     }
 
     [RelayCommand]
@@ -433,41 +487,5 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _networkMonitor.Dispose();
-    }
-}
-
-/// <summary>Result of an "Update All" run, shown as a dismissible card at the bottom of the window.</summary>
-public sealed record UpdateAllSummaryInfo(int SucceededCount, int FailedCount, IReadOnlyList<string> FailedNames)
-{
-    /// <summary>True when at least one item failed — drives the card's icon/accent color and whether the failed-names line shows at all.</summary>
-    public bool HasFailures => FailedCount > 0;
-
-    public string SucceededText => string.Format(LocalizationManager.Instance["UpdateAllSucceededLabel"], SucceededCount);
-
-    public string FailedText => string.Format(LocalizationManager.Instance["UpdateAllFailedLabel"], FailedCount);
-
-    /// <summary>
-    /// A full "Failed: name, name and N more" line, capped so a large failed batch can't blow
-    /// out the card's height. Null when nothing failed, so the XAML can hide the row entirely
-    /// by null-checking this instead of needing a separate visibility binding on HasFailures.
-    /// </summary>
-    public string? FailedNamesLine
-    {
-        get
-        {
-            if (FailedNames.Count == 0)
-            {
-                return null;
-            }
-
-            const int maxShown = 3;
-            var shown = string.Join(", ", FailedNames.Take(maxShown));
-            var remaining = FailedNames.Count - maxShown;
-            var names = remaining > 0
-                ? string.Format(LocalizationManager.Instance["UpdateAllFailedNamesAndMore"], shown, remaining)
-                : shown;
-
-            return $"{LocalizationManager.Instance["UpdateAllFailedPrefix"]} {names}";
-        }
     }
 }

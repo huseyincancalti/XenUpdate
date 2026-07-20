@@ -34,8 +34,14 @@ public sealed partial class GuideCardViewModel : ObservableObject
     /// <summary>Compact label (e.g. "NVIDIA", "Visual Studio") for the sidebar sub-branch.</summary>
     public string ShortLabel => _guide.ShortLabel;
 
+    /// <summary>
+    /// True for symptom-driven repair guides ("fix missing VCRUNTIME140.dll") — presented as
+    /// optional reference material, never as a pending task: see <see cref="GuideItem.IsTroubleshooting"/>.
+    /// </summary>
+    public bool IsTroubleshooting => _guide.IsTroubleshooting;
+
     /// <summary>MaterialDesign PackIcon kind name for the landing page's entry card.</summary>
-    public string IconKind => Category switch
+    public string IconKind => IsTroubleshooting ? "Wrench" : Category switch
     {
         GuideCategory.GraphicsDriver => "Gpu",
         GuideCategory.Software => "Code",

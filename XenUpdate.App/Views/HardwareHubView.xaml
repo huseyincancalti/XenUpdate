@@ -9,6 +9,68 @@
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:HardwareHubViewModel, IsDesignTimeCreatable=False}"
              Loaded="HardwareHubView_OnLoaded">
+    <UserControl.Resources>
+        <!-- One guide entry card — shared by the update-guides grid and the problem-fixes grid
+             below, so the two sections can't drift apart visually. -->
+        <DataTemplate x:Key="GuideEntryCardTemplate">
+            <Border Style="{StaticResource ZenGuideEntryCardStyle}"
+                    Width="250" Padding="20" Margin="0,0,16,16"
+                    PreviewMouseLeftButtonUp="GuideEntryCard_OnClick">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <Border Width="38" Height="38" CornerRadius="10" Background="{DynamicResource ZenPrimaryBrush}" Margin="0,0,10,0">
+                            <materialDesign:PackIcon Kind="{Binding IconKind}" Width="20" Height="20" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock Text="{Binding ShortLabel}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <!-- Up to date: reassurance, no progress bar -->
+                    <StackPanel Visibility="{Binding IsUpToDate, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                            <materialDesign:PackIcon Kind="CheckCircle" Width="16" Height="16" Foreground="{DynamicResource ZenSuccessBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <TextBlock Text="{Binding [GuideUpToDateBadge], Source={x:Static loc:LocalizationManager.Instance}}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource ZenSuccessBrush}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Needs attention: progress + call to action -->
+                    <StackPanel Visibility="{Binding IsUpToDate, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+
+                        <TextBlock Text="{Binding Why}" FontSize="11.5" Opacity="0.7" TextWrapping="Wrap" Margin="0,0,0,12" MaxHeight="48" TextTrimming="CharacterEllipsis" />
+
+                        <!-- Progress + step counter imply an outstanding task, so they're
+                             hidden for problem-fix guides — "0 of 5 steps done" on a
+                             machine with no problem reads as unfinished homework. -->
+                        <StackPanel Visibility="{Binding IsTroubleshooting, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                            <ProgressBar Height="5" Minimum="0" Maximum="100" Value="{Binding ProgressPercent, Mode=OneWay}" Margin="0,0,0,10" />
+                        </StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding StepCounter}" FontSize="11" Opacity="0.6" VerticalAlignment="Center"
+                                       Visibility="{Binding IsTroubleshooting, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource ZenPrimaryBrush}" VerticalAlignment="Center" Margin="0,0,4,0">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="{Binding [ContinueGuide], Source={x:Static loc:LocalizationManager.Instance}}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsTroubleshooting}" Value="True">
+                                                    <Setter Property="Text" Value="{Binding [ViewGuide], Source={x:Static loc:LocalizationManager.Instance}}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <materialDesign:PackIcon Kind="ArrowRight" Width="14" Height="14" Foreground="{DynamicResource ZenPrimaryBrush}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24">
         <ScrollViewer.RenderTransform>
             <TranslateTransform />
@@ -66,55 +128,36 @@
                            Visibility="{Binding HasGuides, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
                 <ItemsControl x:Name="GuidesItemsControl"
-                              ItemsSource="{Binding Guides}"
+                              ItemsSource="{Binding UpdateGuides}"
+                              ItemTemplate="{StaticResource GuideEntryCardTemplate}"
                               Visibility="{Binding HasGuides, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <WrapPanel Orientation="Horizontal" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Style="{StaticResource ZenGuideEntryCardStyle}"
-                                    Width="250" Padding="20" Margin="0,0,16,16"
-                                    PreviewMouseLeftButtonUp="GuideEntryCard_OnClick">
-                                <StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                        <Border Width="38" Height="38" CornerRadius="10" Background="{DynamicResource ZenPrimaryBrush}" Margin="0,0,10,0">
-                                            <materialDesign:PackIcon Kind="{Binding IconKind}" Width="20" Height="20" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Border>
-                                        <TextBlock Text="{Binding ShortLabel}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" />
-                                    </StackPanel>
-
-                                    <!-- Up to date: reassurance, no progress bar -->
-                                    <StackPanel Visibility="{Binding IsUpToDate, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                            <materialDesign:PackIcon Kind="CheckCircle" Width="16" Height="16" Foreground="{DynamicResource ZenSuccessBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
-                                            <TextBlock Text="{Binding [GuideUpToDateBadge], Source={x:Static loc:LocalizationManager.Instance}}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource ZenSuccessBrush}" VerticalAlignment="Center" />
-                                        </StackPanel>
-                                    </StackPanel>
-
-                                    <!-- Needs attention: progress + call to action -->
-                                    <StackPanel Visibility="{Binding IsUpToDate, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
-                                        <TextBlock Text="{Binding Why}" FontSize="11.5" Opacity="0.7" TextWrapping="Wrap" Margin="0,0,0,12" MaxHeight="48" TextTrimming="CharacterEllipsis" />
-                                        <ProgressBar Height="5" Minimum="0" Maximum="100" Value="{Binding ProgressPercent, Mode=OneWay}" Margin="0,0,0,10" />
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Text="{Binding StepCounter}" FontSize="11" Opacity="0.6" VerticalAlignment="Center" />
-                                            <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                                <TextBlock Text="{Binding [ContinueGuide], Source={x:Static loc:LocalizationManager.Instance}}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource ZenPrimaryBrush}" VerticalAlignment="Center" Margin="0,0,4,0" />
-                                                <materialDesign:PackIcon Kind="ArrowRight" Width="14" Height="14" Foreground="{DynamicResource ZenPrimaryBrush}" VerticalAlignment="Center" />
-                                            </StackPanel>
-                                        </Grid>
-                                    </StackPanel>
-                                </StackPanel>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
                 </ItemsControl>
+
+                <!-- Problem fixes: symptom-driven repair guides, deliberately their own section
+                     (and never sidebar branches) — separated so they read as an optional
+                     reference shelf, not more pending update work. -->
+                <StackPanel Visibility="{Binding HasTroubleshootingGuides, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,4">
+                        <materialDesign:PackIcon Kind="Wrench" Width="14" Height="14" Foreground="{DynamicResource ZenMutedTextBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBlock Text="{Binding [GuidesProblemFixesSection], Source={x:Static loc:LocalizationManager.Instance}}"
+                                   FontSize="12" FontWeight="SemiBold" Opacity="0.65" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding [GuidesProblemFixesDesc], Source={x:Static loc:LocalizationManager.Instance}}"
+                               FontSize="11.5" Opacity="0.55" TextWrapping="Wrap" Margin="0,0,0,10" MaxWidth="700" HorizontalAlignment="Left" />
+                    <ItemsControl ItemsSource="{Binding TroubleshootingGuides}"
+                                  ItemTemplate="{StaticResource GuideEntryCardTemplate}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </StackPanel>
 
                 <!-- empty state: nothing applies to this machine at all -->
                 <Border Style="{StaticResource ZenGlassPanelStyle}" Padding="24"
@@ -161,6 +204,23 @@
 
                                 <!-- Needs attention: the spacious step wizard -->
                                 <StackPanel Visibility="{Binding IsUpToDate, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+
+                                    <!-- Troubleshooting notice: makes explicit that this guide is only
+                                         relevant if the user is actually seeing the symptom — without it,
+                                         a step wizard sitting here implies work everyone should do. -->
+                                    <Border CornerRadius="8" Padding="14,10" Margin="0,0,0,16"
+                                            Background="{DynamicResource ZenGlassPanelBrush}"
+                                            BorderBrush="{DynamicResource ZenMutedTextBrush}"
+                                            BorderThickness="1"
+                                            Visibility="{Binding IsTroubleshooting, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon Kind="InformationOutline" Width="18" Height="18"
+                                                                     Foreground="{DynamicResource ZenMutedTextBrush}"
+                                                                     VerticalAlignment="Top" Margin="0,1,10,0" />
+                                            <TextBlock Text="{Binding [GuideTroubleshootingNotice], Source={x:Static loc:LocalizationManager.Instance}}"
+                                                       FontSize="12.5" Opacity="0.85" TextWrapping="Wrap" MaxWidth="560" />
+                                        </StackPanel>
+                                    </Border>
 
                                     <TextBlock Text="{Binding Why}" Opacity="0.75" FontSize="13.5" TextWrapping="Wrap" Margin="0,0,0,22" />
 

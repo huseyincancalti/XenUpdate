@@ -52,4 +52,13 @@ public abstract partial class UpdateItem : ObservableObject
     /// </summary>
     [ObservableProperty]
     private string? _errorMessage;
+
+    /// <summary>
+    /// 0-100 install progress while <see cref="Status"/> is Installing. Reset to 0 when a new
+    /// install starts; meaningless (and ignored by the UI) in any other status. Lets any live
+    /// view of an in-progress batch (e.g. the update queue window) show a real progress bar per
+    /// item without needing to know which page-specific service is installing it.
+    /// </summary>
+    [ObservableProperty]
+    private int _progressPercent;
 }

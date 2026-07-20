@@ -34,3 +34,31 @@ not a crash or visible error.
 the `FolderProfile` publish profile) for exit-path bugs like this, not just a
 Debug build — self-contained/single-file builds have been where this
 specific class of bug actually surfaced in testing.
+
+## A `Window.OnClosing` override that unconditionally cancels can block exit too
+
+Third confirmed offender, found the same way as the first two (user reports
+"still running, had to kill it from Task Manager"): a reusable popup window
+(`UpdateQueueWindow`) overrode `OnClosing` to always set `e.Cancel = true` and
+`Hide()`, so clicking its own close button hides it instead of tearing down
+the WPF `Window` (cheap reuse across repeated `Show()` calls, avoiding a
+rebuild of its visual tree every time).
+
+That's a legitimate pattern **only if it distinguishes "the user dismissed
+this one popup" from "the whole app is shutting down."** An unconditional
+cancel does not — and `Application.Shutdown()` closes every window in
+`Application.Windows` (including hidden ones still tracked there) as part of
+its own sequence. If *any* window cancels that close, WPF aborts the whole
+shutdown. `App.xaml.cs OnExit` — and the hard `Environment.Exit(0)` inside it
+— never even runs, silently, with no exception and no log line, because the
+shutdown never got that far.
+
+**The rule going forward:** never override `OnClosing` on a window to
+unconditionally cancel. If a window needs "close button hides instead of
+destroying it" behavior, wire that directly into the close *button's* click
+handler calling `Hide()` — bypassing `Closing` entirely for that one path —
+and leave `OnClosing` itself alone so a real `Close()` (Alt+F4, or the app
+shutting down) always succeeds. If the window is cached and reused
+(`_window ??= new Window(...)`), subscribe to its `Closed` event to null out
+the cached reference — otherwise a legitimate close (e.g. Alt+F4) leaves a
+stale reference that throws on the next reuse attempt.

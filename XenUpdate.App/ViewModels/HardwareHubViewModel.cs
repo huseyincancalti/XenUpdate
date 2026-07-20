@@ -73,11 +73,30 @@ public sealed partial class HardwareHubViewModel : ObservableObject
 
     public bool HasGuides => Guides.Count > 0;
 
+    /// <summary>Keep-this-updated guides (GPU drivers, Visual Studio…) — the landing page's main grid.</summary>
+    public IEnumerable<GuideCardViewModel> UpdateGuides => Guides.Where(g => !g.IsTroubleshooting);
+
+    /// <summary>Symptom-driven repair guides — the landing page's separate "problem fixes" shelf.</summary>
+    public IEnumerable<GuideCardViewModel> TroubleshootingGuides => Guides.Where(g => g.IsTroubleshooting);
+
+    public bool HasTroubleshootingGuides => Guides.Any(g => g.IsTroubleshooting);
+
     /// <summary>
-    /// How many applicable guides still need action (excludes ones a real check already
-    /// confirmed are up to date). Bound by the Overview page's quick-stat chip.
+    /// True when at least one sub-branch survived <see cref="RefreshSidebarGuides"/>'s
+    /// confirmed-update-only filter — the sidebar's branch panel binds this (not
+    /// <see cref="HasGuides"/>) so it collapses entirely instead of showing an empty trunk
+    /// when every guide is up to date / informational.
     /// </summary>
-    public int GuidesNeedingAttentionCount => Guides.Count(g => !g.IsUpToDate);
+    public bool HasSidebarGuides => SidebarGuides.Count > 0;
+
+    /// <summary>
+    /// How many applicable guides still need action. Excludes ones a real check already
+    /// confirmed are up to date, AND troubleshooting guides — those are symptom-driven
+    /// reference material with no checkable "done" state, so counting them here would tell
+    /// every user on a perfectly healthy machine that something "needs attention" forever.
+    /// Bound by the Overview page's quick-stat chip.
+    /// </summary>
+    public int GuidesNeedingAttentionCount => Guides.Count(g => !g.IsUpToDate && !g.IsTroubleshooting);
 
     public bool ShowEmptyState => !IsLoading && !HasGuides;
 
@@ -230,6 +249,9 @@ public sealed partial class HardwareHubViewModel : ObservableObject
             : Guides.FirstOrDefault(g => string.Equals(g.Id, _selectedGuideId, StringComparison.OrdinalIgnoreCase));
 
         OnPropertyChanged(nameof(HasGuides));
+        OnPropertyChanged(nameof(UpdateGuides));
+        OnPropertyChanged(nameof(TroubleshootingGuides));
+        OnPropertyChanged(nameof(HasTroubleshootingGuides));
         OnPropertyChanged(nameof(GuidesNeedingAttentionCount));
         OnPropertyChanged(nameof(ShowEmptyState));
 
@@ -259,10 +281,16 @@ public sealed partial class HardwareHubViewModel : ObservableObject
         SidebarGuides.Clear();
         foreach (var card in Guides)
         {
-            if (!string.IsNullOrWhiteSpace(card.ShortLabel))
+            // The sidebar's sub-branches only advertise guides with a CONFIRMED available
+            // update — a branch there reads as "something for you to act on right now".
+            // Everything else (up to date, no version check possible, or symptom-driven
+            // problem-fix guides) stays reachable from the Guides landing page instead, where
+            // the browsing context makes "nothing to do here, just information" obvious.
+            if (!string.IsNullOrWhiteSpace(card.ShortLabel) && card.HasUpdateBadge)
                 SidebarGuides.Add(new GuideSidebarItem(card.Id, card.ShortLabel));
         }
 
+        OnPropertyChanged(nameof(HasSidebarGuides));
         UpdateSidebarActiveStates();
     }
 

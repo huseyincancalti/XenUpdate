@@ -66,8 +66,13 @@ public sealed class PipInstallerTests
         var installer = new PipInstaller(runner, logger);
         var item = new PipPackageItem { DisplayName = "numpy", PackageName = "numpy" };
 
+        // Deliberately NOT Progress<T>: that class posts callbacks asynchronously (thread pool
+        // here, since xunit has no SynchronizationContext), so the assert below raced the
+        // callback and failed intermittently. In the app the same pattern is ordering-safe —
+        // the WPF dispatcher runs the posted callback before the awaiting install loop's own
+        // continuation, FIFO — but a test needs the report delivered synchronously to observe it.
         string? reportedReason = null;
-        var progress = new Progress<InstallProgress>(p =>
+        var progress = new SynchronousProgress<InstallProgress>(p =>
         {
             if (p.FailureReason is not null)
                 reportedReason = p.FailureReason;
@@ -76,6 +81,13 @@ public sealed class PipInstallerTests
         await installer.InstallUpdateAsync(item, progress, CancellationToken.None);
 
         Assert.Equal("ERROR: No matching distribution found for numpy==2.0.0", reportedReason);
+    }
+
+    private sealed class SynchronousProgress<T> : IProgress<T>
+    {
+        private readonly Action<T> _handler;
+        public SynchronousProgress(Action<T> handler) => _handler = handler;
+        public void Report(T value) => _handler(value);
     }
 
     [Fact]

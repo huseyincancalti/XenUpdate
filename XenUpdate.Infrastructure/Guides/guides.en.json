@@ -90,5 +90,37 @@
       "Let the installer finish, then restart Visual Studio if it asks.",
       "Come back and mark this guide as done."
     ]
+  },
+  {
+    "Id": "runtime-dotnet",
+    "IsTroubleshooting": true,
+    "Title": "An updated app won't open and asks for .NET",
+    "ShortLabel": ".NET Runtime",
+    "Why": "Sometimes an app you just updated moves to a newer .NET and then refuses to open with a message like \"To run this application, you must install .NET\". The fix is quick: install the exact .NET Desktop Runtime version it names. Each major version installs side by side, so this never breaks your other apps.",
+    "Category": "Software",
+    "OfficialUrl": "https://dotnet.microsoft.com/download/dotnet",
+    "Steps": [
+      "Read the error window carefully — it names the exact version it wants (e.g. \".NET 8.0\") and usually offers a download link.",
+      "Click \"Open official page\" below and pick that same major version from the list.",
+      "Under \"Run desktop apps\", download the \".NET Desktop Runtime\" installer for Windows x64 (x86 only if the app is 32-bit).",
+      "Run the installer and let it finish — no restart is usually needed.",
+      "Open the app that was failing again — then mark this guide as done."
+    ]
+  },
+  {
+    "Id": "gpu-clean-install",
+    "IsTroubleshooting": true,
+    "Title": "Problems right after a GPU driver update? Clean-reinstall (DDU)",
+    "ShortLabel": "Clean GPU Install",
+    "Why": "If you get black screens, flickering, artifacts, or crashes right after updating your GPU driver (from the Drivers page or the guides here) — or a driver install that keeps failing halfway — leftover files from old drivers are the usual culprit. Display Driver Uninstaller (DDU) is the free community-standard tool that strips the old driver completely so a fresh one installs cleanly.",
+    "Category": "Software",
+    "OfficialUrl": "https://www.wagnardsoft.com/",
+    "Steps": [
+      "FIRST download the fresh driver for your GPU (NVIDIA/AMD/Intel guides above) — after cleaning you'll have no driver and a basic-resolution screen.",
+      "Click \"Open official page\" below and download the latest Display Driver Uninstaller (DDU) from Wagnardsoft.",
+      "Disconnect from the internet (so Windows can't auto-install its own driver mid-clean), then restart into Safe Mode: Start → Power → hold Shift while clicking Restart → Troubleshoot → Startup Settings.",
+      "In Safe Mode run DDU, pick your GPU type, and choose \"Clean and restart\".",
+      "After the restart, run the fresh driver installer you downloaded in step 1, reconnect to the internet, and mark this guide as done."
+    ]
   }
 ]

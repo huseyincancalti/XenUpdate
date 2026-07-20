@@ -19,7 +19,6 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -94,27 +93,12 @@
                     Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
         </Grid>
 
-        <Border Grid.Row="2"
-                Style="{StaticResource ZenGlassPanelStyle}"
-                Margin="0,0,0,12"
-                Padding="12"
-                Visibility="{Binding IsInstallBatchRunning, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <StackPanel>
-                <TextBlock Text="{Binding CurrentBatchProgressText}"
-                           FontWeight="SemiBold"
-                           Margin="0,0,0,4" />
-                <TextBlock Text="{Binding CurrentPackageName, StringFormat=Current package: {0}}"
-                           Margin="0,0,0,6" />
-                <ProgressBar IsIndeterminate="True"
-                             Height="6"
-                             Margin="0,0,0,6" />
-                <TextBlock Text="{Binding CurrentInstallDetailText}"
-                           Opacity="0.7"
-                           FontSize="12" />
-            </StackPanel>
-        </Border>
-
-        <Grid Grid.Row="3">
+        <!--
+            The inline install-batch progress panel that used to live here is now shown live in
+            the Update Queue popup window instead — see ShellViewModel.UpdateQueue /
+            Views/UpdateQueueWindow.xaml. Keeping both would just duplicate the same information.
+        -->
+        <Grid Grid.Row="2">
             <Border Style="{StaticResource ZenDataGridChromeStyle}"
                     Visibility="{Binding HasUpdates, Converter={StaticResource BooleanToVisibilityConverter}}">
             <DataGrid x:Name="PipPackagesDataGrid"
@@ -244,6 +228,9 @@
             </DataGrid>
             </Border>
 
+            <!-- First-scan skeleton: ghost rows while scanning with nothing to show yet (style owns its own visibility logic) -->
+            <ContentControl Style="{StaticResource ZenScanSkeletonStyle}" />
+
             <Border Style="{StaticResource ZenGlassPanelStyle}"
                     Padding="24"
                     Visibility="{Binding IsEmptyStateVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -260,7 +247,7 @@
             </Border>
         </Grid>
 
-        <TextBlock Grid.Row="4"
+        <TextBlock Grid.Row="3"
                    Text="{Binding StatusMessage}"
                    Opacity="0.65"
                    FontSize="12"

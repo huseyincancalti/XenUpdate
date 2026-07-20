@@ -38,14 +38,17 @@ Click **"More info" → "Run anyway"** to proceed. The full source code is avail
 | **App updates** | Scans via `winget`, shows live download sizes, updates selected apps |
 | **Windows Updates** | Lists pending OS updates via the Windows Update API, installs selected |
 | **Driver updates** | Scans via Windows Update for pending driver packages |
-| **Guided Advisor** | Detects your GPU/CPU, checks whether a newer driver actually exists (live NVIDIA check), and walks you through manual updates (BIOS, firmware, GPU) step by step |
-| **Scan All** | One button kicks off all three scans simultaneously |
+| **Python package updates** | Scans installed `pip` packages and updates selected ones |
+| **Update Queue** | A Steam-download-queue-style window: shows every update from every source in one flat, live-progress list — freely drag-reorder which installs next, even across sources, and reach it anytime via the always-visible floating button |
+| **Guided Advisor** | Detects your GPU/CPU, checks whether a newer driver actually exists (live NVIDIA check), and walks you through manual updates (GPU, Visual Studio) step by step. A separate "Problem fixes" shelf covers issues that can follow an update (e.g. a driver clean-reinstall) — kept clearly apart from the update guides so it never reads as a pending task on a healthy machine |
+| **Scan All / Select All / Update All** | One button each to scan every source, select everything found, and install it all — in whatever order you leave the Update Queue in |
 | **System Restore** | Creates a restore point automatically before driver/system installs |
 | **Offline awareness** | Dims the UI and shows a badge in the title bar when the network is down |
-| **Blacklist** | Hide specific packages you never want to see in update results |
+| **Blacklist / Whitelist** | Hide packages you never want to see, or pre-approve ones to auto-update the moment you're online |
 | **Tray mode** | Minimize to system tray; background checks run silently |
-| **Drop-in languages** | Add a new locale by dropping a translated `xx.json` into `Assets/Locales` — no rebuild needed |
-| **Light / Dark theme** | Toggle anytime from Settings |
+| **Drop-in languages** | Add a new locale by dropping a translated `xx.json` into `Assets/Locales` — no rebuild needed. English/Turkish string and guide-catalog parity is enforced by an automated test |
+| **Custom theming** | A glassmorphism UI with a built-in color picker (drag a saturation/hue square, no OS dialog) — pick any Primary/Secondary/Background trio, save individual colors or whole themes for later, and optionally set a blurred background photo with an adjustable cursor spotlight |
+| **Light / Dark theme** | Auto-syncs to whatever background color you pick, or toggle manually from Settings |
 | **Self-updating** | Checks its own GitHub releases and notifies you when a new version is out |
 
 ---
@@ -59,8 +62,9 @@ XenUpdate is a WPF/.NET 8 app built on a clean layered MVVM architecture.
 - [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) — MVVM, commands, messaging
 - [MaterialDesignInXamlToolkit](https://github.com/MaterialDesignInXAML/MaterialDesignInXamlToolkit) — UI components
 - [H.NotifyIcon.Wpf](https://github.com/HavenDV/H.NotifyIcon) — system tray
+- [gong-wpf-dragdrop](https://github.com/punker76/gong-wpf-dragdrop) — Update Queue drag-and-drop reordering
 - WUApiLib (COM) — Windows Update API
-- `winget` CLI — third-party app updates
+- `winget` / `pip` CLIs — third-party app and Python package updates
 
 **Project layout**
 
@@ -69,7 +73,7 @@ XenUpdate.sln
 ├── XenUpdate.App             # WPF shell, views, view-models, themes, tray, localization
 ├── XenUpdate.Core            # Interfaces, models, enums (no dependencies)
 ├── XenUpdate.Infrastructure  # winget, WUA, drivers, NVIDIA, system restore, storage
-└── XenUpdate.Tests           # Unit tests (~60)
+└── XenUpdate.Tests           # Unit tests (~85)
 ```
 
 **Build from source**

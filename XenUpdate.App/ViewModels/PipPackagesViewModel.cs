@@ -3,7 +3,9 @@ using System.ComponentModel;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using XenUpdate.App.Collections;
+using XenUpdate.App.Messages;
 using XenUpdate.App.Services;
 using XenUpdate.Core.Enums;
 using XenUpdate.Core.Interfaces;
@@ -49,7 +51,6 @@ public sealed partial class PipPackagesViewModel : ObservableObject
     /// </summary>
     public int LastBatchSucceededCount { get; private set; }
     public int LastBatchFailedCount { get; private set; }
-    public IReadOnlyList<string> LastBatchFailedNames { get; private set; } = Array.Empty<string>();
 
     /// <summary>True while any operation (scan or install) is running. Drives command enable/disable.</summary>
     [ObservableProperty]
@@ -230,7 +231,7 @@ public sealed partial class PipPackagesViewModel : ObservableObject
 
     private bool CanScan() => !IsBusy;
 
-    /// <summary>Installs all selected package updates one by one.</summary>
+    /// <summary>Installs all selected package updates one by one, in whatever order they currently appear in Updates.</summary>
     [RelayCommand(CanExecute = nameof(CanInstallSelected))]
     private async Task InstallSelectedAsync()
     {
@@ -248,6 +249,24 @@ public sealed partial class PipPackagesViewModel : ObservableObject
             return;
         }
 
+        WeakReferenceMessenger.Default.Send(new InstallBatchStartedMessage(L.T("NavPipPackages"), selectedUpdates));
+        await RunInstallBatchAsync(selectedUpdates);
+    }
+
+    /// <summary>
+    /// Runs the install batch over exactly the given items, in the given order — no selection
+    /// snapshot, no InstallBatchStartedMessage (the caller already announced this batch to the
+    /// Update Queue window, e.g. via ShellViewModel.UpdateAllAsync's AnnouncePlan). This is what
+    /// makes item-level drag-reordering inside the Update Queue window (say, swapping which of
+    /// two selected Python packages installs first) actually change execution order rather than
+    /// just the visual: ShellViewModel reads UpdateQueueGroup.Items' live order and passes it
+    /// straight here instead of letting this page recompute its own order from Updates.
+    /// </summary>
+    public async Task InstallItemsAsync(IReadOnlyList<UpdateItem> items) =>
+        await RunInstallBatchAsync(items.Cast<PipPackageItem>().ToList());
+
+    private async Task RunInstallBatchAsync(List<PipPackageItem> selectedUpdates)
+    {
         ResetCancellation();
 
         IsBusy = true;
@@ -257,7 +276,6 @@ public sealed partial class PipPackagesViewModel : ObservableObject
 
         var succeededItems = new List<PipPackageItem>();
         var failedCount = 0;
-        var failedNames = new List<string>();
         var batchCompletedCleanly = false;
 
         try
@@ -279,7 +297,7 @@ public sealed partial class PipPackagesViewModel : ObservableObject
                             failureReason = update.FailureReason;
                             return;
                         }
-                        OnInstallProgressReported(update.Percent);
+                        OnInstallProgressReported(item, update.Percent);
                     });
 
                     var success = await _installer.InstallUpdateAsync(item, progress, _operationCts.Token);
@@ -296,7 +314,6 @@ public sealed partial class PipPackagesViewModel : ObservableObject
                     else
                     {
                         failedCount++;
-                        failedNames.Add(item.DisplayName);
                     }
                 }
                 catch (OperationCanceledException)
@@ -312,7 +329,6 @@ public sealed partial class PipPackagesViewModel : ObservableObject
             batchCompletedCleanly = true;
             LastBatchSucceededCount = succeededItems.Count;
             LastBatchFailedCount = failedCount;
-            LastBatchFailedNames = failedNames;
         }
         catch (OperationCanceledException)
         {
@@ -320,7 +336,6 @@ public sealed partial class PipPackagesViewModel : ObservableObject
             StatusMessage = string.Format(L.T("PipInstallCancelled"), succeededItems.Count, failedCount);
             LastBatchSucceededCount = succeededItems.Count;
             LastBatchFailedCount = failedCount;
-            LastBatchFailedNames = failedNames;
             _logger.Info($"Pip install batch was cancelled. Completed before cancel: {succeededItems.Count + failedCount} of {selectedUpdates.Count}.");
         }
         catch (Exception ex)
@@ -492,6 +507,7 @@ public sealed partial class PipPackagesViewModel : ObservableObject
     private async Task ShowInstallingStateAsync(PipPackageItem item, int currentIndex, int totalCount)
     {
         item.Status = UpdateStatus.Installing;
+        item.ProgressPercent = 0;
         CurrentBatchProgressText = string.Format(L.T("InstallingXOfY"), currentIndex + 1, totalCount);
         CurrentPackageName = item.DisplayName;
         CurrentInstallDetailText = L.T("PreparingDownload");
@@ -500,8 +516,9 @@ public sealed partial class PipPackagesViewModel : ObservableObject
         await Task.Yield();
     }
 
-    private void OnInstallProgressReported(int percent)
+    private void OnInstallProgressReported(PipPackageItem item, int percent)
     {
+        item.ProgressPercent = percent;
         CurrentInstallDetailText = percent switch
         {
             <= 25 => L.T("PreparingDownload"),
